@@ -312,7 +312,7 @@ let types is_ec2 shapes =
   imports @ modules
 
 
-let op service version _shapes op =
+let op service version protocol _shapes op =
   let open Syntax in
   let mkty = function
     | None -> ty0 "unit"
@@ -344,34 +344,47 @@ let op service version _shapes op =
     match op.Operation.output_shape with
     | None -> variant1 "Ok" (ident "()")
     | Some shp ->
-      tryfail (letin "xml" (app1 "Ezxmlm.from_string" (ident "body"))
-                 (letin "resp" (let r = app2 "Xml.member"
-                                    (str (op.Operation.name ^ "Response"))
-                                    (app1 "snd" (ident "xml")) in
-                                match op.Operation.output_wrapper with
-                                | None -> r
-                                | Some w -> app2 "Util.option_bind"
-                                              r (app1 "Xml.member" (str w)))
-                    (try_msg "Xml.RequiredFieldMissing"
-                       (app2 "Util.or_error"
-                          (app2 "Util.option_bind"
-                             (ident "resp")
-                             (ident (shp ^ ".parse")))
-                          (letom "Error"
-                             (app1 "BadResponse"
-                                (record [("body", ident "body"); ("message", str ("Could not find well formed " ^ shp ^ "."))]))))
-                       (letom "Error"
-                          (variant1 "Error"
-                             (app1 "BadResponse"
-                                (record [("body", ident "body"); ("message", app2 "^" (str ("Error parsing " ^ shp ^ " - missing field in body or children: ")) (ident "msg"))])))))
-                 ))
-        (variant1 "Error"
-           (letom "Error"
-              (app1 "BadResponse"
-                 (record [("body", ident "body"); ("message", app2 "^"
-                                                     (str "Error parsing xml: ")
-                                                     (ident "msg")
-                                                  )]))))
+      match protocol with
+      | "json" | "rest-json" ->
+        try_msg "Yojson.Json_error"
+          (letin "json" (app1 "Yojson.Basic.from_string" (ident "body"))
+             (variant1 "Ok"
+                (app1 (shp ^ ".of_json") (ident "json"))))
+          (variant1 "Error"
+             (letom "Error"
+                (app1 "BadResponse"
+                   (record [("body", ident "body"); ("message", app2 "^"
+                                                       (str "Error parsing JSON: ")
+                                                       (ident "msg"))]))))
+      | "query" | "ec2" | "rest-xml" ->
+        tryfail (letin "xml" (app1 "Ezxmlm.from_string" (ident "body"))
+                   (letin "resp" (let r = app2 "Xml.member"
+                                      (* this may be a bug. shouldn't we just use output-shape? *)
+                                      (str (op.Operation.name ^ "Response"))
+                                      (app1 "snd" (ident "xml")) in
+                                  match op.Operation.output_wrapper with
+                                  | None -> r
+                                  | Some w -> app2 "Util.option_bind"
+                                                r (app1 "Xml.member" (str w)))
+                      (try_msg "Xml.RequiredFieldMissing"
+                         (app2 "Util.or_error"
+                            (app2 "Util.option_bind"
+                               (ident "resp")
+                               (ident (shp ^ ".parse")))
+                            (letom "Error"
+                               (app1 "BadResponse"
+                                  (record [("body", ident "body"); ("message", str ("Could not find well formed " ^ shp ^ "."))]))))
+                         (letom "Error"
+                            (variant1 "Error"
+                               (app1 "BadResponse"
+                                  (record [("body", ident "body"); ("message", app2 "^" (str ("Error parsing " ^ shp ^ " - missing field in body or children: ")) (ident "msg"))])))))))
+          (variant1 "Error"
+             (letom "Error"
+                (app1 "BadResponse"
+                   (record [("body", ident "body"); ("message", app2 "^"
+                                                       (str "Error parsing xml: ")
+                                                       (ident "msg"))]))))
+      | other -> raise Not_found
   in
     let op_error_parse =
     letin "errors" (app2 "@" (list (List.map (fun name -> ident ("Errors_internal." ^ (Util.to_variant_name name)))
