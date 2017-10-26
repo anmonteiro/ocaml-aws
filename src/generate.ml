@@ -312,6 +312,44 @@ let types is_ec2 shapes =
   imports @ modules
 
 
+let op_to_uri shapes op =
+  let replace_shape loc_name =
+    (* Some S3 APIs specify `Key+` but the shape name is `Key` *)
+    let loc_name = if String.get loc_name ((String.length loc_name) - 1) = '+' then
+        String.sub loc_name 0 ((String.length loc_name) - 1)
+      else loc_name
+    in
+    let shp = StringTable.find op.Operation.input_shape shapes in
+    match shp.Shape.content with
+    | Shape.Structure members ->
+      let found = List.find
+          (fun member ->
+             match member.Structure.loc_name with
+             | None -> false
+             | Some x -> x = loc_name) members
+      in
+      found.Structure.field_name
+    | _ -> raise Not_found
+  in
+  let uri = op.Operation.http_uri in
+  if ((String.contains uri '{') && (String.contains uri '}')) then
+    let is_shape = ref false in
+    let tokens = (Str.full_split (Str.regexp "[{}]") uri)
+                 |> List.fold_left
+                   (fun acc i ->
+                      let open Str in
+                      match i with
+                      | Text s ->
+                        if !is_shape then
+                          (Syntax.ident ("req." ^ op.Operation.input_shape ^ "." ^ (replace_shape s))) :: acc
+                        else (Syntax.str s) :: acc
+                      | Delim d -> is_shape := d = "{"; acc)
+                   []
+                 |> List.rev in
+    List.fold_left (Syntax.app2 "^") (Syntax.app2 "^" (List.hd tokens) (List.nth tokens 1)) (List.tl (List.tl tokens))
+  else (Syntax.str uri)
+
+
 let op service version protocol _shapes op =
   let open Syntax in
   let mkty = function
@@ -324,21 +362,25 @@ let op service version protocol _shapes op =
           ])
   in
   let to_body =
-
-    letin "uri"
-      (app2 "Uri.add_query_params"
-         (app1 "Uri.of_string"
-          (app1 "Aws.Util.of_option_exn" (app2 "Endpoints.url_of" (ident "service") (ident "region"))))
-         (match op.Operation.input_shape with
-          | None -> defaults
-          | Some input_shape ->
-            (app2 "List.append"
-               defaults
-               (app1 "Util.drop_empty"
-                  (app1 "Uri.query_of_encoded"
-                     (app1 "Query.render"
-                        (app1 (input_shape ^ ".to_query") (ident "req"))))))))
-      (tuple [variant op.Operation.http_meth; ident "uri"; list []])
+    match protocol with
+    | "json" | "rest-json" ->
+      letin "uri"
+        (app1 "Uri.of_string" (op_to_uri shapes op))
+        (tuple [variant op.Operation.http_meth; ident "uri"; list []])
+    | "query" | "ec2" | "rest-xml" ->
+      letin "uri"
+        (app2 "Uri.add_query_params"
+           (app1 "Uri.of_string" (op_to_uri shapes op))
+           (app2 "List.append"
+              (list [ pair (str "Action") (list [str op.Operation.name])
+                    ; pair (str "Version") (list [str version])
+                    ])
+              (app1 "Util.drop_empty"
+                 (app1 "Uri.query_of_encoded"
+                    (app1 "Query.render"
+                       (app1 (op.Operation.input_shape ^ ".to_query") (ident "req")))))))
+        (tuple [variant op.Operation.http_meth; ident "uri"; list []])
+    | _ -> raise Not_found
   in
   let of_body =
     match op.Operation.output_shape with
