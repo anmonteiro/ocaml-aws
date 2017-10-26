@@ -94,8 +94,11 @@ let types is_ec2 shapes =
         (* Hack for a unit type since empty records aren't yet valid *)
         Syntax.tyunit "t"
       | Shape.Structure members ->
-        mkrecty (List.map (fun m ->
-            (m.Structure.field_name, m.Structure.shape ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
+        if List.length members = 0 then
+          Syntax.tylet "t" (Syntax.ty0 "unit")
+        else
+          mkrecty (List.map (fun m ->
+            (m.Structure.field_name, (String.capitalize m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
             members)
       | Shape.List (shp, _, _flatten) ->
         Syntax.tylet "t" (Syntax.ty1 "list" (shp ^ ".t"))
@@ -151,6 +154,7 @@ let types is_ec2 shapes =
         Syntax.(let_ "parse" (fun_ "xml" (app1 "Some" (unit ()))))
       | Shape.Structure s ->
         let fields = List.map (fun (mem : Structure.member) ->
+<<<<<<< HEAD
             let loc_name =
               match mem.Structure.loc_name with
               | Some name -> name
@@ -161,6 +165,22 @@ let types is_ec2 shapes =
                   (app1 (mem.Structure.shape ^ ".parse")
                     (ident "xml"))
               )
+=======
+          let loc_name =
+            match mem.Structure.loc_name with
+            | Some name -> name
+            | None      -> mem.Structure.name
+          in
+          let b = Syntax.(app2 "Util.option_bind"
+            (app2 "Xml.member" (str loc_name) (ident "xml"))
+            (ident ((String.capitalize mem.Structure.shape) ^ ".parse")))
+          in
+          let op =
+            if mem.Structure.required then
+              Syntax.(app2 "Xml.required" (str loc_name) b)
+            else if is_list ~shapes ~shp:mem.Structure.shape then
+             Syntax.(app2 "Util.of_option" (list []) b)
+>>>>>>> force-capitalize module names when generating types
             else
               Syntax.(app2 "Util.option_bind"
                               (app2 "Xml.member" (str loc_name) (ident "xml"))
@@ -221,7 +241,7 @@ let types is_ec2 shapes =
                            let location = if is_ec2 then String.capitalize_ascii location else location in
                            let q arg =
                              app1 "Query.Pair"
-                               (pair (str location) (app1 (mem.Structure.shape ^ ".to_query") arg)) in
+                               (pair (str location) (app1 ((String.capitalize mem.Structure.shape) ^ ".to_query") arg)) in
                            (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                             then app1 "Some" (q (ident ("v." ^ mem.Structure.field_name)))
                             else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -249,8 +269,13 @@ let types is_ec2 shapes =
                          (List.map (fun mem ->
                               let q arg =
                                 (pair
+<<<<<<< HEAD
                                    (str mem.Structure.field_name)
                                    (app1 (mem.Structure.shape ^ ".to_json") arg)) in
+=======
+                                   (str location)
+                                   (app1 ((String.capitalize mem.Structure.shape) ^ ".to_json") arg)) in
+>>>>>>> force-capitalize module names when generating types
                               if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                               then app1 "Some" (q (ident ("v." ^ mem.Structure.field_name)))
                               else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -285,6 +310,7 @@ let types is_ec2 shapes =
                 (* Hack for a unit type since empty records aren't yet valid *)
                 Syntax.unit ()
               | Shape.Structure s ->
+<<<<<<< HEAD
                 record (List.map (fun mem ->
                     (mem.Structure.field_name,
                      (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
@@ -296,12 +322,37 @@ let types is_ec2 shapes =
               | Shape.List (shp,_,_flatten) -> app2 "Json.to_list" (ident (shp ^ ".of_json")) (ident "j")
               | Shape.Map ((key_shp,_),(val_shp,_)) -> app3 "Json.to_hashtbl" (ident (key_shp ^ ".of_string")) (ident (val_shp ^ ".of_json")) (ident "j")
               | Shape.Enum _ ->
+=======
+                if List.length s = 0 then
+                  (ident "()")
+                else
+                  record (List.map (fun mem ->
+                      let location =
+                        match mem.Structure.loc_name with
+                        | Some name -> name
+                        | None      ->
+                          mem.Structure.name ^
+                          if not is_ec2 && is_list ~shapes ~shp:mem.Structure.shape
+                          then ".member" else ""
+                      in
+                      (mem.Structure.field_name,
+                       (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
+                        then fun v -> app1 ((String.capitalize mem.Structure.shape) ^ ".of_json")
+                            (app1 "Util.of_option_exn" v)
+                        else fun v -> app2 "Util.option_map" v (ident ((String.capitalize mem.Structure.shape) ^ ".of_json")))
+                         (app2 "Json.lookup" (ident "j") (str location))))
+                      s)
+              | Shape.List (shp,_) -> app2 "Json.to_list" (ident (shp ^ ".of_json")) (ident "j")
+              | Shape.Map ((kshp,_),(vshp,_)) -> app2 "Json.to_hashtbl" (ident (vshp ^ ".of_json")) (ident "j")
+              | Shape.Enum opts ->
+>>>>>>> force-capitalize module names when generating types
                 (app1 "Util.of_option_exn"
                    (app2 "Util.list_find"
                       (ident "str_to_t")
                       (app1 "String.of_json" (ident "j"))))
              )))  in
-    Syntax.module_ v.Shape.name ([ty] @ extra @ [make; parse; to_query; to_json; of_json]) in
+    (* Force capitalize the module name, because some shapes may have uncapitalized names *)
+    Syntax.module_ (String.capitalize v.Shape.name) ([ty] @ extra @ [make; parse; to_query; to_json; of_json]) in
   let modules = List.map build_module (toposort shapes) in
   let imports =
     [Syntax.open_ "Aws";
