@@ -154,7 +154,6 @@ let types is_ec2 shapes =
         Syntax.(let_ "parse" (fun_ "xml" (app1 "Some" (unit ()))))
       | Shape.Structure s ->
         let fields = List.map (fun (mem : Structure.member) ->
-<<<<<<< HEAD
             let loc_name =
               match mem.Structure.loc_name with
               | Some name -> name
@@ -165,22 +164,6 @@ let types is_ec2 shapes =
                   (app1 (mem.Structure.shape ^ ".parse")
                     (ident "xml"))
               )
-=======
-          let loc_name =
-            match mem.Structure.loc_name with
-            | Some name -> name
-            | None      -> mem.Structure.name
-          in
-          let b = Syntax.(app2 "Util.option_bind"
-            (app2 "Xml.member" (str loc_name) (ident "xml"))
-            (ident ((String.capitalize mem.Structure.shape) ^ ".parse")))
-          in
-          let op =
-            if mem.Structure.required then
-              Syntax.(app2 "Xml.required" (str loc_name) b)
-            else if is_list ~shapes ~shp:mem.Structure.shape then
-             Syntax.(app2 "Util.of_option" (list []) b)
->>>>>>> force-capitalize module names when generating types
             else
               Syntax.(app2 "Util.option_bind"
                               (app2 "Xml.member" (str loc_name) (ident "xml"))
@@ -211,7 +194,9 @@ let types is_ec2 shapes =
                          (app1 "Util.option_all"
                             (app2 "List.map"
                                (ident (shp ^ ".parse"))
-                               (app2 "Xml.members" (str item_name) (ident "xml"))))))
+                               (if flattened then
+                                 (list_expr (ident "xml") (ident "[]"))
+                                else (app2 "Xml.members" (str item_name) (ident "xml")))))))
       | Shape.Enum _opts ->
         Syntax.(let_ "parse"
                   (fun_ "xml"
@@ -269,13 +254,8 @@ let types is_ec2 shapes =
                          (List.map (fun mem ->
                               let q arg =
                                 (pair
-<<<<<<< HEAD
                                    (str mem.Structure.field_name)
-                                   (app1 (mem.Structure.shape ^ ".to_json") arg)) in
-=======
-                                   (str location)
                                    (app1 ((String.capitalize mem.Structure.shape) ^ ".to_json") arg)) in
->>>>>>> force-capitalize module names when generating types
                               if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                               then app1 "Some" (q (ident ("v." ^ mem.Structure.field_name)))
                               else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -310,42 +290,17 @@ let types is_ec2 shapes =
                 (* Hack for a unit type since empty records aren't yet valid *)
                 Syntax.unit ()
               | Shape.Structure s ->
-<<<<<<< HEAD
                 record (List.map (fun mem ->
                     (mem.Structure.field_name,
                      (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
-                      then fun v -> app1 (mem.Structure.shape ^ ".of_json")
+                      then fun v -> app1 ((String.capitalize mem.Structure.shape) ^ ".of_json")
                           (app1 "Util.of_option_exn" v)
-                      else fun v -> app2 "Util.option_map" v (ident (mem.Structure.shape ^ ".of_json")))
+                      else fun v -> app2 "Util.option_map" v (ident ((String.capitalize mem.Structure.shape) ^ ".of_json")))
                        (app2 "Json.lookup" (ident "j") (str mem.Structure.field_name))))
                     s)
               | Shape.List (shp,_,_flatten) -> app2 "Json.to_list" (ident (shp ^ ".of_json")) (ident "j")
               | Shape.Map ((key_shp,_),(val_shp,_)) -> app3 "Json.to_hashtbl" (ident (key_shp ^ ".of_string")) (ident (val_shp ^ ".of_json")) (ident "j")
               | Shape.Enum _ ->
-=======
-                if List.length s = 0 then
-                  (ident "()")
-                else
-                  record (List.map (fun mem ->
-                      let location =
-                        match mem.Structure.loc_name with
-                        | Some name -> name
-                        | None      ->
-                          mem.Structure.name ^
-                          if not is_ec2 && is_list ~shapes ~shp:mem.Structure.shape
-                          then ".member" else ""
-                      in
-                      (mem.Structure.field_name,
-                       (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
-                        then fun v -> app1 ((String.capitalize mem.Structure.shape) ^ ".of_json")
-                            (app1 "Util.of_option_exn" v)
-                        else fun v -> app2 "Util.option_map" v (ident ((String.capitalize mem.Structure.shape) ^ ".of_json")))
-                         (app2 "Json.lookup" (ident "j") (str location))))
-                      s)
-              | Shape.List (shp,_) -> app2 "Json.to_list" (ident (shp ^ ".of_json")) (ident "j")
-              | Shape.Map ((kshp,_),(vshp,_)) -> app2 "Json.to_hashtbl" (ident (vshp ^ ".of_json")) (ident "j")
-              | Shape.Enum opts ->
->>>>>>> force-capitalize module names when generating types
                 (app1 "Util.of_option_exn"
                    (app2 "Util.list_find"
                       (ident "str_to_t")
@@ -451,14 +406,20 @@ let op service version protocol _shapes op =
                                                        (ident "msg"))]))))
       | "query" | "ec2" | "rest-xml" ->
         tryfail (letin "xml" (app1 "Ezxmlm.from_string" (ident "body"))
-                   (letin "resp" (let r = app2 "Xml.member"
-                                      (* this may be a bug. shouldn't we just use output-shape? *)
-                                      (str (op.Operation.name ^ "Response"))
-                                      (app1 "snd" (ident "xml")) in
-                                  match op.Operation.output_wrapper with
-                                  | None -> r
-                                  | Some w -> app2 "Util.option_bind"
-                                                r (app1 "Xml.member" (str w)))
+                   (letin "resp"
+                      (if protocol = "rest-xml" then
+                         (matchvar (app1 "List.hd" (app1 "snd" (ident "xml")))
+                            [("`El (_, xs)", (app1 "Some" (ident "xs")));
+                             "_", (app1 "raise" (app1 "Failure" (str ("Could not find well formed " ^ shp ^ "."))))])
+                        else
+                          (let r = app2 "Xml.member"
+                             (* this may be a bug. shouldn't we just use output-shape? *)
+                             (str (op.Operation.name ^ "Response"))
+                             (app1 "snd" (ident "xml")) in
+                         match op.Operation.output_wrapper with
+                         | None -> r
+                         | Some w -> app2 "Util.option_bind"
+                                       r (app1 "Xml.member" (str w))))
                       (try_msg "Xml.RequiredFieldMissing"
                          (app2 "Util.or_error"
                             (app2 "Util.option_bind"

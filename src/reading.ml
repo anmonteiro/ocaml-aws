@@ -78,6 +78,10 @@ let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
       | `Bool true -> true
       | _ -> false in
     let shape  = Json.member_exn "shape" member |> Json.to_string in
+    let flattened = match Json.member_opt "flattened" j with
+      | Some x -> Json.to_bool x
+      | None -> false
+    in
     let loc_name =
       match Json.member "locationName" member with
       | `Null    -> None
