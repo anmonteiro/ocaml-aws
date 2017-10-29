@@ -237,6 +237,27 @@ module Query = struct
             (fun k v acc -> (Pair (key_to_str k, to_query v)) :: acc) tbl [])
 end
 
+module Headers = struct
+  type t =
+    | List of t list
+    | Pair of (string * t)
+    | Value of string option
+
+  let render hs =
+    let rec enc k hs = match hs with
+      | Pair (label, Value (Some s)) -> [(k ^ label, s)]
+      | Pair (label, xs) -> enc label xs
+      | List xs -> List.concat (List.map (enc k) xs)
+      | _ -> []
+    in enc "" hs
+
+  let to_headers_list to_headers vals = List (List.map to_headers vals)
+
+  let to_headers_hashtbl to_headers tbl =
+    List (Hashtbl.fold
+            (fun k v acc -> (Pair (k, to_headers v)) :: acc) tbl [])
+end
+
 
 module Json = struct
   type t =
@@ -278,6 +299,7 @@ module BaseTypes = struct
     val to_json : t -> Json.t
     val of_json : Json.t -> t
     val to_query : t -> Query.t
+    val to_headers : t -> Headers.t
     val parse : Ezxmlm.nodes -> t option
     val to_string : t -> string
     val of_string : string -> t
@@ -292,6 +314,7 @@ module BaseTypes = struct
       | t     -> raise (Json.Casting_error("unit", t))
 
     let to_query () = List []
+    let to_headers () = Headers.List []
     let parse _ = Some () (* XXX(seliopou): Should never be used, maybe assert that? *)
     let to_string _ = raise (Failure("unit"))
     let of_string _ = raise (Failure("unit"))
@@ -305,6 +328,7 @@ module BaseTypes = struct
       | `String s -> s
       | t         -> raise (Json.Casting_error("string", t))
     let to_query s = Value (Some s)
+    let to_headers s = Headers.Value (Some s)
     let parse s = Some (data_to_string s)
     let to_string s = s
     let of_string s = s
@@ -325,6 +349,9 @@ module BaseTypes = struct
     let to_query = function
       | true -> Value (Some "true")
       | false -> Value (Some "false")
+    let to_headers = function
+      | true -> Headers.Value (Some "true")
+      | false -> Headers.Value (Some "false")
     let parse b =
       match String.parse b with
       | None   -> None
@@ -351,6 +378,7 @@ module BaseTypes = struct
       | `Int i -> i
       | t      -> raise (Json.Casting_error("int", t))
     let to_query i = Value (Some (string_of_int i))
+    let to_headers i = Headers.Value (Some (string_of_int i))
     let parse i =
       match String.parse i with
       | None   -> None
@@ -369,6 +397,7 @@ module BaseTypes = struct
       | `Float f -> f
       | t        -> raise (Json.Casting_error("float", t))
     let to_query f = Value (Some (string_of_float f))
+    let to_headers f = Headers.Value (Some (string_of_float f))
     let parse f =
       match String.parse f with
       | None   -> None
@@ -384,6 +413,7 @@ module BaseTypes = struct
     let to_json c = `String (Time.format c)
     let of_json t = Time.parse (String.of_json t)
     let to_query c = Value (Some (Time.format c))
+    let to_headers c = Headers.Value (Some (Time.format c))
     let parse c =
       match String.parse c with
       | None   -> None
@@ -444,13 +474,23 @@ module Signing = struct
       let get_signature_key key date region service =
         sign (sign (sign (sign ("AWS4" ^ key) date) region) service) "aws4_request" in
       let now = Time.now_utc () in
+      (* TODO: only append Content-Length header when body is empty *)
+      let headers = ("Content-Length", "0") :: headers in
       let amzdate = Time.date_time now in
       let datestamp = Time.date_yymmdd now in
       let canonical_uri = "/" in
       let canonical_querystring = params in
+      let canonical_headers =
+        ("host", host) :: ("x-amz-date", amzdate) :: headers |>
+        List.sort (fun (k1,_) (k2,_) -> compare k1 k2) |>
+        List.map (fun (k,v) -> (String.lowercase k) ^ ":" ^ v) |>
+        String.concat "\n" |>
+        (fun x -> x ^ "\n") in
+      let signed_headers =
+        "host" :: "x-amz-date" :: (List.map (fun (k,_) -> (String.lowercase k)) headers) |>
+        List.sort compare |>
+        String.concat ";" in
       let payload_hash = Hash.sha256_hex "" in
-      let canonical_headers = "host:" ^ host ^ "\n" ^ "x-amz-content-sha256:" ^ payload_hash ^ "\nx-amz-date:" ^ amzdate ^ "\n" in
-      let signed_headers = "host;x-amz-content-sha256;x-amz-date" in
       let canonical_request = Request.string_of_meth meth ^ "\n" ^ canonical_uri ^ "\n" ^ canonical_querystring ^ "\n" ^ canonical_headers ^ "\n" ^ signed_headers ^ "\n" ^ payload_hash in
       let algorithm = "AWS4-HMAC-SHA256" in
       let credential_scope = datestamp ^ "/" ^ region ^ "/" ^ service ^ "/" ^ "aws4_request" in
