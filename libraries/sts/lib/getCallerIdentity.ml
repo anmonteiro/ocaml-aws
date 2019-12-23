@@ -1,7 +1,7 @@
 open Types
 open Aws
-type input = AssumeRoleWithWebIdentityRequest.t
-type output = AssumeRoleWithWebIdentityResponse.t
+type input = unit
+type output = GetCallerIdentityResponse.t
 type error = Errors_internal.t
 let service = "sts"
 let to_http service region req =
@@ -9,30 +9,22 @@ let to_http service region req =
     Uri.add_query_params
       (Uri.of_string
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
-      (List.append
-         [("Version", ["2011-06-15"]);
-         ("Action", ["AssumeRoleWithWebIdentity"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (AssumeRoleWithWebIdentityRequest.to_query req))))) in
-  (`POST, uri,
-    (Headers.render (AssumeRoleWithWebIdentityRequest.to_headers req)), "")
+      [("Version", ["2011-06-15"]); ("Action", ["GetCallerIdentity"])] in
+  (`POST, uri, (Headers.render (Headers.List [])), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
     let resp =
-      Util.option_bind
-        (Xml.member "AssumeRoleWithWebIdentityResponse" (snd xml))
-        (Xml.member "AssumeRoleWithWebIdentityResult") in
+      Util.option_bind (Xml.member "GetCallerIdentityResponse" (snd xml))
+        (Xml.member "GetCallerIdentityResult") in
     try
-      Util.or_error
-        (Util.option_bind resp AssumeRoleWithWebIdentityResponse.parse)
+      Util.or_error (Util.option_bind resp GetCallerIdentityResponse.parse)
         (let open Error in
            BadResponse
              {
                body;
                message =
-                 "Could not find well formed AssumeRoleWithWebIdentityResponse."
+                 "Could not find well formed GetCallerIdentityResponse."
              })
     with
     | Xml.RequiredFieldMissing msg ->
@@ -42,7 +34,7 @@ let of_http body =
                {
                  body;
                  message =
-                   ("Error parsing AssumeRoleWithWebIdentityResponse - missing field in body or children: "
+                   ("Error parsing GetCallerIdentityResponse - missing field in body or children: "
                       ^ msg)
                })
   with
