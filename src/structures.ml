@@ -20,7 +20,11 @@ module Shape = struct
     | Enum of string list
     | Map of (string * string option) * (string * string option)
 
-  type t = { name : string; content : contents }
+  type t =
+   { name : string
+   ; content : contents
+     (* generate a recursive module; bool is if already generated both *)
+   ; mutable depends_on: t option * bool }
 
 
   type parsed = string * string * contents option

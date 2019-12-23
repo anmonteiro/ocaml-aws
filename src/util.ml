@@ -154,7 +154,7 @@ let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t)
             Shape.Map ((replace_shape kshp, kln), (replace_shape vshp, vln))
           | Some (Shape.Enum opts) -> Shape.Enum opts
         in
-        StringTable.add key { Shape.name = nm; content } acc)
+        StringTable.add key { Shape.name = nm; content; depends_on = None, false } acc)
     shapes StringTable.empty
   in
   let is_empty_struct shp =

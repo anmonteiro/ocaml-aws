@@ -69,7 +69,18 @@ let toposort (shapes : Shape.t StringTable.t) =
     match data.Shape.content with
     | Shape.Structure members ->
       List.iter (fun mem -> add_edge data mem.Structure.shape) members
-    | Shape.List (s,_,_) -> add_edge data s
+    | Shape.List (s,_,_) ->
+      add_edge data s;
+      (try
+        let shp = StringTable.find s shapes in
+        let reverse_edges = G.find_all_edges graph shp data
+        in
+        (* Only handle mutual recursion for now *)
+        if List.length reverse_edges = 1 then begin
+          data.depends_on <- Some shp, false;
+          shp.depends_on <- Some data, false;
+        end
+      with _ -> ())
     | Shape.Map ((ks,_), (vs,_)) -> add_edge data ks; add_edge data vs
     | Shape.Enum _ -> ())
   shapes;
@@ -83,7 +94,73 @@ let types is_ec2 shapes =
   let option_type shp = function
     |true -> Syntax.ty0 shp
     |false -> Syntax.ty1 "option" shp in
-  let build_module v =
+  let build_module_signature v =
+    let mkrecsty fs =
+      Syntax.styreclet "t" (List.map (fun (nm,shp,req) ->
+          (nm, option_type shp req)) fs)
+    in
+    let ty =
+      match v.Shape.content with
+      | Shape.Structure [ ] ->
+        (* Hack for a unit type since empty records aren't yet valid *)
+        Syntax.styunit "t"
+      | Shape.Structure members ->
+        if List.length members = 0 then
+          Syntax.stylet "t" (Syntax.ty0 "unit")
+        else
+          mkrecsty (List.map (fun m ->
+            (m.Structure.field_name, (String.capitalize_ascii m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
+            members)
+      | Shape.List (shp, _, _flatten) ->
+        Syntax.stylet "t" (Syntax.ty1 "list" (shp ^ ".t"))
+      | Shape.Map ((kshp, _loc), (vshp, _)) ->
+        Syntax.stylet "t" (Syntax.ty2 "Hashtbl.t" (kshp ^ ".t") (vshp ^ ".t"))
+      | Shape.Enum opts ->
+        Syntax.styvariantlet "t" (List.map (fun t -> (Util.to_variant_name t, [])) opts)
+    in
+    let make = match v.Shape.content with
+      | Shape.Structure [ ] -> Syntax.(val_ "make" (sfununit  "t"))
+      | Shape.Structure members ->
+        let rec mkarrow (args : Structure.member list) ret = match args with
+          | [ ] -> ret
+          | (x::xs) ->
+            let fn = if x.Structure.required
+              then Syntax.arrowlab
+              else Syntax.arrowopt
+             in
+             fn x.Structure.field_name (Syntax.tname ((String.capitalize_ascii x.Structure.shape) ^ ".t")) (mkarrow xs ret) in
+        Syntax.(val_
+                  "make"
+                  (mkarrow members (sfununit "t")))
+      | Shape.List _
+      | Shape.Enum _
+      | Shape.Map _ ->
+        Syntax.(val_
+                  "make"
+                  (arrow (tname "t") (sfununit "t")))
+      (* TODO: maybe accept a list of tuples and create a Hashtbl *)
+    in
+    let extra = let open Syntax in match v.Shape.content with
+      | Shape.Enum _ -> [val_ "str_to_t"
+                              (constr "list"
+                                (spair (tname "string") (tname "t")));
+                            val_ "str_to_t"
+                              (constr "list"
+                                (spair (tname "t") (tname "string")));
+                            val_ "to_string" (arrow (tname "t") (tname "string"));
+                            val_ "of_string" (arrow (tname "string") (tname "t"))
+                           ]
+      | _ -> []
+    in
+    let parse = Syntax.(val_ "parse" (arrow (tname "Ezxmlm.nodes") (constr "option" (tname "t")))) in
+    let to_query = Syntax.(val_ "to_query" (arrow (tname "t") (tname "Aws.Query.t"))) in
+    let to_json = Syntax.(val_ "to_json" (arrow (tname "t") (tname "Aws.Json.t"))) in
+    let of_json = Syntax.(val_ "of_json" (arrow (tname "Aws.Json.t") (tname "t")))  in
+    let to_headers = Syntax.(val_ "to_headers" (arrow (tname "t") (tname "Aws.Headers.t")))  in
+    let to_xml = Syntax.(val_ "to_xml" (arrow (tname "t") (tname "Ezxmlm.nodes"))) in
+    [ty] @ extra @ [make; parse; to_query; to_headers; to_xml; to_json; of_json]
+  in
+  let build_module_structure v =
     let mkrecty fs =
       Syntax.tyreclet "t" (List.map (fun (nm,shp,req) ->
           (nm, option_type shp req)) fs)
@@ -403,8 +480,20 @@ let types is_ec2 shapes =
                         (ident "v"))))))
     in
     (* Force capitalize the module name, because some shapes may have uncapitalized names *)
-    Syntax.module_ (String.capitalize_ascii v.Shape.name) ([ty] @ extra @ [make; parse; to_query; to_headers; to_xml; to_json; of_json]) in
-  let modules = List.map build_module (toposort shapes) in
+    (String.capitalize_ascii v.Shape.name), ([ty] @ extra @ [make; parse; to_query; to_headers; to_xml; to_json; of_json]) in
+  let build_module v =
+    let name, itms = build_module_structure v in
+    match v.Shape.depends_on with
+    | Some dshp, false ->
+      let oname, oitms = build_module_structure dshp in
+      let sigs = build_module_signature v in
+      let osigs = build_module_signature dshp in
+      dshp.depends_on <- fst dshp.depends_on, true;
+      [ Syntax.rec_module [ (name, itms, sigs); oname, oitms, osigs ] ]
+    | _, true -> []
+    | None, _ -> [ Syntax.module_ name itms ]
+  in
+  let modules = List.concat (List.map build_module (toposort shapes)) in
   let imports =
     [Syntax.open_ "Aws";
      Syntax.open_ "Aws.BaseTypes";
