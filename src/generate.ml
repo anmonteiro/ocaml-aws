@@ -167,7 +167,7 @@ let types is_ec2 shapes =
             else
               Syntax.(app2 "Util.option_bind"
                               (app2 "Xml.member" (str loc_name) (ident "xml"))
-                              (ident (mem.Structure.shape ^ ".parse")))
+                              (ident ((String.capitalize_ascii mem.Structure.shape) ^ ".parse")))
             in
             let op =
               if mem.Structure.required then
@@ -411,7 +411,7 @@ let types is_ec2 shapes =
      Syntax.open_ "CalendarLib";
      Syntax.(tylet "calendar" (ty0 "Calendar.t"));
     ] in
-  imports @ modules
+  imports, modules
 
 
 let op_to_uri shapes op =

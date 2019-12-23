@@ -74,3 +74,7 @@ val inline_shapes :
 val filter_map : 'a list -> f:('a -> 'b option) -> 'b list
 
 val option_map : string option -> f:string -> string option
+
+val split_with : ('a -> bool) -> 'a list -> 'a list * 'a list
+
+val split_with_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
