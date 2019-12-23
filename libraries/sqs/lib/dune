@@ -3,4 +3,4 @@
  (public_name aws_sqs)
  (synopsis "aws-Amazon Simple Queue Service")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

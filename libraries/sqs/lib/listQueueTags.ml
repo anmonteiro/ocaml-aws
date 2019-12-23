@@ -1,7 +1,7 @@
 open Types
 open Aws
-type input = ListQueuesRequest.t
-type output = ListQueuesResult.t
+type input = ListQueueTagsRequest.t
+type output = ListQueueTagsResult.t
 type error = Errors_internal.t
 let service = "sqs"
 let to_http service region req =
@@ -9,22 +9,25 @@ let to_http service region req =
     Uri.add_query_params
       (Uri.of_string
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
-      (List.append [("Version", ["2012-11-05"]); ("Action", ["ListQueues"])]
+      (List.append
+         [("Version", ["2012-11-05"]); ("Action", ["ListQueueTags"])]
          (Util.drop_empty
             (Uri.query_of_encoded
-               (Query.render (ListQueuesRequest.to_query req))))) in
-  (`POST, uri, (Headers.render (ListQueuesRequest.to_headers req)), "")
+               (Query.render (ListQueueTagsRequest.to_query req))))) in
+  (`POST, uri, (Headers.render (ListQueueTagsRequest.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
     let resp =
-      Util.option_bind (Xml.member "ListQueuesResponse" (snd xml))
-        (Xml.member "ListQueuesResult") in
+      Util.option_bind (Xml.member "ListQueueTagsResponse" (snd xml))
+        (Xml.member "ListQueueTagsResult") in
     try
-      Util.or_error (Util.option_bind resp ListQueuesResult.parse)
+      Util.or_error (Util.option_bind resp ListQueueTagsResult.parse)
         (let open Error in
            BadResponse
-             { body; message = "Could not find well formed ListQueuesResult."
+             {
+               body;
+               message = "Could not find well formed ListQueueTagsResult."
              })
     with
     | Xml.RequiredFieldMissing msg ->
@@ -34,7 +37,7 @@ let of_http body =
                {
                  body;
                  message =
-                   ("Error parsing ListQueuesResult - missing field in body or children: "
+                   ("Error parsing ListQueueTagsResult - missing field in body or children: "
                       ^ msg)
                })
   with
