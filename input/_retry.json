@@ -16,6 +16,29 @@
         }
       }
     },
+    "throttled_exception": {
+      "applies_when": {
+        "response": {
+          "service_error_code": "ThrottledException",
+          "http_status_code": 400
+        }
+      }
+    },
+    "request_throttled_exception": {
+      "applies_when": {
+        "response": {
+          "service_error_code": "RequestThrottledException",
+          "http_status_code": 400
+        }
+      }
+    },
+    "too_many_requests": {
+      "applies_when": {
+        "response": {
+          "http_status_code": 429
+        }
+      }
+    },
     "general_socket_errors": {
       "applies_when": {
         "socket_errors": ["GENERAL_CONNECTION_ERROR"]
@@ -28,6 +51,13 @@
         }
       }
     },
+    "bad_gateway": {
+      "applies_when": {
+        "response": {
+          "http_status_code": 502
+        }
+      }
+    },
     "service_unavailable": {
       "applies_when": {
         "response": {
@@ -35,10 +65,25 @@
         }
       }
     },
+    "gateway_timeout": {
+      "applies_when": {
+        "response": {
+          "http_status_code": 504
+        }
+      }
+    },
     "limit_exceeded": {
       "applies_when": {
         "response": {
           "http_status_code": 509
+        }
+      }
+    },
+    "throughput_exceeded": {
+      "applies_when": {
+        "response": {
+          "service_error_code": "ProvisionedThroughputExceededException",
+          "http_status_code": 400
         }
       }
     }
@@ -54,10 +99,30 @@
       "policies": {
           "general_socket_errors": {"$ref": "general_socket_errors"},
           "general_server_error": {"$ref": "general_server_error"},
+          "bad_gateway": {"$ref": "bad_gateway"},
           "service_unavailable": {"$ref": "service_unavailable"},
+          "gateway_timeout": {"$ref": "gateway_timeout"},
           "limit_exceeded": {"$ref": "limit_exceeded"},
           "throttling_exception": {"$ref": "throttling_exception"},
-          "throttling": {"$ref": "throttling"}
+          "throttled_exception": {"$ref": "throttled_exception"},
+          "request_throttled_exception": {"$ref": "request_throttled_exception"},
+          "throttling": {"$ref": "throttling"},
+          "too_many_requests": {"$ref": "too_many_requests"},
+          "throughput_exceeded": {"$ref": "throughput_exceeded"}
+      }
+    },
+    "organizations": {
+      "__default__": {
+        "policies": {
+          "too_many_requests": {
+            "applies_when": {
+              "response": {
+                "service_error_code": "TooManyRequestsException",
+                "http_status_code": 400
+              }
+            }
+          }
+        }
       }
     },
     "dynamodb": {
@@ -69,14 +134,14 @@
           "growth_factor": 2
         },
         "policies": {
-          "throughput_exceeded": {
-            "applies_when": {
-              "response": {
-                "service_error_code": "ProvisionedThroughputExceededException",
-                "http_status_code": 400
-              }
-            }
-          },
+	  "still_processing": {
+	    "applies_when": {
+	      "response": {
+		"service_error_code": "TransactionInProgressException",
+		"http_status_code": 400
+	      }
+	    }
+	  },
           "crc32": {
             "applies_when": {
               "response": {
@@ -115,6 +180,20 @@
         }
       }
     },
+    "kinesis": {
+      "__default__": {
+        "policies": {
+          "request_limit_exceeded": {
+            "applies_when": {
+              "response": {
+                "service_error_code": "LimitExceededException",
+                "http_status_code": 400
+              }
+            }
+          }
+        }
+      }
+    },
     "sqs": {
       "__default__": {
         "policies": {
@@ -145,6 +224,56 @@
               "response": {
                 "http_status_code": 400,
                 "service_error_code": "BadDigest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "glacier": {
+      "__default__": {
+        "policies": {
+          "timeouts": {
+            "applies_when": {
+              "response": {
+                "http_status_code": 408,
+                "service_error_code": "RequestTimeoutException"
+              }
+            }
+          }
+        }
+      }
+    },
+    "route53": {
+      "__default__": {
+        "policies": {
+          "request_limit_exceeded": {
+            "applies_when": {
+              "response": {
+                "service_error_code": "Throttling",
+                "http_status_code": 400
+              }
+            }
+          },
+          "still_processing": {
+            "applies_when": {
+              "response": {
+                "service_error_code": "PriorRequestNotComplete",
+                "http_status_code": 400
+              }
+            }
+          }
+        }
+      }
+    },
+    "sts": {
+      "__default__": {
+        "policies": {
+          "idp_unreachable_error": {
+            "applies_when": {
+              "response": {
+                "service_error_code": "IDPCommunicationError",
+                "http_status_code": 400
               }
             }
           }

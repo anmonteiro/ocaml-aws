@@ -1,0 +1,20 @@
+{
+  "name": "ocaml-aws",
+  "dependencies": {
+    "@opam/calendar": "*",
+    "@opam/ezxmlm": "*",
+    "@opam/digestif": "*",
+    "@opam/dune": "*",
+    "@opam/uri": ">= 1.4.0",
+    "@opam/atdgen": "*",
+    "@opam/yojson": ">= 1.6.0",
+    "@opam/base-unix": "*",
+    "@opam/cmdliner": "*",
+    "@opam/ppx_tools_versioned": "*",
+    "@opam/ocaml-migrate-parsetree": "*",
+    "@opam/ocamlgraph": "*"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  }
+}

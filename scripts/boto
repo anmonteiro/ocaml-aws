@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -exo pipefail
+
+function realpath {
+ echo $(cd $(dirname $1); pwd)/$(basename $1);
+}
+
+current_dir=$PWD
+
+repo_root="$(dirname $(realpath "$0"))/.."
+# scratch/
+working_dir="$repo_root/scratch"
+
+mkdir -p $working_dir
+
+cd $working_dir
+
+tarball="boto.tar.gz"
+# Use the latest master. They have a `develop` branch that's probably not
+# as stable.
+curl https://github.com/boto/botocore/archive/master.tar.gz -L -o $tarball
+
+tar xzf $tarball
+
+# Copy the directories
+for dir in $(find botocore-master/botocore/data -depth 1 -type d); do
+  dest_input="$repo_root/input/$(basename $dir)"
+  mkdir -p $dest_input
+  echo $dest_input
+  shopt -s dotglob; cp -R $dir/ $dest_input/
+
+  # Create (relative) symlink to `latest`
+  latest=$(find $dest_input -type d -depth 1 | sort -r | head -n1)
+  rm -f "$dest_input/latest"
+  ln -s "$(basename $latest)" "$dest_input/latest"
+done
+
+# Now copy the remaining files
+cp $(find botocore-master/botocore/data -depth 1 -type f) "$repo_root/input"
+
+cd $current_dir
+rm -rf $working_dir
+
