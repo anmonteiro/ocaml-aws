@@ -538,9 +538,16 @@ let op_to_uri shapes op =
                           let { Structure.field_name; shape; _ } = replace_shape s in
                           let segment = (Syntax.ident ("req." ^ input_shape ^ "." ^ field_name))
                           in
-                          let segment = if shape = "String"
-                            then segment
-                            else (Syntax.app1 ("Aws.BaseTypes." ^ shape ^ ".to_string") segment)
+                          let segment = if shape = "String" then
+                              (* Don't convert a string to a string *)
+                              segment
+                            else
+                              let prefix =
+                                if List.mem_assoc (String.lowercase_ascii shape) Util.prim_type_map then
+                                  "Aws.BaseTypes." ^ shape
+                                else shape
+                              in
+                              (Syntax.app1 (prefix ^ ".to_string") segment)
                           in
                           segment :: acc
                         | _ ->

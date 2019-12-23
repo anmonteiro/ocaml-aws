@@ -99,6 +99,22 @@ let to_field_name s =
   s;
   (String.concat "" (List.rev !acc))
 
+let prim_type_map =
+  (* NOTE(dbp 2015-01-26): Not all of these have been seen in the
+     wild (ex: double, float, datetime) *)
+  [("boolean", "Boolean")
+  ;("string","String")
+  ;("integer","Integer")
+  ;("long","Long")
+  ;("double","Double")
+  ;("float","Float")
+  ;("datetime","DateTime")
+  (* NOTE(dbp 2015-01-26): timestamp is a type used in the
+     CreatedTime shape for elasticloadbalancing, and as far as I can
+     tell from the examples, it is the same as DateTime. *)
+  ;("timestamp","DateTime")
+  ;("blob","Blob")]
+
 (* NOTE(dbp 2015-01-26): Shapes that just have primitive types
    (boolean, integer, etc) types aren't actually useful (they
    communicate no information, since all of the typing is
@@ -114,31 +130,15 @@ let to_field_name s =
    away as strings).
 *)
 let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t) =
-  let type_map =
-    (* NOTE(dbp 2015-01-26): Not all of these have been seen in the
-       wild (ex: double, float, datetime) *)
-    [("boolean", "Boolean")
-    ;("string","String")
-    ;("integer","Integer")
-    ;("long","Long")
-    ;("double","Double")
-    ;("float","Float")
-    ;("datetime","DateTime")
-    (* NOTE(dbp 2015-01-26): timestamp is a type used in the
-       CreatedTime shape for elasticloadbalancing, and as far as I can
-       tell from the examples, it is the same as DateTime. *)
-    ;("timestamp","DateTime")
-    ;("blob","Blob")] in
-
   let replace_shape default =
     try
       let _, shptyp, _ = StringTable.find default shapes in
-      List.assoc shptyp type_map
+      List.assoc shptyp prim_type_map
     with Not_found -> default
   in
   let new_shapes =
     StringTable.fold (fun key (nm, ty, contents) acc ->
-      if List.mem_assoc ty type_map then
+      if List.mem_assoc ty prim_type_map then
         acc
       else
         let content =
