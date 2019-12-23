@@ -8,17 +8,23 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-04-01"]); ("Action", ["UpdateHealthCheck"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (UpdateHealthCheckRequest.to_query req))))) in
-  (`POST, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/2013-04-01/healthcheck/" ^
+               req.UpdateHealthCheckRequest.health_check_id)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (UpdateHealthCheckRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (UpdateHealthCheckRequest.to_headers req)),
+    "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "UpdateHealthCheckResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise
+            (Failure "Could not find well formed UpdateHealthCheckResponse.") in
     try
       Util.or_error (Util.option_bind resp UpdateHealthCheckResponse.parse)
         (let open Error in

@@ -8,17 +8,22 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-04-01"]); ("Action", ["DeleteHostedZone"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (DeleteHostedZoneRequest.to_query req))))) in
-  (`DELETE, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/2013-04-01/hostedzone/" ^ req.DeleteHostedZoneRequest.id)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DeleteHostedZoneRequest.to_query req)))) in
+  (`DELETE, uri, (Headers.render (DeleteHostedZoneRequest.to_headers req)),
+    "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "DeleteHostedZoneResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise
+            (Failure "Could not find well formed DeleteHostedZoneResponse.") in
     try
       Util.or_error (Util.option_bind resp DeleteHostedZoneResponse.parse)
         (let open Error in

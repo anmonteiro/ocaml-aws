@@ -8,15 +8,14 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-04-01"]);
-         ("Action", ["DeleteReusableDelegationSet"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render
-                  (DeleteReusableDelegationSetRequest.to_query req))))) in
-  (`DELETE, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/2013-04-01/delegationset/" ^
+               req.DeleteReusableDelegationSetRequest.id)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DeleteReusableDelegationSetRequest.to_query req)))) in
+  (`DELETE, uri,
+    (Headers.render (DeleteReusableDelegationSetRequest.to_headers req)), "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

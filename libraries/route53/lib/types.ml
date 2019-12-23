@@ -14,16 +14,181 @@ module ResourceRecord =
             (Xml.required "Value"
                (Util.option_bind (Xml.member "Value" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Value", (String.to_query v.value)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt [Some ("value", (String.to_json v.value))])
     let of_json j =
       { value = (String.of_json (Util.of_option_exn (Json.lookup j "value")))
       }
+  end
+module Dimension =
+  struct
+    type t = {
+      name: String.t ;
+      value: String.t }
+    let make ~name  ~value  () = { name; value }
+    let parse xml =
+      Some
+        {
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+           @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (String.to_json v.value));
+           Some ("name", (String.to_json v.name))])
+    let of_json j =
+      {
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        value = (String.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
+  end
+module CloudWatchRegion =
+  struct
+    type t =
+      | Us_east_1 
+      | Us_east_2 
+      | Us_west_1 
+      | Us_west_2 
+      | Ca_central_1 
+      | Eu_central_1 
+      | Eu_west_1 
+      | Eu_west_2 
+      | Eu_west_3 
+      | Ap_east_1 
+      | Me_south_1 
+      | Ap_south_1 
+      | Ap_southeast_1 
+      | Ap_southeast_2 
+      | Ap_northeast_1 
+      | Ap_northeast_2 
+      | Ap_northeast_3 
+      | Eu_north_1 
+      | Sa_east_1 
+      | Cn_northwest_1 
+      | Cn_north_1 
+    let str_to_t =
+      [("cn-north-1", Cn_north_1);
+      ("cn-northwest-1", Cn_northwest_1);
+      ("sa-east-1", Sa_east_1);
+      ("eu-north-1", Eu_north_1);
+      ("ap-northeast-3", Ap_northeast_3);
+      ("ap-northeast-2", Ap_northeast_2);
+      ("ap-northeast-1", Ap_northeast_1);
+      ("ap-southeast-2", Ap_southeast_2);
+      ("ap-southeast-1", Ap_southeast_1);
+      ("ap-south-1", Ap_south_1);
+      ("me-south-1", Me_south_1);
+      ("ap-east-1", Ap_east_1);
+      ("eu-west-3", Eu_west_3);
+      ("eu-west-2", Eu_west_2);
+      ("eu-west-1", Eu_west_1);
+      ("eu-central-1", Eu_central_1);
+      ("ca-central-1", Ca_central_1);
+      ("us-west-2", Us_west_2);
+      ("us-west-1", Us_west_1);
+      ("us-east-2", Us_east_2);
+      ("us-east-1", Us_east_1)]
+    let t_to_str =
+      [(Cn_north_1, "cn-north-1");
+      (Cn_northwest_1, "cn-northwest-1");
+      (Sa_east_1, "sa-east-1");
+      (Eu_north_1, "eu-north-1");
+      (Ap_northeast_3, "ap-northeast-3");
+      (Ap_northeast_2, "ap-northeast-2");
+      (Ap_northeast_1, "ap-northeast-1");
+      (Ap_southeast_2, "ap-southeast-2");
+      (Ap_southeast_1, "ap-southeast-1");
+      (Ap_south_1, "ap-south-1");
+      (Me_south_1, "me-south-1");
+      (Ap_east_1, "ap-east-1");
+      (Eu_west_3, "eu-west-3");
+      (Eu_west_2, "eu-west-2");
+      (Eu_west_1, "eu-west-1");
+      (Eu_central_1, "eu-central-1");
+      (Ca_central_1, "ca-central-1");
+      (Us_west_2, "us-west-2");
+      (Us_west_1, "us-west-1");
+      (Us_east_2, "us-east-2");
+      (Us_east_1, "us-east-1")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module HealthCheckRegion =
+  struct
+    type t =
+      | Us_east_1 
+      | Us_west_1 
+      | Us_west_2 
+      | Eu_west_1 
+      | Ap_southeast_1 
+      | Ap_southeast_2 
+      | Ap_northeast_1 
+      | Sa_east_1 
+    let str_to_t =
+      [("sa-east-1", Sa_east_1);
+      ("ap-northeast-1", Ap_northeast_1);
+      ("ap-southeast-2", Ap_southeast_2);
+      ("ap-southeast-1", Ap_southeast_1);
+      ("eu-west-1", Eu_west_1);
+      ("us-west-2", Us_west_2);
+      ("us-west-1", Us_west_1);
+      ("us-east-1", Us_east_1)]
+    let t_to_str =
+      [(Sa_east_1, "sa-east-1");
+      (Ap_northeast_1, "ap-northeast-1");
+      (Ap_southeast_2, "ap-southeast-2");
+      (Ap_southeast_1, "ap-southeast-1");
+      (Eu_west_1, "eu-west-1");
+      (Us_west_2, "us-west-2");
+      (Us_west_1, "us-west-1");
+      (Us_east_1, "us-east-1")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
   end
 module AliasTarget =
   struct
@@ -48,16 +213,21 @@ module AliasTarget =
                (Util.option_bind (Xml.member "EvaluateTargetHealth" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "HostedZoneId"
+                   ([], (String.to_xml v.hosted_zone_id)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "DNSName" ([], (String.to_xml v.d_n_s_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("EvaluateTargetHealth",
-                   (Boolean.to_query v.evaluate_target_health)));
-           Some (Query.Pair ("DNSName", (String.to_query v.d_n_s_name)));
-           Some
-             (Query.Pair ("HostedZoneId", (String.to_query v.hosted_zone_id)))])
+              (Ezxmlm.make_tag "EvaluateTargetHealth"
+                 ([], (Boolean.to_xml v.evaluate_target_health)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -97,15 +267,22 @@ module GeoLocation =
           subdivision_code =
             (Util.option_bind (Xml.member "SubdivisionCode" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.continent_code
+                (fun f ->
+                   Ezxmlm.make_tag "ContinentCode" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.country_code
+               (fun f ->
+                  Ezxmlm.make_tag "CountryCode" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.subdivision_code
-              (fun f -> Query.Pair ("SubdivisionCode", (String.to_query f)));
-           Util.option_map v.country_code
-             (fun f -> Query.Pair ("CountryCode", (String.to_query f)));
-           Util.option_map v.continent_code
-             (fun f -> Query.Pair ("ContinentCode", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "SubdivisionCode" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -134,15 +311,19 @@ module RRType =
       | NS 
       | CNAME 
       | MX 
+      | NAPTR 
       | PTR 
       | SRV 
       | SPF 
       | AAAA 
+      | CAA 
     let str_to_t =
-      [("AAAA", AAAA);
+      [("CAA", CAA);
+      ("AAAA", AAAA);
       ("SPF", SPF);
       ("SRV", SRV);
       ("PTR", PTR);
+      ("NAPTR", NAPTR);
       ("MX", MX);
       ("CNAME", CNAME);
       ("NS", NS);
@@ -150,10 +331,12 @@ module RRType =
       ("A", A);
       ("SOA", SOA)]
     let t_to_str =
-      [(AAAA, "AAAA");
+      [(CAA, "CAA");
+      (AAAA, "AAAA");
       (SPF, "SPF");
       (SRV, "SRV");
       (PTR, "PTR");
+      (NAPTR, "NAPTR");
       (MX, "MX");
       (CNAME, "CNAME");
       (NS, "NS");
@@ -168,6 +351,10 @@ module RRType =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -188,6 +375,10 @@ module ResourceRecordSetFailover =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -197,36 +388,69 @@ module ResourceRecordSetRegion =
   struct
     type t =
       | Us_east_1 
+      | Us_east_2 
       | Us_west_1 
       | Us_west_2 
+      | Ca_central_1 
       | Eu_west_1 
+      | Eu_west_2 
+      | Eu_west_3 
       | Eu_central_1 
       | Ap_southeast_1 
       | Ap_southeast_2 
       | Ap_northeast_1 
+      | Ap_northeast_2 
+      | Ap_northeast_3 
+      | Eu_north_1 
       | Sa_east_1 
       | Cn_north_1 
+      | Cn_northwest_1 
+      | Ap_east_1 
+      | Me_south_1 
+      | Ap_south_1 
     let str_to_t =
-      [("cn-north-1", Cn_north_1);
+      [("ap-south-1", Ap_south_1);
+      ("me-south-1", Me_south_1);
+      ("ap-east-1", Ap_east_1);
+      ("cn-northwest-1", Cn_northwest_1);
+      ("cn-north-1", Cn_north_1);
       ("sa-east-1", Sa_east_1);
+      ("eu-north-1", Eu_north_1);
+      ("ap-northeast-3", Ap_northeast_3);
+      ("ap-northeast-2", Ap_northeast_2);
       ("ap-northeast-1", Ap_northeast_1);
       ("ap-southeast-2", Ap_southeast_2);
       ("ap-southeast-1", Ap_southeast_1);
       ("eu-central-1", Eu_central_1);
+      ("eu-west-3", Eu_west_3);
+      ("eu-west-2", Eu_west_2);
       ("eu-west-1", Eu_west_1);
+      ("ca-central-1", Ca_central_1);
       ("us-west-2", Us_west_2);
       ("us-west-1", Us_west_1);
+      ("us-east-2", Us_east_2);
       ("us-east-1", Us_east_1)]
     let t_to_str =
-      [(Cn_north_1, "cn-north-1");
+      [(Ap_south_1, "ap-south-1");
+      (Me_south_1, "me-south-1");
+      (Ap_east_1, "ap-east-1");
+      (Cn_northwest_1, "cn-northwest-1");
+      (Cn_north_1, "cn-north-1");
       (Sa_east_1, "sa-east-1");
+      (Eu_north_1, "eu-north-1");
+      (Ap_northeast_3, "ap-northeast-3");
+      (Ap_northeast_2, "ap-northeast-2");
       (Ap_northeast_1, "ap-northeast-1");
       (Ap_southeast_2, "ap-southeast-2");
       (Ap_southeast_1, "ap-southeast-1");
       (Eu_central_1, "eu-central-1");
+      (Eu_west_3, "eu-west-3");
+      (Eu_west_2, "eu-west-2");
       (Eu_west_1, "eu-west-1");
+      (Ca_central_1, "ca-central-1");
       (Us_west_2, "us-west-2");
       (Us_west_1, "us-west-1");
+      (Us_east_2, "us-east-2");
       (Us_east_1, "us-east-1")]
     let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
     let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
@@ -236,6 +460,10 @@ module ResourceRecordSetRegion =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -249,8 +477,167 @@ module ResourceRecords =
       Util.option_all
         (List.map ResourceRecord.parse (Xml.members "ResourceRecord" xml))
     let to_query v = Query.to_query_list ResourceRecord.to_query v
+    let to_headers v = Headers.to_headers_list ResourceRecord.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (ResourceRecord.to_xml x))) v
     let to_json v = `List (List.map ResourceRecord.to_json v)
     let of_json j = Json.to_list ResourceRecord.of_json j
+  end
+module ComparisonOperator =
+  struct
+    type t =
+      | GreaterThanOrEqualToThreshold 
+      | GreaterThanThreshold 
+      | LessThanThreshold 
+      | LessThanOrEqualToThreshold 
+    let str_to_t =
+      [("LessThanOrEqualToThreshold", LessThanOrEqualToThreshold);
+      ("LessThanThreshold", LessThanThreshold);
+      ("GreaterThanThreshold", GreaterThanThreshold);
+      ("GreaterThanOrEqualToThreshold", GreaterThanOrEqualToThreshold)]
+    let t_to_str =
+      [(LessThanOrEqualToThreshold, "LessThanOrEqualToThreshold");
+      (LessThanThreshold, "LessThanThreshold");
+      (GreaterThanThreshold, "GreaterThanThreshold");
+      (GreaterThanOrEqualToThreshold, "GreaterThanOrEqualToThreshold")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module DimensionList =
+  struct
+    type t = Dimension.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map Dimension.parse (Xml.members "Dimension" xml))
+    let to_query v = Query.to_query_list Dimension.to_query v
+    let to_headers v = Headers.to_headers_list Dimension.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Dimension.to_xml x)))
+        v
+    let to_json v = `List (List.map Dimension.to_json v)
+    let of_json j = Json.to_list Dimension.of_json j
+  end
+module Statistic =
+  struct
+    type t =
+      | Average 
+      | Sum 
+      | SampleCount 
+      | Maximum 
+      | Minimum 
+    let str_to_t =
+      [("Minimum", Minimum);
+      ("Maximum", Maximum);
+      ("SampleCount", SampleCount);
+      ("Sum", Sum);
+      ("Average", Average)]
+    let t_to_str =
+      [(Minimum, "Minimum");
+      (Maximum, "Maximum");
+      (SampleCount, "SampleCount");
+      (Sum, "Sum");
+      (Average, "Average")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module AlarmIdentifier =
+  struct
+    type t = {
+      region: CloudWatchRegion.t ;
+      name: String.t }
+    let make ~region  ~name  () = { region; name }
+    let parse xml =
+      Some
+        {
+          region =
+            (Xml.required "Region"
+               (Util.option_bind (Xml.member "Region" xml)
+                  CloudWatchRegion.parse));
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Region"
+                  ([], (CloudWatchRegion.to_xml v.region)))])
+           @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("name", (String.to_json v.name));
+           Some ("region", (CloudWatchRegion.to_json v.region))])
+    let of_json j =
+      {
+        region =
+          (CloudWatchRegion.of_json
+             (Util.of_option_exn (Json.lookup j "region")));
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")))
+      }
+  end
+module ChildHealthCheckList =
+  struct
+    type t = String.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map String.parse (Xml.members "ChildHealthCheck" xml))
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
+    let to_json v = `List (List.map String.to_json v)
+    let of_json j = Json.to_list String.of_json j
+  end
+module HealthCheckRegionList =
+  struct
+    type t = HealthCheckRegion.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map HealthCheckRegion.parse (Xml.members "Region" xml))
+    let to_query v = Query.to_query_list HealthCheckRegion.to_query v
+    let to_headers v = Headers.to_headers_list HealthCheckRegion.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (HealthCheckRegion.to_xml x)))
+        v
+    let to_json v = `List (List.map HealthCheckRegion.to_json v)
+    let of_json j = Json.to_list HealthCheckRegion.of_json j
   end
 module HealthCheckType =
   struct
@@ -260,14 +647,20 @@ module HealthCheckType =
       | HTTP_STR_MATCH 
       | HTTPS_STR_MATCH 
       | TCP 
+      | CALCULATED 
+      | CLOUDWATCH_METRIC 
     let str_to_t =
-      [("TCP", TCP);
+      [("CLOUDWATCH_METRIC", CLOUDWATCH_METRIC);
+      ("CALCULATED", CALCULATED);
+      ("TCP", TCP);
       ("HTTPS_STR_MATCH", HTTPS_STR_MATCH);
       ("HTTP_STR_MATCH", HTTP_STR_MATCH);
       ("HTTPS", HTTPS);
       ("HTTP", HTTP)]
     let t_to_str =
-      [(TCP, "TCP");
+      [(CLOUDWATCH_METRIC, "CLOUDWATCH_METRIC");
+      (CALCULATED, "CALCULATED");
+      (TCP, "TCP");
       (HTTPS_STR_MATCH, "HTTPS_STR_MATCH");
       (HTTP_STR_MATCH, "HTTP_STR_MATCH");
       (HTTPS, "HTTPS");
@@ -280,6 +673,41 @@ module HealthCheckType =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module InsufficientDataHealthStatus =
+  struct
+    type t =
+      | Healthy 
+      | Unhealthy 
+      | LastKnownStatus 
+    let str_to_t =
+      [("LastKnownStatus", LastKnownStatus);
+      ("Unhealthy", Unhealthy);
+      ("Healthy", Healthy)]
+    let t_to_str =
+      [(LastKnownStatus, "LastKnownStatus");
+      (Unhealthy, "Unhealthy");
+      (Healthy, "Healthy")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -297,13 +725,16 @@ module Tag =
           key = (Util.option_bind (Xml.member "Key" xml) String.parse);
           value = (Util.option_bind (Xml.member "Value" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.key
+               (fun f -> Ezxmlm.make_tag "Key" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.value
-              (fun f -> Query.Pair ("Value", (String.to_query f)));
-           Util.option_map v.key
-             (fun f -> Query.Pair ("Key", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Value" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -333,6 +764,10 @@ module ChangeAction =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -349,13 +784,15 @@ module ResourceRecordSet =
       region: ResourceRecordSetRegion.t option ;
       geo_location: GeoLocation.t option ;
       failover: ResourceRecordSetFailover.t option ;
+      multi_value_answer: Boolean.t option ;
       t_t_l: Long.t option ;
       resource_records: ResourceRecords.t ;
       alias_target: AliasTarget.t option ;
-      health_check_id: String.t option }
+      health_check_id: String.t option ;
+      traffic_policy_instance_id: String.t option }
     let make ~name  ~type_  ?set_identifier  ?weight  ?region  ?geo_location 
-      ?failover  ?t_t_l  ?(resource_records= [])  ?alias_target 
-      ?health_check_id  () =
+      ?failover  ?multi_value_answer  ?t_t_l  ?(resource_records= []) 
+      ?alias_target  ?health_check_id  ?traffic_policy_instance_id  () =
       {
         name;
         type_;
@@ -364,10 +801,12 @@ module ResourceRecordSet =
         region;
         geo_location;
         failover;
+        multi_value_answer;
         t_t_l;
         resource_records;
         alias_target;
-        health_check_id
+        health_check_id;
+        traffic_policy_instance_id
       }
     let parse xml =
       Some
@@ -390,6 +829,9 @@ module ResourceRecordSet =
           failover =
             (Util.option_bind (Xml.member "Failover" xml)
                ResourceRecordSetFailover.parse);
+          multi_value_answer =
+            (Util.option_bind (Xml.member "MultiValueAnswer" xml)
+               Boolean.parse);
           t_t_l = (Util.option_bind (Xml.member "TTL" xml) Long.parse);
           resource_records =
             (Util.of_option []
@@ -399,47 +841,90 @@ module ResourceRecordSet =
             (Util.option_bind (Xml.member "AliasTarget" xml)
                AliasTarget.parse);
           health_check_id =
-            (Util.option_bind (Xml.member "HealthCheckId" xml) String.parse)
+            (Util.option_bind (Xml.member "HealthCheckId" xml) String.parse);
+          traffic_policy_instance_id =
+            (Util.option_bind (Xml.member "TrafficPolicyInstanceId" xml)
+               String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.health_check_id
-              (fun f -> Query.Pair ("HealthCheckId", (String.to_query f)));
-           Util.option_map v.alias_target
-             (fun f -> Query.Pair ("AliasTarget", (AliasTarget.to_query f)));
-           Some
-             (Query.Pair
-                ("ResourceRecords.member",
-                  (ResourceRecords.to_query v.resource_records)));
-           Util.option_map v.t_t_l
-             (fun f -> Query.Pair ("TTL", (Long.to_query f)));
-           Util.option_map v.failover
-             (fun f ->
-                Query.Pair
-                  ("Failover", (ResourceRecordSetFailover.to_query f)));
-           Util.option_map v.geo_location
-             (fun f -> Query.Pair ("GeoLocation", (GeoLocation.to_query f)));
-           Util.option_map v.region
-             (fun f ->
-                Query.Pair ("Region", (ResourceRecordSetRegion.to_query f)));
-           Util.option_map v.weight
-             (fun f -> Query.Pair ("Weight", (Long.to_query f)));
-           Util.option_map v.set_identifier
-             (fun f -> Query.Pair ("SetIdentifier", (String.to_query f)));
-           Some (Query.Pair ("Type", (RRType.to_query v.type_)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((((((([] @
+                       [Some
+                          (Ezxmlm.make_tag "Name"
+                             ([], (String.to_xml v.name)))])
+                      @
+                      [Some
+                         (Ezxmlm.make_tag "Type"
+                            ([], (RRType.to_xml v.type_)))])
+                     @
+                     [Util.option_map v.set_identifier
+                        (fun f ->
+                           Ezxmlm.make_tag "SetIdentifier"
+                             ([], (String.to_xml f)))])
+                    @
+                    [Util.option_map v.weight
+                       (fun f ->
+                          Ezxmlm.make_tag "Weight" ([], (Long.to_xml f)))])
+                   @
+                   [Util.option_map v.region
+                      (fun f ->
+                         Ezxmlm.make_tag "Region"
+                           ([], (ResourceRecordSetRegion.to_xml f)))])
+                  @
+                  [Util.option_map v.geo_location
+                     (fun f ->
+                        Ezxmlm.make_tag "GeoLocation"
+                          ([], (GeoLocation.to_xml f)))])
+                 @
+                 [Util.option_map v.failover
+                    (fun f ->
+                       Ezxmlm.make_tag "Failover"
+                         ([], (ResourceRecordSetFailover.to_xml f)))])
+                @
+                [Util.option_map v.multi_value_answer
+                   (fun f ->
+                      Ezxmlm.make_tag "MultiValueAnswer"
+                        ([], (Boolean.to_xml f)))])
+               @
+               [Util.option_map v.t_t_l
+                  (fun f -> Ezxmlm.make_tag "TTL" ([], (Long.to_xml f)))])
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "ResourceRecords"
+                         ([], (ResourceRecords.to_xml [x]))))
+                 v.resource_records))
+             @
+             [Util.option_map v.alias_target
+                (fun f ->
+                   Ezxmlm.make_tag "AliasTarget" ([], (AliasTarget.to_xml f)))])
+            @
+            [Util.option_map v.health_check_id
+               (fun f ->
+                  Ezxmlm.make_tag "HealthCheckId" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.traffic_policy_instance_id
+              (fun f ->
+                 Ezxmlm.make_tag "TrafficPolicyInstanceId"
+                   ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.health_check_id
-              (fun f -> ("health_check_id", (String.to_json f)));
+           [Util.option_map v.traffic_policy_instance_id
+              (fun f -> ("traffic_policy_instance_id", (String.to_json f)));
+           Util.option_map v.health_check_id
+             (fun f -> ("health_check_id", (String.to_json f)));
            Util.option_map v.alias_target
              (fun f -> ("alias_target", (AliasTarget.to_json f)));
            Some
              ("resource_records",
                (ResourceRecords.to_json v.resource_records));
            Util.option_map v.t_t_l (fun f -> ("t_t_l", (Long.to_json f)));
+           Util.option_map v.multi_value_answer
+             (fun f -> ("multi_value_answer", (Boolean.to_json f)));
            Util.option_map v.failover
              (fun f -> ("failover", (ResourceRecordSetFailover.to_json f)));
            Util.option_map v.geo_location
@@ -466,6 +951,9 @@ module ResourceRecordSet =
         failover =
           (Util.option_map (Json.lookup j "failover")
              ResourceRecordSetFailover.of_json);
+        multi_value_answer =
+          (Util.option_map (Json.lookup j "multi_value_answer")
+             Boolean.of_json);
         t_t_l = (Util.option_map (Json.lookup j "t_t_l") Long.of_json);
         resource_records =
           (ResourceRecords.of_json
@@ -473,7 +961,10 @@ module ResourceRecordSet =
         alias_target =
           (Util.option_map (Json.lookup j "alias_target") AliasTarget.of_json);
         health_check_id =
-          (Util.option_map (Json.lookup j "health_check_id") String.of_json)
+          (Util.option_map (Json.lookup j "health_check_id") String.of_json);
+        traffic_policy_instance_id =
+          (Util.option_map (Json.lookup j "traffic_policy_instance_id")
+             String.of_json)
       }
   end
 module HostedZoneConfig =
@@ -490,13 +981,17 @@ module HostedZoneConfig =
           private_zone =
             (Util.option_bind (Xml.member "PrivateZone" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.comment
+               (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.private_zone
-              (fun f -> Query.Pair ("PrivateZone", (Boolean.to_query f)));
-           Util.option_map v.comment
-             (fun f -> Query.Pair ("Comment", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "PrivateZone" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -509,6 +1004,49 @@ module HostedZoneConfig =
         comment = (Util.option_map (Json.lookup j "comment") String.of_json);
         private_zone =
           (Util.option_map (Json.lookup j "private_zone") Boolean.of_json)
+      }
+  end
+module LinkedService =
+  struct
+    type t =
+      {
+      service_principal: String.t option ;
+      description: String.t option }
+    let make ?service_principal  ?description  () =
+      { service_principal; description }
+    let parse xml =
+      Some
+        {
+          service_principal =
+            (Util.option_bind (Xml.member "ServicePrincipal" xml)
+               String.parse);
+          description =
+            (Util.option_bind (Xml.member "Description" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.service_principal
+               (fun f ->
+                  Ezxmlm.make_tag "ServicePrincipal" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.description
+              (fun f -> Ezxmlm.make_tag "Description" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.description
+              (fun f -> ("description", (String.to_json f)));
+           Util.option_map v.service_principal
+             (fun f -> ("service_principal", (String.to_json f)))])
+    let of_json j =
+      {
+        service_principal =
+          (Util.option_map (Json.lookup j "service_principal") String.of_json);
+        description =
+          (Util.option_map (Json.lookup j "description") String.of_json)
       }
   end
 module StatusReport =
@@ -524,13 +1062,17 @@ module StatusReport =
           checked_time =
             (Util.option_bind (Xml.member "CheckedTime" xml) DateTime.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.status
+               (fun f -> Ezxmlm.make_tag "Status" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.checked_time
-              (fun f -> Query.Pair ("CheckedTime", (DateTime.to_query f)));
-           Util.option_map v.status
-             (fun f -> Query.Pair ("Status", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "CheckedTime" ([], (DateTime.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -544,6 +1086,217 @@ module StatusReport =
           (Util.option_map (Json.lookup j "checked_time") DateTime.of_json)
       }
   end
+module VPCRegion =
+  struct
+    type t =
+      | Us_east_1 
+      | Us_east_2 
+      | Us_west_1 
+      | Us_west_2 
+      | Eu_west_1 
+      | Eu_west_2 
+      | Eu_west_3 
+      | Eu_central_1 
+      | Ap_east_1 
+      | Me_south_1 
+      | Ap_southeast_1 
+      | Ap_southeast_2 
+      | Ap_south_1 
+      | Ap_northeast_1 
+      | Ap_northeast_2 
+      | Ap_northeast_3 
+      | Eu_north_1 
+      | Sa_east_1 
+      | Ca_central_1 
+      | Cn_north_1 
+    let str_to_t =
+      [("cn-north-1", Cn_north_1);
+      ("ca-central-1", Ca_central_1);
+      ("sa-east-1", Sa_east_1);
+      ("eu-north-1", Eu_north_1);
+      ("ap-northeast-3", Ap_northeast_3);
+      ("ap-northeast-2", Ap_northeast_2);
+      ("ap-northeast-1", Ap_northeast_1);
+      ("ap-south-1", Ap_south_1);
+      ("ap-southeast-2", Ap_southeast_2);
+      ("ap-southeast-1", Ap_southeast_1);
+      ("me-south-1", Me_south_1);
+      ("ap-east-1", Ap_east_1);
+      ("eu-central-1", Eu_central_1);
+      ("eu-west-3", Eu_west_3);
+      ("eu-west-2", Eu_west_2);
+      ("eu-west-1", Eu_west_1);
+      ("us-west-2", Us_west_2);
+      ("us-west-1", Us_west_1);
+      ("us-east-2", Us_east_2);
+      ("us-east-1", Us_east_1)]
+    let t_to_str =
+      [(Cn_north_1, "cn-north-1");
+      (Ca_central_1, "ca-central-1");
+      (Sa_east_1, "sa-east-1");
+      (Eu_north_1, "eu-north-1");
+      (Ap_northeast_3, "ap-northeast-3");
+      (Ap_northeast_2, "ap-northeast-2");
+      (Ap_northeast_1, "ap-northeast-1");
+      (Ap_south_1, "ap-south-1");
+      (Ap_southeast_2, "ap-southeast-2");
+      (Ap_southeast_1, "ap-southeast-1");
+      (Me_south_1, "me-south-1");
+      (Ap_east_1, "ap-east-1");
+      (Eu_central_1, "eu-central-1");
+      (Eu_west_3, "eu-west-3");
+      (Eu_west_2, "eu-west-2");
+      (Eu_west_1, "eu-west-1");
+      (Us_west_2, "us-west-2");
+      (Us_west_1, "us-west-1");
+      (Us_east_2, "us-east-2");
+      (Us_east_1, "us-east-1")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module CloudWatchAlarmConfiguration =
+  struct
+    type t =
+      {
+      evaluation_periods: Integer.t ;
+      threshold: Double.t ;
+      comparison_operator: ComparisonOperator.t ;
+      period: Integer.t ;
+      metric_name: String.t ;
+      namespace: String.t ;
+      statistic: Statistic.t ;
+      dimensions: DimensionList.t }
+    let make ~evaluation_periods  ~threshold  ~comparison_operator  ~period 
+      ~metric_name  ~namespace  ~statistic  ?(dimensions= [])  () =
+      {
+        evaluation_periods;
+        threshold;
+        comparison_operator;
+        period;
+        metric_name;
+        namespace;
+        statistic;
+        dimensions
+      }
+    let parse xml =
+      Some
+        {
+          evaluation_periods =
+            (Xml.required "EvaluationPeriods"
+               (Util.option_bind (Xml.member "EvaluationPeriods" xml)
+                  Integer.parse));
+          threshold =
+            (Xml.required "Threshold"
+               (Util.option_bind (Xml.member "Threshold" xml) Double.parse));
+          comparison_operator =
+            (Xml.required "ComparisonOperator"
+               (Util.option_bind (Xml.member "ComparisonOperator" xml)
+                  ComparisonOperator.parse));
+          period =
+            (Xml.required "Period"
+               (Util.option_bind (Xml.member "Period" xml) Integer.parse));
+          metric_name =
+            (Xml.required "MetricName"
+               (Util.option_bind (Xml.member "MetricName" xml) String.parse));
+          namespace =
+            (Xml.required "Namespace"
+               (Util.option_bind (Xml.member "Namespace" xml) String.parse));
+          statistic =
+            (Xml.required "Statistic"
+               (Util.option_bind (Xml.member "Statistic" xml) Statistic.parse));
+          dimensions =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Dimensions" xml)
+                  DimensionList.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((([] @
+                  [Some
+                     (Ezxmlm.make_tag "EvaluationPeriods"
+                        ([], (Integer.to_xml v.evaluation_periods)))])
+                 @
+                 [Some
+                    (Ezxmlm.make_tag "Threshold"
+                       ([], (Double.to_xml v.threshold)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "ComparisonOperator"
+                      ([], (ComparisonOperator.to_xml v.comparison_operator)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "Period" ([], (Integer.to_xml v.period)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "MetricName"
+                    ([], (String.to_xml v.metric_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "Namespace"
+                   ([], (String.to_xml v.namespace)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "Statistic"
+                  ([], (Statistic.to_xml v.statistic)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Dimensions"
+                      ([], (DimensionList.to_xml [x])))) v.dimensions))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("dimensions", (DimensionList.to_json v.dimensions));
+           Some ("statistic", (Statistic.to_json v.statistic));
+           Some ("namespace", (String.to_json v.namespace));
+           Some ("metric_name", (String.to_json v.metric_name));
+           Some ("period", (Integer.to_json v.period));
+           Some
+             ("comparison_operator",
+               (ComparisonOperator.to_json v.comparison_operator));
+           Some ("threshold", (Double.to_json v.threshold));
+           Some
+             ("evaluation_periods", (Integer.to_json v.evaluation_periods))])
+    let of_json j =
+      {
+        evaluation_periods =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "evaluation_periods")));
+        threshold =
+          (Double.of_json (Util.of_option_exn (Json.lookup j "threshold")));
+        comparison_operator =
+          (ComparisonOperator.of_json
+             (Util.of_option_exn (Json.lookup j "comparison_operator")));
+        period =
+          (Integer.of_json (Util.of_option_exn (Json.lookup j "period")));
+        metric_name =
+          (String.of_json (Util.of_option_exn (Json.lookup j "metric_name")));
+        namespace =
+          (String.of_json (Util.of_option_exn (Json.lookup j "namespace")));
+        statistic =
+          (Statistic.of_json (Util.of_option_exn (Json.lookup j "statistic")));
+        dimensions =
+          (DimensionList.of_json
+             (Util.of_option_exn (Json.lookup j "dimensions")))
+      }
+  end
 module HealthCheckConfig =
   struct
     type t =
@@ -555,10 +1308,22 @@ module HealthCheckConfig =
       fully_qualified_domain_name: String.t option ;
       search_string: String.t option ;
       request_interval: Integer.t option ;
-      failure_threshold: Integer.t option }
+      failure_threshold: Integer.t option ;
+      measure_latency: Boolean.t option ;
+      inverted: Boolean.t option ;
+      disabled: Boolean.t option ;
+      health_threshold: Integer.t option ;
+      child_health_checks: ChildHealthCheckList.t ;
+      enable_s_n_i: Boolean.t option ;
+      regions: HealthCheckRegionList.t ;
+      alarm_identifier: AlarmIdentifier.t option ;
+      insufficient_data_health_status: InsufficientDataHealthStatus.t option }
     let make ?i_p_address  ?port  ~type_  ?resource_path 
       ?fully_qualified_domain_name  ?search_string  ?request_interval 
-      ?failure_threshold  () =
+      ?failure_threshold  ?measure_latency  ?inverted  ?disabled 
+      ?health_threshold  ?(child_health_checks= [])  ?enable_s_n_i 
+      ?(regions= [])  ?alarm_identifier  ?insufficient_data_health_status  ()
+      =
       {
         i_p_address;
         port;
@@ -567,7 +1332,16 @@ module HealthCheckConfig =
         fully_qualified_domain_name;
         search_string;
         request_interval;
-        failure_threshold
+        failure_threshold;
+        measure_latency;
+        inverted;
+        disabled;
+        health_threshold;
+        child_health_checks;
+        enable_s_n_i;
+        regions;
+        alarm_identifier;
+        insufficient_data_health_status
       }
     let parse xml =
       Some
@@ -591,32 +1365,146 @@ module HealthCheckConfig =
                Integer.parse);
           failure_threshold =
             (Util.option_bind (Xml.member "FailureThreshold" xml)
-               Integer.parse)
+               Integer.parse);
+          measure_latency =
+            (Util.option_bind (Xml.member "MeasureLatency" xml) Boolean.parse);
+          inverted =
+            (Util.option_bind (Xml.member "Inverted" xml) Boolean.parse);
+          disabled =
+            (Util.option_bind (Xml.member "Disabled" xml) Boolean.parse);
+          health_threshold =
+            (Util.option_bind (Xml.member "HealthThreshold" xml)
+               Integer.parse);
+          child_health_checks =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "ChildHealthChecks" xml)
+                  ChildHealthCheckList.parse));
+          enable_s_n_i =
+            (Util.option_bind (Xml.member "EnableSNI" xml) Boolean.parse);
+          regions =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Regions" xml)
+                  HealthCheckRegionList.parse));
+          alarm_identifier =
+            (Util.option_bind (Xml.member "AlarmIdentifier" xml)
+               AlarmIdentifier.parse);
+          insufficient_data_health_status =
+            (Util.option_bind (Xml.member "InsufficientDataHealthStatus" xml)
+               InsufficientDataHealthStatus.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.failure_threshold
-              (fun f -> Query.Pair ("FailureThreshold", (Integer.to_query f)));
-           Util.option_map v.request_interval
-             (fun f -> Query.Pair ("RequestInterval", (Integer.to_query f)));
-           Util.option_map v.search_string
-             (fun f -> Query.Pair ("SearchString", (String.to_query f)));
-           Util.option_map v.fully_qualified_domain_name
-             (fun f ->
-                Query.Pair ("FullyQualifiedDomainName", (String.to_query f)));
-           Util.option_map v.resource_path
-             (fun f -> Query.Pair ("ResourcePath", (String.to_query f)));
-           Some (Query.Pair ("Type", (HealthCheckType.to_query v.type_)));
-           Util.option_map v.port
-             (fun f -> Query.Pair ("Port", (Integer.to_query f)));
-           Util.option_map v.i_p_address
-             (fun f -> Query.Pair ("IPAddress", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((((((((((([] @
+                           [Util.option_map v.i_p_address
+                              (fun f ->
+                                 Ezxmlm.make_tag "IPAddress"
+                                   ([], (String.to_xml f)))])
+                          @
+                          [Util.option_map v.port
+                             (fun f ->
+                                Ezxmlm.make_tag "Port"
+                                  ([], (Integer.to_xml f)))])
+                         @
+                         [Some
+                            (Ezxmlm.make_tag "Type"
+                               ([], (HealthCheckType.to_xml v.type_)))])
+                        @
+                        [Util.option_map v.resource_path
+                           (fun f ->
+                              Ezxmlm.make_tag "ResourcePath"
+                                ([], (String.to_xml f)))])
+                       @
+                       [Util.option_map v.fully_qualified_domain_name
+                          (fun f ->
+                             Ezxmlm.make_tag "FullyQualifiedDomainName"
+                               ([], (String.to_xml f)))])
+                      @
+                      [Util.option_map v.search_string
+                         (fun f ->
+                            Ezxmlm.make_tag "SearchString"
+                              ([], (String.to_xml f)))])
+                     @
+                     [Util.option_map v.request_interval
+                        (fun f ->
+                           Ezxmlm.make_tag "RequestInterval"
+                             ([], (Integer.to_xml f)))])
+                    @
+                    [Util.option_map v.failure_threshold
+                       (fun f ->
+                          Ezxmlm.make_tag "FailureThreshold"
+                            ([], (Integer.to_xml f)))])
+                   @
+                   [Util.option_map v.measure_latency
+                      (fun f ->
+                         Ezxmlm.make_tag "MeasureLatency"
+                           ([], (Boolean.to_xml f)))])
+                  @
+                  [Util.option_map v.inverted
+                     (fun f ->
+                        Ezxmlm.make_tag "Inverted" ([], (Boolean.to_xml f)))])
+                 @
+                 [Util.option_map v.disabled
+                    (fun f ->
+                       Ezxmlm.make_tag "Disabled" ([], (Boolean.to_xml f)))])
+                @
+                [Util.option_map v.health_threshold
+                   (fun f ->
+                      Ezxmlm.make_tag "HealthThreshold"
+                        ([], (Integer.to_xml f)))])
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "ChildHealthChecks"
+                          ([], (ChildHealthCheckList.to_xml [x]))))
+                  v.child_health_checks))
+              @
+              [Util.option_map v.enable_s_n_i
+                 (fun f ->
+                    Ezxmlm.make_tag "EnableSNI" ([], (Boolean.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "Regions"
+                        ([], (HealthCheckRegionList.to_xml [x])))) v.regions))
+            @
+            [Util.option_map v.alarm_identifier
+               (fun f ->
+                  Ezxmlm.make_tag "AlarmIdentifier"
+                    ([], (AlarmIdentifier.to_xml f)))])
+           @
+           [Util.option_map v.insufficient_data_health_status
+              (fun f ->
+                 Ezxmlm.make_tag "InsufficientDataHealthStatus"
+                   ([], (InsufficientDataHealthStatus.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.failure_threshold
-              (fun f -> ("failure_threshold", (Integer.to_json f)));
+           [Util.option_map v.insufficient_data_health_status
+              (fun f ->
+                 ("insufficient_data_health_status",
+                   (InsufficientDataHealthStatus.to_json f)));
+           Util.option_map v.alarm_identifier
+             (fun f -> ("alarm_identifier", (AlarmIdentifier.to_json f)));
+           Some ("regions", (HealthCheckRegionList.to_json v.regions));
+           Util.option_map v.enable_s_n_i
+             (fun f -> ("enable_s_n_i", (Boolean.to_json f)));
+           Some
+             ("child_health_checks",
+               (ChildHealthCheckList.to_json v.child_health_checks));
+           Util.option_map v.health_threshold
+             (fun f -> ("health_threshold", (Integer.to_json f)));
+           Util.option_map v.disabled
+             (fun f -> ("disabled", (Boolean.to_json f)));
+           Util.option_map v.inverted
+             (fun f -> ("inverted", (Boolean.to_json f)));
+           Util.option_map v.measure_latency
+             (fun f -> ("measure_latency", (Boolean.to_json f)));
+           Util.option_map v.failure_threshold
+             (fun f -> ("failure_threshold", (Integer.to_json f)));
            Util.option_map v.request_interval
              (fun f -> ("request_interval", (Integer.to_json f)));
            Util.option_map v.search_string
@@ -648,7 +1536,29 @@ module HealthCheckConfig =
           (Util.option_map (Json.lookup j "request_interval") Integer.of_json);
         failure_threshold =
           (Util.option_map (Json.lookup j "failure_threshold")
-             Integer.of_json)
+             Integer.of_json);
+        measure_latency =
+          (Util.option_map (Json.lookup j "measure_latency") Boolean.of_json);
+        inverted =
+          (Util.option_map (Json.lookup j "inverted") Boolean.of_json);
+        disabled =
+          (Util.option_map (Json.lookup j "disabled") Boolean.of_json);
+        health_threshold =
+          (Util.option_map (Json.lookup j "health_threshold") Integer.of_json);
+        child_health_checks =
+          (ChildHealthCheckList.of_json
+             (Util.of_option_exn (Json.lookup j "child_health_checks")));
+        enable_s_n_i =
+          (Util.option_map (Json.lookup j "enable_s_n_i") Boolean.of_json);
+        regions =
+          (HealthCheckRegionList.of_json
+             (Util.of_option_exn (Json.lookup j "regions")));
+        alarm_identifier =
+          (Util.option_map (Json.lookup j "alarm_identifier")
+             AlarmIdentifier.of_json);
+        insufficient_data_health_status =
+          (Util.option_map (Json.lookup j "insufficient_data_health_status")
+             InsufficientDataHealthStatus.of_json)
       }
   end
 module TagList =
@@ -658,6 +1568,9 @@ module TagList =
     let parse xml =
       Util.option_all (List.map Tag.parse (Xml.members "Tag" xml))
     let to_query v = Query.to_query_list Tag.to_query v
+    let to_headers v = Headers.to_headers_list Tag.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Tag.to_xml x))) v
     let to_json v = `List (List.map Tag.to_json v)
     let of_json j = Json.to_list Tag.of_json j
   end
@@ -676,6 +1589,10 @@ module TagResourceType =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -688,6 +1605,9 @@ module DelegationSetNameServers =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "NameServer" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -710,14 +1630,17 @@ module Change =
                (Util.option_bind (Xml.member "ResourceRecordSet" xml)
                   ResourceRecordSet.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Action" ([], (ChangeAction.to_xml v.action)))])
+           @
            [Some
-              (Query.Pair
-                 ("ResourceRecordSet",
-                   (ResourceRecordSet.to_query v.resource_record_set)));
-           Some (Query.Pair ("Action", (ChangeAction.to_query v.action)))])
+              (Ezxmlm.make_tag "ResourceRecordSet"
+                 ([], (ResourceRecordSet.to_xml v.resource_record_set)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -734,54 +1657,6 @@ module Change =
              (Util.of_option_exn (Json.lookup j "resource_record_set")))
       }
   end
-module VPCRegion =
-  struct
-    type t =
-      | Us_east_1 
-      | Us_west_1 
-      | Us_west_2 
-      | Eu_west_1 
-      | Eu_central_1 
-      | Ap_southeast_1 
-      | Ap_southeast_2 
-      | Ap_northeast_1 
-      | Sa_east_1 
-      | Cn_north_1 
-    let str_to_t =
-      [("cn-north-1", Cn_north_1);
-      ("sa-east-1", Sa_east_1);
-      ("ap-northeast-1", Ap_northeast_1);
-      ("ap-southeast-2", Ap_southeast_2);
-      ("ap-southeast-1", Ap_southeast_1);
-      ("eu-central-1", Eu_central_1);
-      ("eu-west-1", Eu_west_1);
-      ("us-west-2", Us_west_2);
-      ("us-west-1", Us_west_1);
-      ("us-east-1", Us_east_1)]
-    let t_to_str =
-      [(Cn_north_1, "cn-north-1");
-      (Sa_east_1, "sa-east-1");
-      (Ap_northeast_1, "ap-northeast-1");
-      (Ap_southeast_2, "ap-southeast-2");
-      (Ap_southeast_1, "ap-southeast-1");
-      (Eu_central_1, "eu-central-1");
-      (Eu_west_1, "eu-west-1");
-      (Us_west_2, "us-west-2");
-      (Us_west_1, "us-west-1");
-      (Us_east_1, "us-east-1")]
-    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
-    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
-    let make v () = v
-    let parse xml =
-      Util.option_bind (String.parse xml)
-        (fun s -> Util.list_find str_to_t s)
-    let to_query v =
-      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
-    let to_json v =
-      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
-    let of_json j =
-      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
-  end
 module HostedZone =
   struct
     type t =
@@ -790,10 +1665,18 @@ module HostedZone =
       name: String.t ;
       caller_reference: String.t ;
       config: HostedZoneConfig.t option ;
-      resource_record_set_count: Long.t option }
+      resource_record_set_count: Long.t option ;
+      linked_service: LinkedService.t option }
     let make ~id  ~name  ~caller_reference  ?config 
-      ?resource_record_set_count  () =
-      { id; name; caller_reference; config; resource_record_set_count }
+      ?resource_record_set_count  ?linked_service  () =
+      {
+        id;
+        name;
+        caller_reference;
+        config;
+        resource_record_set_count;
+        linked_service
+      }
     let parse xml =
       Some
         {
@@ -812,26 +1695,42 @@ module HostedZone =
                HostedZoneConfig.parse);
           resource_record_set_count =
             (Util.option_bind (Xml.member "ResourceRecordSetCount" xml)
-               Long.parse)
+               Long.parse);
+          linked_service =
+            (Util.option_bind (Xml.member "LinkedService" xml)
+               LinkedService.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.resource_record_set_count
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+               @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "CallerReference"
+                    ([], (String.to_xml v.caller_reference)))])
+             @
+             [Util.option_map v.config
+                (fun f ->
+                   Ezxmlm.make_tag "Config" ([], (HostedZoneConfig.to_xml f)))])
+            @
+            [Util.option_map v.resource_record_set_count
+               (fun f ->
+                  Ezxmlm.make_tag "ResourceRecordSetCount"
+                    ([], (Long.to_xml f)))])
+           @
+           [Util.option_map v.linked_service
               (fun f ->
-                 Query.Pair ("ResourceRecordSetCount", (Long.to_query f)));
-           Util.option_map v.config
-             (fun f -> Query.Pair ("Config", (HostedZoneConfig.to_query f)));
-           Some
-             (Query.Pair
-                ("CallerReference", (String.to_query v.caller_reference)));
-           Some (Query.Pair ("Name", (String.to_query v.name)));
-           Some (Query.Pair ("Id", (String.to_query v.id)))])
+                 Ezxmlm.make_tag "LinkedService"
+                   ([], (LinkedService.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.resource_record_set_count
-              (fun f -> ("resource_record_set_count", (Long.to_json f)));
+           [Util.option_map v.linked_service
+              (fun f -> ("linked_service", (LinkedService.to_json f)));
+           Util.option_map v.resource_record_set_count
+             (fun f -> ("resource_record_set_count", (Long.to_json f)));
            Util.option_map v.config
              (fun f -> ("config", (HostedZoneConfig.to_json f)));
            Some ("caller_reference", (String.to_json v.caller_reference));
@@ -848,7 +1747,10 @@ module HostedZone =
           (Util.option_map (Json.lookup j "config") HostedZoneConfig.of_json);
         resource_record_set_count =
           (Util.option_map (Json.lookup j "resource_record_set_count")
-             Long.of_json)
+             Long.of_json);
+        linked_service =
+          (Util.option_map (Json.lookup j "linked_service")
+             LinkedService.of_json)
       }
   end
 module ChangeStatus =
@@ -866,50 +1768,341 @@ module ChangeStatus =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
       Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
   end
+module TrafficPolicy =
+  struct
+    type t =
+      {
+      id: String.t ;
+      version: Integer.t ;
+      name: String.t ;
+      type_: RRType.t ;
+      document: String.t ;
+      comment: String.t option }
+    let make ~id  ~version  ~name  ~type_  ~document  ?comment  () =
+      { id; version; name; type_; document; comment }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          version =
+            (Xml.required "Version"
+               (Util.option_bind (Xml.member "Version" xml) Integer.parse));
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml) RRType.parse));
+          document =
+            (Xml.required "Document"
+               (Util.option_bind (Xml.member "Document" xml) String.parse));
+          comment =
+            (Util.option_bind (Xml.member "Comment" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "Version" ([], (Integer.to_xml v.version)))])
+              @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+             @ [Some (Ezxmlm.make_tag "Type" ([], (RRType.to_xml v.type_)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "Document" ([], (String.to_xml v.document)))])
+           @
+           [Util.option_map v.comment
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.comment
+              (fun f -> ("comment", (String.to_json f)));
+           Some ("document", (String.to_json v.document));
+           Some ("type_", (RRType.to_json v.type_));
+           Some ("name", (String.to_json v.name));
+           Some ("version", (Integer.to_json v.version));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        version =
+          (Integer.of_json (Util.of_option_exn (Json.lookup j "version")));
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        type_ = (RRType.of_json (Util.of_option_exn (Json.lookup j "type_")));
+        document =
+          (String.of_json (Util.of_option_exn (Json.lookup j "document")));
+        comment = (Util.option_map (Json.lookup j "comment") String.of_json)
+      }
+  end
 module HealthCheckObservation =
   struct
     type t =
       {
+      region: HealthCheckRegion.t option ;
       i_p_address: String.t option ;
       status_report: StatusReport.t option }
-    let make ?i_p_address  ?status_report  () =
-      { i_p_address; status_report }
+    let make ?region  ?i_p_address  ?status_report  () =
+      { region; i_p_address; status_report }
     let parse xml =
       Some
         {
+          region =
+            (Util.option_bind (Xml.member "Region" xml)
+               HealthCheckRegion.parse);
           i_p_address =
             (Util.option_bind (Xml.member "IPAddress" xml) String.parse);
           status_report =
             (Util.option_bind (Xml.member "StatusReport" xml)
                StatusReport.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.region
+                (fun f ->
+                   Ezxmlm.make_tag "Region"
+                     ([], (HealthCheckRegion.to_xml f)))])
+            @
+            [Util.option_map v.i_p_address
+               (fun f -> Ezxmlm.make_tag "IPAddress" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.status_report
               (fun f ->
-                 Query.Pair ("StatusReport", (StatusReport.to_query f)));
-           Util.option_map v.i_p_address
-             (fun f -> Query.Pair ("IPAddress", (String.to_query f)))])
+                 Ezxmlm.make_tag "StatusReport" ([], (StatusReport.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Util.option_map v.status_report
               (fun f -> ("status_report", (StatusReport.to_json f)));
            Util.option_map v.i_p_address
-             (fun f -> ("i_p_address", (String.to_json f)))])
+             (fun f -> ("i_p_address", (String.to_json f)));
+           Util.option_map v.region
+             (fun f -> ("region", (HealthCheckRegion.to_json f)))])
     let of_json j =
       {
+        region =
+          (Util.option_map (Json.lookup j "region") HealthCheckRegion.of_json);
         i_p_address =
           (Util.option_map (Json.lookup j "i_p_address") String.of_json);
         status_report =
           (Util.option_map (Json.lookup j "status_report")
              StatusReport.of_json)
+      }
+  end
+module TrafficPolicyInstance =
+  struct
+    type t =
+      {
+      id: String.t ;
+      hosted_zone_id: String.t ;
+      name: String.t ;
+      t_t_l: Long.t ;
+      state: String.t ;
+      message: String.t ;
+      traffic_policy_id: String.t ;
+      traffic_policy_version: Integer.t ;
+      traffic_policy_type: RRType.t }
+    let make ~id  ~hosted_zone_id  ~name  ~t_t_l  ~state  ~message 
+      ~traffic_policy_id  ~traffic_policy_version  ~traffic_policy_type  () =
+      {
+        id;
+        hosted_zone_id;
+        name;
+        t_t_l;
+        state;
+        message;
+        traffic_policy_id;
+        traffic_policy_version;
+        traffic_policy_type
+      }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          t_t_l =
+            (Xml.required "TTL"
+               (Util.option_bind (Xml.member "TTL" xml) Long.parse));
+          state =
+            (Xml.required "State"
+               (Util.option_bind (Xml.member "State" xml) String.parse));
+          message =
+            (Xml.required "Message"
+               (Util.option_bind (Xml.member "Message" xml) String.parse));
+          traffic_policy_id =
+            (Xml.required "TrafficPolicyId"
+               (Util.option_bind (Xml.member "TrafficPolicyId" xml)
+                  String.parse));
+          traffic_policy_version =
+            (Xml.required "TrafficPolicyVersion"
+               (Util.option_bind (Xml.member "TrafficPolicyVersion" xml)
+                  Integer.parse));
+          traffic_policy_type =
+            (Xml.required "TrafficPolicyType"
+               (Util.option_bind (Xml.member "TrafficPolicyType" xml)
+                  RRType.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((([] @
+                   [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+                  @
+                  [Some
+                     (Ezxmlm.make_tag "HostedZoneId"
+                        ([], (String.to_xml v.hosted_zone_id)))])
+                 @
+                 [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+                @ [Some (Ezxmlm.make_tag "TTL" ([], (Long.to_xml v.t_t_l)))])
+               @
+               [Some (Ezxmlm.make_tag "State" ([], (String.to_xml v.state)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "Message" ([], (String.to_xml v.message)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "TrafficPolicyId"
+                   ([], (String.to_xml v.traffic_policy_id)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyVersion"
+                  ([], (Integer.to_xml v.traffic_policy_version)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyType"
+                 ([], (RRType.to_xml v.traffic_policy_type)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_type", (RRType.to_json v.traffic_policy_type));
+           Some
+             ("traffic_policy_version",
+               (Integer.to_json v.traffic_policy_version));
+           Some ("traffic_policy_id", (String.to_json v.traffic_policy_id));
+           Some ("message", (String.to_json v.message));
+           Some ("state", (String.to_json v.state));
+           Some ("t_t_l", (Long.to_json v.t_t_l));
+           Some ("name", (String.to_json v.name));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        t_t_l = (Long.of_json (Util.of_option_exn (Json.lookup j "t_t_l")));
+        state = (String.of_json (Util.of_option_exn (Json.lookup j "state")));
+        message =
+          (String.of_json (Util.of_option_exn (Json.lookup j "message")));
+        traffic_policy_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_id")));
+        traffic_policy_version =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_version")));
+        traffic_policy_type =
+          (RRType.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_type")))
+      }
+  end
+module ResettableElementName =
+  struct
+    type t =
+      | FullyQualifiedDomainName 
+      | Regions 
+      | ResourcePath 
+      | ChildHealthChecks 
+    let str_to_t =
+      [("ChildHealthChecks", ChildHealthChecks);
+      ("ResourcePath", ResourcePath);
+      ("Regions", Regions);
+      ("FullyQualifiedDomainName", FullyQualifiedDomainName)]
+    let t_to_str =
+      [(ChildHealthChecks, "ChildHealthChecks");
+      (ResourcePath, "ResourcePath");
+      (Regions, "Regions");
+      (FullyQualifiedDomainName, "FullyQualifiedDomainName")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module VPC =
+  struct
+    type t = {
+      v_p_c_region: VPCRegion.t option ;
+      v_p_c_id: String.t option }
+    let make ?v_p_c_region  ?v_p_c_id  () = { v_p_c_region; v_p_c_id }
+    let parse xml =
+      Some
+        {
+          v_p_c_region =
+            (Util.option_bind (Xml.member "VPCRegion" xml) VPCRegion.parse);
+          v_p_c_id = (Util.option_bind (Xml.member "VPCId" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.v_p_c_region
+               (fun f ->
+                  Ezxmlm.make_tag "VPCRegion" ([], (VPCRegion.to_xml f)))])
+           @
+           [Util.option_map v.v_p_c_id
+              (fun f -> Ezxmlm.make_tag "VPCId" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.v_p_c_id
+              (fun f -> ("v_p_c_id", (String.to_json f)));
+           Util.option_map v.v_p_c_region
+             (fun f -> ("v_p_c_region", (VPCRegion.to_json f)))])
+    let of_json j =
+      {
+        v_p_c_region =
+          (Util.option_map (Json.lookup j "v_p_c_region") VPCRegion.of_json);
+        v_p_c_id =
+          (Util.option_map (Json.lookup j "v_p_c_id") String.of_json)
       }
   end
 module GeoLocationDetails =
@@ -948,21 +2141,34 @@ module GeoLocationDetails =
           subdivision_name =
             (Util.option_bind (Xml.member "SubdivisionName" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Util.option_map v.continent_code
+                   (fun f ->
+                      Ezxmlm.make_tag "ContinentCode" ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.continent_name
+                  (fun f ->
+                     Ezxmlm.make_tag "ContinentName" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.country_code
+                 (fun f ->
+                    Ezxmlm.make_tag "CountryCode" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.country_name
+                (fun f ->
+                   Ezxmlm.make_tag "CountryName" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.subdivision_code
+               (fun f ->
+                  Ezxmlm.make_tag "SubdivisionCode" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.subdivision_name
-              (fun f -> Query.Pair ("SubdivisionName", (String.to_query f)));
-           Util.option_map v.subdivision_code
-             (fun f -> Query.Pair ("SubdivisionCode", (String.to_query f)));
-           Util.option_map v.country_name
-             (fun f -> Query.Pair ("CountryName", (String.to_query f)));
-           Util.option_map v.country_code
-             (fun f -> Query.Pair ("CountryCode", (String.to_query f)));
-           Util.option_map v.continent_name
-             (fun f -> Query.Pair ("ContinentName", (String.to_query f)));
-           Util.option_map v.continent_code
-             (fun f -> Query.Pair ("ContinentCode", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "SubdivisionName" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -994,17 +2200,54 @@ module GeoLocationDetails =
           (Util.option_map (Json.lookup j "subdivision_name") String.of_json)
       }
   end
+module HostedZoneLimitType =
+  struct
+    type t =
+      | MAX_RRSETS_BY_ZONE 
+      | MAX_VPCS_ASSOCIATED_BY_ZONE 
+    let str_to_t =
+      [("MAX_VPCS_ASSOCIATED_BY_ZONE", MAX_VPCS_ASSOCIATED_BY_ZONE);
+      ("MAX_RRSETS_BY_ZONE", MAX_RRSETS_BY_ZONE)]
+    let t_to_str =
+      [(MAX_VPCS_ASSOCIATED_BY_ZONE, "MAX_VPCS_ASSOCIATED_BY_ZONE");
+      (MAX_RRSETS_BY_ZONE, "MAX_RRSETS_BY_ZONE")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
 module HealthCheck =
   struct
     type t =
       {
       id: String.t ;
       caller_reference: String.t ;
+      linked_service: LinkedService.t option ;
       health_check_config: HealthCheckConfig.t ;
-      health_check_version: Long.t }
-    let make ~id  ~caller_reference  ~health_check_config 
-      ~health_check_version  () =
-      { id; caller_reference; health_check_config; health_check_version }
+      health_check_version: Long.t ;
+      cloud_watch_alarm_configuration: CloudWatchAlarmConfiguration.t option }
+    let make ~id  ~caller_reference  ?linked_service  ~health_check_config 
+      ~health_check_version  ?cloud_watch_alarm_configuration  () =
+      {
+        id;
+        caller_reference;
+        linked_service;
+        health_check_config;
+        health_check_version;
+        cloud_watch_alarm_configuration
+      }
     let parse xml =
       Some
         {
@@ -1015,6 +2258,9 @@ module HealthCheck =
             (Xml.required "CallerReference"
                (Util.option_bind (Xml.member "CallerReference" xml)
                   String.parse));
+          linked_service =
+            (Util.option_bind (Xml.member "LinkedService" xml)
+               LinkedService.parse);
           health_check_config =
             (Xml.required "HealthCheckConfig"
                (Util.option_bind (Xml.member "HealthCheckConfig" xml)
@@ -1022,31 +2268,52 @@ module HealthCheck =
           health_check_version =
             (Xml.required "HealthCheckVersion"
                (Util.option_bind (Xml.member "HealthCheckVersion" xml)
-                  Long.parse))
+                  Long.parse));
+          cloud_watch_alarm_configuration =
+            (Util.option_bind (Xml.member "CloudWatchAlarmConfiguration" xml)
+               CloudWatchAlarmConfiguration.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("HealthCheckVersion",
-                   (Long.to_query v.health_check_version)));
-           Some
-             (Query.Pair
-                ("HealthCheckConfig",
-                  (HealthCheckConfig.to_query v.health_check_config)));
-           Some
-             (Query.Pair
-                ("CallerReference", (String.to_query v.caller_reference)));
-           Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "CallerReference"
+                     ([], (String.to_xml v.caller_reference)))])
+              @
+              [Util.option_map v.linked_service
+                 (fun f ->
+                    Ezxmlm.make_tag "LinkedService"
+                      ([], (LinkedService.to_xml f)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "HealthCheckConfig"
+                   ([], (HealthCheckConfig.to_xml v.health_check_config)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "HealthCheckVersion"
+                  ([], (Long.to_xml v.health_check_version)))])
+           @
+           [Util.option_map v.cloud_watch_alarm_configuration
+              (fun f ->
+                 Ezxmlm.make_tag "CloudWatchAlarmConfiguration"
+                   ([], (CloudWatchAlarmConfiguration.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("health_check_version", (Long.to_json v.health_check_version));
+           [Util.option_map v.cloud_watch_alarm_configuration
+              (fun f ->
+                 ("cloud_watch_alarm_configuration",
+                   (CloudWatchAlarmConfiguration.to_json f)));
+           Some
+             ("health_check_version", (Long.to_json v.health_check_version));
            Some
              ("health_check_config",
                (HealthCheckConfig.to_json v.health_check_config));
+           Util.option_map v.linked_service
+             (fun f -> ("linked_service", (LinkedService.to_json f)));
            Some ("caller_reference", (String.to_json v.caller_reference));
            Some ("id", (String.to_json v.id))])
     let of_json j =
@@ -1055,12 +2322,73 @@ module HealthCheck =
         caller_reference =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "caller_reference")));
+        linked_service =
+          (Util.option_map (Json.lookup j "linked_service")
+             LinkedService.of_json);
         health_check_config =
           (HealthCheckConfig.of_json
              (Util.of_option_exn (Json.lookup j "health_check_config")));
         health_check_version =
           (Long.of_json
-             (Util.of_option_exn (Json.lookup j "health_check_version")))
+             (Util.of_option_exn (Json.lookup j "health_check_version")));
+        cloud_watch_alarm_configuration =
+          (Util.option_map (Json.lookup j "cloud_watch_alarm_configuration")
+             CloudWatchAlarmConfiguration.of_json)
+      }
+  end
+module QueryLoggingConfig =
+  struct
+    type t =
+      {
+      id: String.t ;
+      hosted_zone_id: String.t ;
+      cloud_watch_logs_log_group_arn: String.t }
+    let make ~id  ~hosted_zone_id  ~cloud_watch_logs_log_group_arn  () =
+      { id; hosted_zone_id; cloud_watch_logs_log_group_arn }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          cloud_watch_logs_log_group_arn =
+            (Xml.required "CloudWatchLogsLogGroupArn"
+               (Util.option_bind (Xml.member "CloudWatchLogsLogGroupArn" xml)
+                  String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+            [Some
+               (Ezxmlm.make_tag "HostedZoneId"
+                  ([], (String.to_xml v.hosted_zone_id)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "CloudWatchLogsLogGroupArn"
+                 ([], (String.to_xml v.cloud_watch_logs_log_group_arn)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("cloud_watch_logs_log_group_arn",
+                (String.to_json v.cloud_watch_logs_log_group_arn));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        cloud_watch_logs_log_group_arn =
+          (String.of_json
+             (Util.of_option_exn
+                (Json.lookup j "cloud_watch_logs_log_group_arn")))
       }
   end
 module ResourceTagSet =
@@ -1084,15 +2412,23 @@ module ResourceTagSet =
             (Util.of_option []
                (Util.option_bind (Xml.member "Tags" xml) TagList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (TagList.to_query v.tags)));
-           Util.option_map v.resource_id
-             (fun f -> Query.Pair ("ResourceId", (String.to_query f)));
-           Util.option_map v.resource_type
-             (fun f ->
-                Query.Pair ("ResourceType", (TagResourceType.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.resource_type
+                (fun f ->
+                   Ezxmlm.make_tag "ResourceType"
+                     ([], (TagResourceType.to_xml f)))])
+            @
+            [Util.option_map v.resource_id
+               (fun f -> Ezxmlm.make_tag "ResourceId" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagList.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1110,6 +2446,74 @@ module ResourceTagSet =
           (Util.option_map (Json.lookup j "resource_id") String.of_json);
         tags = (TagList.of_json (Util.of_option_exn (Json.lookup j "tags")))
       }
+  end
+module AccountLimitType =
+  struct
+    type t =
+      | MAX_HEALTH_CHECKS_BY_OWNER 
+      | MAX_HOSTED_ZONES_BY_OWNER 
+      | MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER 
+      | MAX_REUSABLE_DELEGATION_SETS_BY_OWNER 
+      | MAX_TRAFFIC_POLICIES_BY_OWNER 
+    let str_to_t =
+      [("MAX_TRAFFIC_POLICIES_BY_OWNER", MAX_TRAFFIC_POLICIES_BY_OWNER);
+      ("MAX_REUSABLE_DELEGATION_SETS_BY_OWNER",
+        MAX_REUSABLE_DELEGATION_SETS_BY_OWNER);
+      ("MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER",
+        MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER);
+      ("MAX_HOSTED_ZONES_BY_OWNER", MAX_HOSTED_ZONES_BY_OWNER);
+      ("MAX_HEALTH_CHECKS_BY_OWNER", MAX_HEALTH_CHECKS_BY_OWNER)]
+    let t_to_str =
+      [(MAX_TRAFFIC_POLICIES_BY_OWNER, "MAX_TRAFFIC_POLICIES_BY_OWNER");
+      (MAX_REUSABLE_DELEGATION_SETS_BY_OWNER,
+        "MAX_REUSABLE_DELEGATION_SETS_BY_OWNER");
+      (MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER,
+        "MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER");
+      (MAX_HOSTED_ZONES_BY_OWNER, "MAX_HOSTED_ZONES_BY_OWNER");
+      (MAX_HEALTH_CHECKS_BY_OWNER, "MAX_HEALTH_CHECKS_BY_OWNER")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module ReusableDelegationSetLimitType =
+  struct
+    type t =
+      | MAX_ZONES_BY_REUSABLE_DELEGATION_SET 
+    let str_to_t =
+      [("MAX_ZONES_BY_REUSABLE_DELEGATION_SET",
+         MAX_ZONES_BY_REUSABLE_DELEGATION_SET)]
+    let t_to_str =
+      [(MAX_ZONES_BY_REUSABLE_DELEGATION_SET,
+         "MAX_ZONES_BY_REUSABLE_DELEGATION_SET")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
   end
 module DelegationSet =
   struct
@@ -1131,17 +2535,24 @@ module DelegationSet =
                (Util.option_bind (Xml.member "NameServers" xml)
                   DelegationSetNameServers.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("NameServers.member",
-                   (DelegationSetNameServers.to_query v.name_servers)));
-           Util.option_map v.caller_reference
-             (fun f -> Query.Pair ("CallerReference", (String.to_query f)));
-           Util.option_map v.id
-             (fun f -> Query.Pair ("Id", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.id
+                (fun f -> Ezxmlm.make_tag "Id" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.caller_reference
+               (fun f ->
+                  Ezxmlm.make_tag "CallerReference" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "NameServers"
+                      ([], (DelegationSetNameServers.to_xml [x]))))
+              v.name_servers))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1161,6 +2572,76 @@ module DelegationSet =
              (Util.of_option_exn (Json.lookup j "name_servers")))
       }
   end
+module TrafficPolicySummary =
+  struct
+    type t =
+      {
+      id: String.t ;
+      name: String.t ;
+      type_: RRType.t ;
+      latest_version: Integer.t ;
+      traffic_policy_count: Integer.t }
+    let make ~id  ~name  ~type_  ~latest_version  ~traffic_policy_count  () =
+      { id; name; type_; latest_version; traffic_policy_count }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml) RRType.parse));
+          latest_version =
+            (Xml.required "LatestVersion"
+               (Util.option_bind (Xml.member "LatestVersion" xml)
+                  Integer.parse));
+          traffic_policy_count =
+            (Xml.required "TrafficPolicyCount"
+               (Util.option_bind (Xml.member "TrafficPolicyCount" xml)
+                  Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+              [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+             @ [Some (Ezxmlm.make_tag "Type" ([], (RRType.to_xml v.type_)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "LatestVersion"
+                  ([], (Integer.to_xml v.latest_version)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyCount"
+                 ([], (Integer.to_xml v.traffic_policy_count)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_count",
+                (Integer.to_json v.traffic_policy_count));
+           Some ("latest_version", (Integer.to_json v.latest_version));
+           Some ("type_", (RRType.to_json v.type_));
+           Some ("name", (String.to_json v.name));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        type_ = (RRType.of_json (Util.of_option_exn (Json.lookup j "type_")));
+        latest_version =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "latest_version")));
+        traffic_policy_count =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_count")))
+      }
+  end
 module Changes =
   struct
     type t = Change.t list
@@ -1168,43 +2649,11 @@ module Changes =
     let parse xml =
       Util.option_all (List.map Change.parse (Xml.members "Change" xml))
     let to_query v = Query.to_query_list Change.to_query v
+    let to_headers v = Headers.to_headers_list Change.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Change.to_xml x))) v
     let to_json v = `List (List.map Change.to_json v)
     let of_json j = Json.to_list Change.of_json j
-  end
-module VPC =
-  struct
-    type t = {
-      v_p_c_region: VPCRegion.t option ;
-      v_p_c_id: String.t option }
-    let make ?v_p_c_region  ?v_p_c_id  () = { v_p_c_region; v_p_c_id }
-    let parse xml =
-      Some
-        {
-          v_p_c_region =
-            (Util.option_bind (Xml.member "VPCRegion" xml) VPCRegion.parse);
-          v_p_c_id = (Util.option_bind (Xml.member "VPCId" xml) String.parse)
-        }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.v_p_c_id
-              (fun f -> Query.Pair ("VPCId", (String.to_query f)));
-           Util.option_map v.v_p_c_region
-             (fun f -> Query.Pair ("VPCRegion", (VPCRegion.to_query f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.v_p_c_id
-              (fun f -> ("v_p_c_id", (String.to_json f)));
-           Util.option_map v.v_p_c_region
-             (fun f -> ("v_p_c_region", (VPCRegion.to_json f)))])
-    let of_json j =
-      {
-        v_p_c_region =
-          (Util.option_map (Json.lookup j "v_p_c_region") VPCRegion.of_json);
-        v_p_c_id =
-          (Util.option_map (Json.lookup j "v_p_c_id") String.of_json)
-      }
   end
 module HostedZones =
   struct
@@ -1214,6 +2663,10 @@ module HostedZones =
       Util.option_all
         (List.map HostedZone.parse (Xml.members "HostedZone" xml))
     let to_query v = Query.to_query_list HostedZone.to_query v
+    let to_headers v = Headers.to_headers_list HostedZone.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (HostedZone.to_xml x))) v
     let to_json v = `List (List.map HostedZone.to_json v)
     let of_json j = Json.to_list HostedZone.of_json j
   end
@@ -1243,15 +2696,21 @@ module ChangeInfo =
           comment =
             (Util.option_bind (Xml.member "Comment" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+             [Some
+                (Ezxmlm.make_tag "Status"
+                   ([], (ChangeStatus.to_xml v.status)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "SubmittedAt"
+                  ([], (DateTime.to_xml v.submitted_at)))])
+           @
            [Util.option_map v.comment
-              (fun f -> Query.Pair ("Comment", (String.to_query f)));
-           Some
-             (Query.Pair ("SubmittedAt", (DateTime.to_query v.submitted_at)));
-           Some (Query.Pair ("Status", (ChangeStatus.to_query v.status)));
-           Some (Query.Pair ("Id", (String.to_query v.id)))])
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1271,6 +2730,21 @@ module ChangeInfo =
         comment = (Util.option_map (Json.lookup j "comment") String.of_json)
       }
   end
+module TrafficPolicies =
+  struct
+    type t = TrafficPolicy.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map TrafficPolicy.parse (Xml.members "TrafficPolicy" xml))
+    let to_query v = Query.to_query_list TrafficPolicy.to_query v
+    let to_headers v = Headers.to_headers_list TrafficPolicy.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (TrafficPolicy.to_xml x))) v
+    let to_json v = `List (List.map TrafficPolicy.to_json v)
+    let of_json j = Json.to_list TrafficPolicy.of_json j
+  end
 module HealthCheckObservations =
   struct
     type t = HealthCheckObservation.t list
@@ -1280,6 +2754,13 @@ module HealthCheckObservations =
         (List.map HealthCheckObservation.parse
            (Xml.members "HealthCheckObservation" xml))
     let to_query v = Query.to_query_list HealthCheckObservation.to_query v
+    let to_headers v =
+      Headers.to_headers_list HealthCheckObservation.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (HealthCheckObservation.to_xml x)))
+        v
     let to_json v = `List (List.map HealthCheckObservation.to_json v)
     let of_json j = Json.to_list HealthCheckObservation.of_json j
   end
@@ -1290,8 +2771,29 @@ module CheckerIpRanges =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
+  end
+module TrafficPolicyInstances =
+  struct
+    type t = TrafficPolicyInstance.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map TrafficPolicyInstance.parse
+           (Xml.members "TrafficPolicyInstance" xml))
+    let to_query v = Query.to_query_list TrafficPolicyInstance.to_query v
+    let to_headers v =
+      Headers.to_headers_list TrafficPolicyInstance.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (TrafficPolicyInstance.to_xml x))) v
+    let to_json v = `List (List.map TrafficPolicyInstance.to_json v)
+    let of_json j = Json.to_list TrafficPolicyInstance.of_json j
   end
 module ErrorMessages =
   struct
@@ -1300,8 +2802,42 @@ module ErrorMessages =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "Message" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
+  end
+module ResettableElementNameList =
+  struct
+    type t = ResettableElementName.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map ResettableElementName.parse
+           (Xml.members "ResettableElementName" xml))
+    let to_query v = Query.to_query_list ResettableElementName.to_query v
+    let to_headers v =
+      Headers.to_headers_list ResettableElementName.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (ResettableElementName.to_xml x))) v
+    let to_json v = `List (List.map ResettableElementName.to_json v)
+    let of_json j = Json.to_list ResettableElementName.of_json j
+  end
+module VPCs =
+  struct
+    type t = VPC.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all (List.map VPC.parse (Xml.members "VPC" xml))
+    let to_query v = Query.to_query_list VPC.to_query v
+    let to_headers v = Headers.to_headers_list VPC.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (VPC.to_xml x))) v
+    let to_json v = `List (List.map VPC.to_json v)
+    let of_json j = Json.to_list VPC.of_json j
   end
 module TagResourceIdList =
   struct
@@ -1310,6 +2846,9 @@ module TagResourceIdList =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "ResourceId" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -1322,8 +2861,53 @@ module GeoLocationDetailsList =
         (List.map GeoLocationDetails.parse
            (Xml.members "GeoLocationDetails" xml))
     let to_query v = Query.to_query_list GeoLocationDetails.to_query v
+    let to_headers v =
+      Headers.to_headers_list GeoLocationDetails.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (GeoLocationDetails.to_xml x))) v
     let to_json v = `List (List.map GeoLocationDetails.to_json v)
     let of_json j = Json.to_list GeoLocationDetails.of_json j
+  end
+module HostedZoneLimit =
+  struct
+    type t = {
+      type_: HostedZoneLimitType.t ;
+      value: Long.t }
+    let make ~type_  ~value  () = { type_; value }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  HostedZoneLimitType.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Type"
+                  ([], (HostedZoneLimitType.to_xml v.type_)))])
+           @ [Some (Ezxmlm.make_tag "Value" ([], (Long.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (Long.to_json v.value));
+           Some ("type_", (HostedZoneLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (HostedZoneLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")));
+        value = (Long.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
   end
 module HealthChecks =
   struct
@@ -1333,8 +2917,30 @@ module HealthChecks =
       Util.option_all
         (List.map HealthCheck.parse (Xml.members "HealthCheck" xml))
     let to_query v = Query.to_query_list HealthCheck.to_query v
+    let to_headers v = Headers.to_headers_list HealthCheck.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (HealthCheck.to_xml x))) v
     let to_json v = `List (List.map HealthCheck.to_json v)
     let of_json j = Json.to_list HealthCheck.of_json j
+  end
+module QueryLoggingConfigs =
+  struct
+    type t = QueryLoggingConfig.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map QueryLoggingConfig.parse
+           (Xml.members "QueryLoggingConfig" xml))
+    let to_query v = Query.to_query_list QueryLoggingConfig.to_query v
+    let to_headers v =
+      Headers.to_headers_list QueryLoggingConfig.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (QueryLoggingConfig.to_xml x))) v
+    let to_json v = `List (List.map QueryLoggingConfig.to_json v)
+    let of_json j = Json.to_list QueryLoggingConfig.of_json j
   end
 module TagKeyList =
   struct
@@ -1343,6 +2949,9 @@ module TagKeyList =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "Key" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -1354,8 +2963,51 @@ module ResourceTagSetList =
       Util.option_all
         (List.map ResourceTagSet.parse (Xml.members "ResourceTagSet" xml))
     let to_query v = Query.to_query_list ResourceTagSet.to_query v
+    let to_headers v = Headers.to_headers_list ResourceTagSet.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (ResourceTagSet.to_xml x))) v
     let to_json v = `List (List.map ResourceTagSet.to_json v)
     let of_json j = Json.to_list ResourceTagSet.of_json j
+  end
+module AccountLimit =
+  struct
+    type t = {
+      type_: AccountLimitType.t ;
+      value: Long.t }
+    let make ~type_  ~value  () = { type_; value }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  AccountLimitType.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Type"
+                  ([], (AccountLimitType.to_xml v.type_)))])
+           @ [Some (Ezxmlm.make_tag "Value" ([], (Long.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (Long.to_json v.value));
+           Some ("type_", (AccountLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (AccountLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")));
+        value = (Long.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
   end
 module ResourceRecordSets =
   struct
@@ -1366,8 +3018,52 @@ module ResourceRecordSets =
         (List.map ResourceRecordSet.parse
            (Xml.members "ResourceRecordSet" xml))
     let to_query v = Query.to_query_list ResourceRecordSet.to_query v
+    let to_headers v = Headers.to_headers_list ResourceRecordSet.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (ResourceRecordSet.to_xml x)))
+        v
     let to_json v = `List (List.map ResourceRecordSet.to_json v)
     let of_json j = Json.to_list ResourceRecordSet.of_json j
+  end
+module ReusableDelegationSetLimit =
+  struct
+    type t = {
+      type_: ReusableDelegationSetLimitType.t ;
+      value: Long.t }
+    let make ~type_  ~value  () = { type_; value }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  ReusableDelegationSetLimitType.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Type"
+                  ([], (ReusableDelegationSetLimitType.to_xml v.type_)))])
+           @ [Some (Ezxmlm.make_tag "Value" ([], (Long.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (Long.to_json v.value));
+           Some ("type_", (ReusableDelegationSetLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (ReusableDelegationSetLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")));
+        value = (Long.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
   end
 module DelegationSets =
   struct
@@ -1377,8 +3073,30 @@ module DelegationSets =
       Util.option_all
         (List.map DelegationSet.parse (Xml.members "DelegationSet" xml))
     let to_query v = Query.to_query_list DelegationSet.to_query v
+    let to_headers v = Headers.to_headers_list DelegationSet.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (DelegationSet.to_xml x))) v
     let to_json v = `List (List.map DelegationSet.to_json v)
     let of_json j = Json.to_list DelegationSet.of_json j
+  end
+module TrafficPolicySummaries =
+  struct
+    type t = TrafficPolicySummary.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map TrafficPolicySummary.parse
+           (Xml.members "TrafficPolicySummary" xml))
+    let to_query v = Query.to_query_list TrafficPolicySummary.to_query v
+    let to_headers v =
+      Headers.to_headers_list TrafficPolicySummary.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (TrafficPolicySummary.to_xml x))) v
+    let to_json v = `List (List.map TrafficPolicySummary.to_json v)
+    let of_json j = Json.to_list TrafficPolicySummary.of_json j
   end
 module ChangeBatch =
   struct
@@ -1395,13 +3113,18 @@ module ChangeBatch =
             (Xml.required "Changes"
                (Util.option_bind (Xml.member "Changes" xml) Changes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Changes.member", (Changes.to_query v.changes)));
-           Util.option_map v.comment
-             (fun f -> Query.Pair ("Comment", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.comment
+               (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Changes" ([], (Changes.to_xml [x]))))
+              v.changes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1415,15 +3138,19 @@ module ChangeBatch =
           (Changes.of_json (Util.of_option_exn (Json.lookup j "changes")))
       }
   end
-module VPCs =
+module RecordData =
   struct
-    type t = VPC.t list
+    type t = String.t list
     let make elems () = elems
     let parse xml =
-      Util.option_all (List.map VPC.parse (Xml.members "VPC" xml))
-    let to_query v = Query.to_query_list VPC.to_query v
-    let to_json v = `List (List.map VPC.to_json v)
-    let of_json j = Json.to_list VPC.of_json j
+      Util.option_all
+        (List.map String.parse (Xml.members "RecordDataEntry" xml))
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
+    let to_json v = `List (List.map String.to_json v)
+    let of_json j = Json.to_list String.of_json j
   end
 module ListHostedZonesByNameResponse =
   struct
@@ -1470,23 +3197,39 @@ module ListHostedZonesByNameResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_hosted_zone_id
-             (fun f -> Query.Pair ("NextHostedZoneId", (String.to_query f)));
-           Util.option_map v.next_d_n_s_name
-             (fun f -> Query.Pair ("NextDNSName", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Util.option_map v.hosted_zone_id
-             (fun f -> Query.Pair ("HostedZoneId", (String.to_query f)));
-           Util.option_map v.d_n_s_name
-             (fun f -> Query.Pair ("DNSName", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("HostedZones.member", (HostedZones.to_query v.hosted_zones)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 (List.map
+                    (fun x ->
+                       Some
+                         (Ezxmlm.make_tag "HostedZones"
+                            ([], (HostedZones.to_xml [x])))) v.hosted_zones))
+                @
+                [Util.option_map v.d_n_s_name
+                   (fun f ->
+                      Ezxmlm.make_tag "DNSName" ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.hosted_zone_id
+                  (fun f ->
+                     Ezxmlm.make_tag "HostedZoneId" ([], (String.to_xml f)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "IsTruncated"
+                    ([], (Boolean.to_xml v.is_truncated)))])
+             @
+             [Util.option_map v.next_d_n_s_name
+                (fun f ->
+                   Ezxmlm.make_tag "NextDNSName" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.next_hosted_zone_id
+               (fun f ->
+                  Ezxmlm.make_tag "NextHostedZoneId" ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1528,6 +3271,8 @@ module DeleteReusableDelegationSetResponse =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -1542,11 +3287,13 @@ module HostedZoneNotFound =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1554,6 +3301,52 @@ module HostedZoneNotFound =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module DeleteQueryLoggingConfigResponse =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
+module GetTrafficPolicyInstanceResponse =
+  struct
+    type t = {
+      traffic_policy_instance: TrafficPolicyInstance.t }
+    let make ~traffic_policy_instance  () = { traffic_policy_instance }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instance =
+            (Xml.required "TrafficPolicyInstance"
+               (Util.option_bind (Xml.member "TrafficPolicyInstance" xml)
+                  TrafficPolicyInstance.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyInstance"
+                 ([],
+                   (TrafficPolicyInstance.to_xml v.traffic_policy_instance)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_instance",
+                (TrafficPolicyInstance.to_json v.traffic_policy_instance))])
+    let of_json j =
+      {
+        traffic_policy_instance =
+          (TrafficPolicyInstance.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instance")))
       }
   end
 module ListHealthChecksRequest =
@@ -1576,6 +3369,15 @@ module ListHealthChecksRequest =
               (fun f -> Query.Pair ("maxitems", (String.to_query f)));
            Util.option_map v.marker
              (fun f -> Query.Pair ("marker", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.marker
+               (fun f -> Ezxmlm.make_tag "marker" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1602,11 +3404,14 @@ module AssociateVPCWithHostedZoneResponse =
                (Util.option_bind (Xml.member "ChangeInfo" xml)
                   ChangeInfo.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)))])
+              (Ezxmlm.make_tag "ChangeInfo"
+                 ([], (ChangeInfo.to_xml v.change_info)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1616,6 +3421,89 @@ module AssociateVPCWithHostedZoneResponse =
         change_info =
           (ChangeInfo.of_json
              (Util.of_option_exn (Json.lookup j "change_info")))
+      }
+  end
+module ListTrafficPolicyVersionsResponse =
+  struct
+    type t =
+      {
+      traffic_policies: TrafficPolicies.t ;
+      is_truncated: Boolean.t ;
+      traffic_policy_version_marker: String.t ;
+      max_items: String.t }
+    let make ~traffic_policies  ~is_truncated  ~traffic_policy_version_marker
+       ~max_items  () =
+      {
+        traffic_policies;
+        is_truncated;
+        traffic_policy_version_marker;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policies =
+            (Xml.required "TrafficPolicies"
+               (Util.option_bind (Xml.member "TrafficPolicies" xml)
+                  TrafficPolicies.parse));
+          is_truncated =
+            (Xml.required "IsTruncated"
+               (Util.option_bind (Xml.member "IsTruncated" xml) Boolean.parse));
+          traffic_policy_version_marker =
+            (Xml.required "TrafficPolicyVersionMarker"
+               (Util.option_bind
+                  (Xml.member "TrafficPolicyVersionMarker" xml) String.parse));
+          max_items =
+            (Xml.required "MaxItems"
+               (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "TrafficPolicies"
+                         ([], (TrafficPolicies.to_xml [x]))))
+                 v.traffic_policies))
+             @
+             [Some
+                (Ezxmlm.make_tag "IsTruncated"
+                   ([], (Boolean.to_xml v.is_truncated)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyVersionMarker"
+                  ([], (String.to_xml v.traffic_policy_version_marker)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("max_items", (String.to_json v.max_items));
+           Some
+             ("traffic_policy_version_marker",
+               (String.to_json v.traffic_policy_version_marker));
+           Some ("is_truncated", (Boolean.to_json v.is_truncated));
+           Some
+             ("traffic_policies",
+               (TrafficPolicies.to_json v.traffic_policies))])
+    let of_json j =
+      {
+        traffic_policies =
+          (TrafficPolicies.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policies")));
+        is_truncated =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "is_truncated")));
+        traffic_policy_version_marker =
+          (String.of_json
+             (Util.of_option_exn
+                (Json.lookup j "traffic_policy_version_marker")));
+        max_items =
+          (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
 module DelegationSetAlreadyReusable =
@@ -1629,11 +3517,13 @@ module DelegationSetAlreadyReusable =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1655,10 +3545,11 @@ module GetChangeRequest =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let of_json j =
@@ -1677,13 +3568,14 @@ module GetGeoLocationResponse =
                (Util.option_bind (Xml.member "GeoLocationDetails" xml)
                   GeoLocationDetails.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("GeoLocationDetails",
-                   (GeoLocationDetails.to_query v.geo_location_details)))])
+              (Ezxmlm.make_tag "GeoLocationDetails"
+                 ([], (GeoLocationDetails.to_xml v.geo_location_details)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1710,14 +3602,17 @@ module GetHealthCheckLastFailureReasonResponse =
                (Util.option_bind (Xml.member "HealthCheckObservations" xml)
                   HealthCheckObservations.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("HealthCheckObservations.member",
-                   (HealthCheckObservations.to_query
-                      v.health_check_observations)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "HealthCheckObservations"
+                      ([], (HealthCheckObservations.to_xml [x]))))
+              v.health_check_observations))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1729,6 +3624,97 @@ module GetHealthCheckLastFailureReasonResponse =
         health_check_observations =
           (HealthCheckObservations.of_json
              (Util.of_option_exn (Json.lookup j "health_check_observations")))
+      }
+  end
+module VPCAssociationAuthorizationNotFound =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module DeleteVPCAssociationAuthorizationRequest =
+  struct
+    type t = {
+      hosted_zone_id: String.t ;
+      v_p_c: VPC.t }
+    let make ~hosted_zone_id  ~v_p_c  () = { hosted_zone_id; v_p_c }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          v_p_c =
+            (Xml.required "VPC"
+               (Util.option_bind (Xml.member "VPC" xml) VPC.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+           @ [Some (Ezxmlm.make_tag "VPC" ([], (VPC.to_xml v.v_p_c)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("v_p_c", (VPC.to_json v.v_p_c));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        v_p_c = (VPC.of_json (Util.of_option_exn (Json.lookup j "v_p_c")))
+      }
+  end
+module TooManyTrafficPolicyInstances =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
 module GetHostedZoneRequest =
@@ -1743,10 +3729,11 @@ module GetHostedZoneRequest =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let of_json j =
@@ -1763,11 +3750,13 @@ module DelegationSetAlreadyCreated =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1776,6 +3765,59 @@ module DelegationSetAlreadyCreated =
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
+  end
+module GetAccountLimitRequest =
+  struct
+    type t = {
+      type_: AccountLimitType.t }
+    let make ~type_  () = { type_ }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  AccountLimitType.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "Type" ([], (AccountLimitType.to_xml v.type_)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("type_", (AccountLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (AccountLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")))
+      }
+  end
+module GetTrafficPolicyInstanceRequest =
+  struct
+    type t = {
+      id: String.t }
+    let make ~id  () = { id }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
+    let of_json j =
+      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
   end
 module ListReusableDelegationSetsRequest =
   struct
@@ -1797,6 +3839,15 @@ module ListReusableDelegationSetsRequest =
               (fun f -> Query.Pair ("maxitems", (String.to_query f)));
            Util.option_map v.marker
              (fun f -> Query.Pair ("marker", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.marker
+               (fun f -> Ezxmlm.make_tag "marker" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1810,6 +3861,17 @@ module ListReusableDelegationSetsRequest =
           (Util.option_map (Json.lookup j "max_items") String.of_json)
       }
   end
+module DeleteTrafficPolicyInstanceResponse =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
 module InvalidArgument =
   struct
     type t = {
@@ -1821,11 +3883,13 @@ module InvalidArgument =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1866,19 +3930,31 @@ module CreateHostedZoneResponse =
             (Xml.required "Location"
                (Util.option_bind (Xml.member "Location" xml) String.parse))
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
         (Util.list_filter_opt
-           [Some (Query.Pair ("Location", (String.to_query v.location)));
-           Util.option_map v.v_p_c
-             (fun f -> Query.Pair ("VPC", (VPC.to_query f)));
-           Some
-             (Query.Pair
-                ("DelegationSet", (DelegationSet.to_query v.delegation_set)));
-           Some
-             (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)));
-           Some
-             (Query.Pair ("HostedZone", (HostedZone.to_query v.hosted_zone)))])
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "HostedZone"
+                     ([], (HostedZone.to_xml v.hosted_zone)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "ChangeInfo"
+                    ([], (ChangeInfo.to_xml v.change_info)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "DelegationSet"
+                   ([], (DelegationSet.to_xml v.delegation_set)))])
+            @
+            [Util.option_map v.v_p_c
+               (fun f -> Ezxmlm.make_tag "VPC" ([], (VPC.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1903,6 +3979,83 @@ module CreateHostedZoneResponse =
           (String.of_json (Util.of_option_exn (Json.lookup j "location")))
       }
   end
+module GetHostedZoneLimitRequest =
+  struct
+    type t = {
+      type_: HostedZoneLimitType.t ;
+      hosted_zone_id: String.t }
+    let make ~type_  ~hosted_zone_id  () = { type_; hosted_zone_id }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  HostedZoneLimitType.parse));
+          hosted_zone_id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Type"
+                  ([], (HostedZoneLimitType.to_xml v.type_)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("hosted_zone_id", (String.to_json v.hosted_zone_id));
+           Some ("type_", (HostedZoneLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (HostedZoneLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")));
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")))
+      }
+  end
+module GetQueryLoggingConfigResponse =
+  struct
+    type t = {
+      query_logging_config: QueryLoggingConfig.t }
+    let make ~query_logging_config  () = { query_logging_config }
+    let parse xml =
+      Some
+        {
+          query_logging_config =
+            (Xml.required "QueryLoggingConfig"
+               (Util.option_bind (Xml.member "QueryLoggingConfig" xml)
+                  QueryLoggingConfig.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "QueryLoggingConfig"
+                 ([], (QueryLoggingConfig.to_xml v.query_logging_config)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("query_logging_config",
+                (QueryLoggingConfig.to_json v.query_logging_config))])
+    let of_json j =
+      {
+        query_logging_config =
+          (QueryLoggingConfig.of_json
+             (Util.of_option_exn (Json.lookup j "query_logging_config")))
+      }
+  end
 module GetHealthCheckStatusResponse =
   struct
     type t = {
@@ -1916,14 +4069,17 @@ module GetHealthCheckStatusResponse =
                (Util.option_bind (Xml.member "HealthCheckObservations" xml)
                   HealthCheckObservations.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("HealthCheckObservations.member",
-                   (HealthCheckObservations.to_query
-                      v.health_check_observations)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "HealthCheckObservations"
+                      ([], (HealthCheckObservations.to_xml [x]))))
+              v.health_check_observations))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1950,13 +4106,17 @@ module GetCheckerIpRangesResponse =
                (Util.option_bind (Xml.member "CheckerIpRanges" xml)
                   CheckerIpRanges.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("CheckerIpRanges.member",
-                   (CheckerIpRanges.to_query v.checker_ip_ranges)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "CheckerIpRanges"
+                      ([], (CheckerIpRanges.to_xml [x]))))
+              v.checker_ip_ranges))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1970,6 +4130,124 @@ module GetCheckerIpRangesResponse =
              (Util.of_option_exn (Json.lookup j "checker_ip_ranges")))
       }
   end
+module ListTrafficPolicyInstancesResponse =
+  struct
+    type t =
+      {
+      traffic_policy_instances: TrafficPolicyInstances.t ;
+      hosted_zone_id_marker: String.t option ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      is_truncated: Boolean.t ;
+      max_items: String.t }
+    let make ~traffic_policy_instances  ?hosted_zone_id_marker 
+      ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ~is_truncated  ~max_items  () =
+      {
+        traffic_policy_instances;
+        hosted_zone_id_marker;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        is_truncated;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instances =
+            (Xml.required "TrafficPolicyInstances"
+               (Util.option_bind (Xml.member "TrafficPolicyInstances" xml)
+                  TrafficPolicyInstances.parse));
+          hosted_zone_id_marker =
+            (Util.option_bind (Xml.member "HostedZoneIdMarker" xml)
+               String.parse);
+          traffic_policy_instance_name_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceNameMarker" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceTypeMarker" xml)
+               RRType.parse);
+          is_truncated =
+            (Xml.required "IsTruncated"
+               (Util.option_bind (Xml.member "IsTruncated" xml) Boolean.parse));
+          max_items =
+            (Xml.required "MaxItems"
+               (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "TrafficPolicyInstances"
+                           ([], (TrafficPolicyInstances.to_xml [x]))))
+                   v.traffic_policy_instances))
+               @
+               [Util.option_map v.hosted_zone_id_marker
+                  (fun f ->
+                     Ezxmlm.make_tag "HostedZoneIdMarker"
+                       ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.traffic_policy_instance_name_marker
+                 (fun f ->
+                    Ezxmlm.make_tag "TrafficPolicyInstanceNameMarker"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.traffic_policy_instance_type_marker
+                (fun f ->
+                   Ezxmlm.make_tag "TrafficPolicyInstanceTypeMarker"
+                     ([], (RRType.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "IsTruncated"
+                  ([], (Boolean.to_xml v.is_truncated)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("max_items", (String.to_json v.max_items));
+           Some ("is_truncated", (Boolean.to_json v.is_truncated));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> ("hosted_zone_id_marker", (String.to_json f)));
+           Some
+             ("traffic_policy_instances",
+               (TrafficPolicyInstances.to_json v.traffic_policy_instances))])
+    let of_json j =
+      {
+        traffic_policy_instances =
+          (TrafficPolicyInstances.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instances")));
+        hosted_zone_id_marker =
+          (Util.option_map (Json.lookup j "hosted_zone_id_marker")
+             String.of_json);
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        is_truncated =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "is_truncated")));
+        max_items =
+          (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
+      }
+  end
 module ThrottlingException =
   struct
     type t = {
@@ -1981,11 +4259,13 @@ module ThrottlingException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2006,11 +4286,13 @@ module InvalidInput =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2031,11 +4313,13 @@ module NoSuchDelegationSet =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2043,6 +4327,40 @@ module NoSuchDelegationSet =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module DeleteTrafficPolicyRequest =
+  struct
+    type t = {
+      id: String.t ;
+      version: Integer.t }
+    let make ~id  ~version  () = { id; version }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          version =
+            (Xml.required "Version"
+               (Util.option_bind (Xml.member "Version" xml) Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+           [Some (Ezxmlm.make_tag "Version" ([], (Integer.to_xml v.version)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("version", (Integer.to_json v.version));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        version =
+          (Integer.of_json (Util.of_option_exn (Json.lookup j "version")))
       }
   end
 module GetHealthCheckResponse =
@@ -2058,12 +4376,14 @@ module GetHealthCheckResponse =
                (Util.option_bind (Xml.member "HealthCheck" xml)
                   HealthCheck.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheck", (HealthCheck.to_query v.health_check)))])
+              (Ezxmlm.make_tag "HealthCheck"
+                 ([], (HealthCheck.to_xml v.health_check)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2088,12 +4408,14 @@ module GetHealthCheckStatusRequest =
                (Util.option_bind (Xml.member "HealthCheckId" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheckId", (String.to_query v.health_check_id)))])
+              (Ezxmlm.make_tag "HealthCheckId"
+                 ([], (String.to_xml v.health_check_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2103,6 +4425,146 @@ module GetHealthCheckStatusRequest =
         health_check_id =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "health_check_id")))
+      }
+  end
+module CreateTrafficPolicyInstanceRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      name: String.t ;
+      t_t_l: Long.t ;
+      traffic_policy_id: String.t ;
+      traffic_policy_version: Integer.t }
+    let make ~hosted_zone_id  ~name  ~t_t_l  ~traffic_policy_id 
+      ~traffic_policy_version  () =
+      {
+        hosted_zone_id;
+        name;
+        t_t_l;
+        traffic_policy_id;
+        traffic_policy_version
+      }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          t_t_l =
+            (Xml.required "TTL"
+               (Util.option_bind (Xml.member "TTL" xml) Long.parse));
+          traffic_policy_id =
+            (Xml.required "TrafficPolicyId"
+               (Util.option_bind (Xml.member "TrafficPolicyId" xml)
+                  String.parse));
+          traffic_policy_version =
+            (Xml.required "TrafficPolicyVersion"
+               (Util.option_bind (Xml.member "TrafficPolicyVersion" xml)
+                  Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "HostedZoneId"
+                     ([], (String.to_xml v.hosted_zone_id)))])
+              @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+             @ [Some (Ezxmlm.make_tag "TTL" ([], (Long.to_xml v.t_t_l)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyId"
+                  ([], (String.to_xml v.traffic_policy_id)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyVersion"
+                 ([], (Integer.to_xml v.traffic_policy_version)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_version",
+                (Integer.to_json v.traffic_policy_version));
+           Some ("traffic_policy_id", (String.to_json v.traffic_policy_id));
+           Some ("t_t_l", (Long.to_json v.t_t_l));
+           Some ("name", (String.to_json v.name));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        t_t_l = (Long.of_json (Util.of_option_exn (Json.lookup j "t_t_l")));
+        traffic_policy_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_id")));
+        traffic_policy_version =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_version")))
+      }
+  end
+module ListVPCAssociationAuthorizationsRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      next_token: String.t option ;
+      max_results: String.t option }
+    let make ~hosted_zone_id  ?next_token  ?max_results  () =
+      { hosted_zone_id; next_token; max_results }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          next_token =
+            (Util.option_bind (Xml.member "nexttoken" xml) String.parse);
+          max_results =
+            (Util.option_bind (Xml.member "maxresults" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_results
+              (fun f -> Query.Pair ("maxresults", (String.to_query f)));
+           Util.option_map v.next_token
+             (fun f -> Query.Pair ("nexttoken", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "nexttoken" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_results
+              (fun f -> Ezxmlm.make_tag "maxresults" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_results
+              (fun f -> ("max_results", (String.to_json f)));
+           Util.option_map v.next_token
+             (fun f -> ("next_token", (String.to_json f)));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json);
+        max_results =
+          (Util.option_map (Json.lookup j "max_results") String.of_json)
       }
   end
 module ListTagsForResourceRequest =
@@ -2123,13 +4585,18 @@ module ListTagsForResourceRequest =
             (Xml.required "ResourceId"
                (Util.option_bind (Xml.member "ResourceId" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("ResourceId", (String.to_query v.resource_id)));
-           Some
-             (Query.Pair
-                ("ResourceType", (TagResourceType.to_query v.resource_type)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "ResourceType"
+                  ([], (TagResourceType.to_xml v.resource_type)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "ResourceId"
+                 ([], (String.to_xml v.resource_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2155,11 +4622,13 @@ module HostedZoneNotEmpty =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2175,6 +4644,8 @@ module GetCheckerIpRangesRequest =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2191,12 +4662,14 @@ module GetHealthCheckLastFailureReasonRequest =
                (Util.option_bind (Xml.member "HealthCheckId" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheckId", (String.to_query v.health_check_id)))])
+              (Ezxmlm.make_tag "HealthCheckId"
+                 ([], (String.to_xml v.health_check_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2206,6 +4679,38 @@ module GetHealthCheckLastFailureReasonRequest =
         health_check_id =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "health_check_id")))
+      }
+  end
+module GetTrafficPolicyResponse =
+  struct
+    type t = {
+      traffic_policy: TrafficPolicy.t }
+    let make ~traffic_policy  () = { traffic_policy }
+    let parse xml =
+      Some
+        {
+          traffic_policy =
+            (Xml.required "TrafficPolicy"
+               (Util.option_bind (Xml.member "TrafficPolicy" xml)
+                  TrafficPolicy.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicy"
+                 ([], (TrafficPolicy.to_xml v.traffic_policy)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("traffic_policy", (TrafficPolicy.to_json v.traffic_policy))])
+    let of_json j =
+      {
+        traffic_policy =
+          (TrafficPolicy.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy")))
       }
   end
 module LimitsExceeded =
@@ -2219,11 +4724,13 @@ module LimitsExceeded =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2244,11 +4751,67 @@ module PublicZoneVPCAssociation =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module TooManyTrafficPolicyVersionsForCurrentPolicy =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module NoSuchTrafficPolicyInstance =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2271,12 +4834,14 @@ module GetHealthCheckRequest =
                (Util.option_bind (Xml.member "HealthCheckId" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheckId", (String.to_query v.health_check_id)))])
+              (Ezxmlm.make_tag "HealthCheckId"
+                 ([], (String.to_xml v.health_check_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2286,6 +4851,33 @@ module GetHealthCheckRequest =
         health_check_id =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "health_check_id")))
+      }
+  end
+module InvalidPaginationToken =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
 module ListResourceRecordSetsRequest =
@@ -2331,8 +4923,26 @@ module ListResourceRecordSetsRequest =
            Util.option_map v.start_record_type
              (fun f -> Query.Pair ("type", (RRType.to_query f)));
            Util.option_map v.start_record_name
-             (fun f -> Query.Pair ("name", (String.to_query f)));
-           Some (Query.Pair ("Id", (String.to_query v.hosted_zone_id)))])
+             (fun f -> Query.Pair ("name", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "Id"
+                     ([], (String.to_xml v.hosted_zone_id)))])
+              @
+              [Util.option_map v.start_record_name
+                 (fun f -> Ezxmlm.make_tag "name" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.start_record_type
+                (fun f -> Ezxmlm.make_tag "type" ([], (RRType.to_xml f)))])
+            @
+            [Util.option_map v.start_record_identifier
+               (fun f -> Ezxmlm.make_tag "identifier" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2361,6 +4971,122 @@ module ListResourceRecordSetsRequest =
           (Util.option_map (Json.lookup j "max_items") String.of_json)
       }
   end
+module TestDNSAnswerRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      record_name: String.t ;
+      record_type: RRType.t ;
+      resolver_i_p: String.t option ;
+      e_d_n_s0_client_subnet_i_p: String.t option ;
+      e_d_n_s0_client_subnet_mask: String.t option }
+    let make ~hosted_zone_id  ~record_name  ~record_type  ?resolver_i_p 
+      ?e_d_n_s0_client_subnet_i_p  ?e_d_n_s0_client_subnet_mask  () =
+      {
+        hosted_zone_id;
+        record_name;
+        record_type;
+        resolver_i_p;
+        e_d_n_s0_client_subnet_i_p;
+        e_d_n_s0_client_subnet_mask
+      }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "hostedzoneid"
+               (Util.option_bind (Xml.member "hostedzoneid" xml) String.parse));
+          record_name =
+            (Xml.required "recordname"
+               (Util.option_bind (Xml.member "recordname" xml) String.parse));
+          record_type =
+            (Xml.required "recordtype"
+               (Util.option_bind (Xml.member "recordtype" xml) RRType.parse));
+          resolver_i_p =
+            (Util.option_bind (Xml.member "resolverip" xml) String.parse);
+          e_d_n_s0_client_subnet_i_p =
+            (Util.option_bind (Xml.member "edns0clientsubnetip" xml)
+               String.parse);
+          e_d_n_s0_client_subnet_mask =
+            (Util.option_bind (Xml.member "edns0clientsubnetmask" xml)
+               String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.e_d_n_s0_client_subnet_mask
+              (fun f ->
+                 Query.Pair ("edns0clientsubnetmask", (String.to_query f)));
+           Util.option_map v.e_d_n_s0_client_subnet_i_p
+             (fun f ->
+                Query.Pair ("edns0clientsubnetip", (String.to_query f)));
+           Util.option_map v.resolver_i_p
+             (fun f -> Query.Pair ("resolverip", (String.to_query f)));
+           Some (Query.Pair ("recordtype", (RRType.to_query v.record_type)));
+           Some (Query.Pair ("recordname", (String.to_query v.record_name)));
+           Some
+             (Query.Pair ("hostedzoneid", (String.to_query v.hosted_zone_id)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Some
+                   (Ezxmlm.make_tag "hostedzoneid"
+                      ([], (String.to_xml v.hosted_zone_id)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "recordname"
+                     ([], (String.to_xml v.record_name)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "recordtype"
+                    ([], (RRType.to_xml v.record_type)))])
+             @
+             [Util.option_map v.resolver_i_p
+                (fun f ->
+                   Ezxmlm.make_tag "resolverip" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.e_d_n_s0_client_subnet_i_p
+               (fun f ->
+                  Ezxmlm.make_tag "edns0clientsubnetip"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.e_d_n_s0_client_subnet_mask
+              (fun f ->
+                 Ezxmlm.make_tag "edns0clientsubnetmask"
+                   ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.e_d_n_s0_client_subnet_mask
+              (fun f -> ("e_d_n_s0_client_subnet_mask", (String.to_json f)));
+           Util.option_map v.e_d_n_s0_client_subnet_i_p
+             (fun f -> ("e_d_n_s0_client_subnet_i_p", (String.to_json f)));
+           Util.option_map v.resolver_i_p
+             (fun f -> ("resolver_i_p", (String.to_json f)));
+           Some ("record_type", (RRType.to_json v.record_type));
+           Some ("record_name", (String.to_json v.record_name));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        record_name =
+          (String.of_json (Util.of_option_exn (Json.lookup j "record_name")));
+        record_type =
+          (RRType.of_json (Util.of_option_exn (Json.lookup j "record_type")));
+        resolver_i_p =
+          (Util.option_map (Json.lookup j "resolver_i_p") String.of_json);
+        e_d_n_s0_client_subnet_i_p =
+          (Util.option_map (Json.lookup j "e_d_n_s0_client_subnet_i_p")
+             String.of_json);
+        e_d_n_s0_client_subnet_mask =
+          (Util.option_map (Json.lookup j "e_d_n_s0_client_subnet_mask")
+             String.of_json)
+      }
+  end
 module NoSuchChange =
   struct
     type t = {
@@ -2372,11 +5098,13 @@ module NoSuchChange =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2384,6 +5112,55 @@ module NoSuchChange =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module CreateQueryLoggingConfigRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      cloud_watch_logs_log_group_arn: String.t }
+    let make ~hosted_zone_id  ~cloud_watch_logs_log_group_arn  () =
+      { hosted_zone_id; cloud_watch_logs_log_group_arn }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          cloud_watch_logs_log_group_arn =
+            (Xml.required "CloudWatchLogsLogGroupArn"
+               (Util.option_bind (Xml.member "CloudWatchLogsLogGroupArn" xml)
+                  String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "HostedZoneId"
+                  ([], (String.to_xml v.hosted_zone_id)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "CloudWatchLogsLogGroupArn"
+                 ([], (String.to_xml v.cloud_watch_logs_log_group_arn)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("cloud_watch_logs_log_group_arn",
+                (String.to_json v.cloud_watch_logs_log_group_arn));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        cloud_watch_logs_log_group_arn =
+          (String.of_json
+             (Util.of_option_exn
+                (Json.lookup j "cloud_watch_logs_log_group_arn")))
       }
   end
 module GetReusableDelegationSetResponse =
@@ -2399,12 +5176,14 @@ module GetReusableDelegationSetResponse =
                (Util.option_bind (Xml.member "DelegationSet" xml)
                   DelegationSet.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("DelegationSet", (DelegationSet.to_query v.delegation_set)))])
+              (Ezxmlm.make_tag "DelegationSet"
+                 ([], (DelegationSet.to_xml v.delegation_set)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2429,11 +5208,14 @@ module ChangeResourceRecordSetsResponse =
                (Util.option_bind (Xml.member "ChangeInfo" xml)
                   ChangeInfo.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)))])
+              (Ezxmlm.make_tag "ChangeInfo"
+                 ([], (ChangeInfo.to_xml v.change_info)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2451,37 +5233,205 @@ module ChangeTagsForResourceResponse =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
 module InvalidChangeBatch =
   struct
     type t = {
-      messages: ErrorMessages.t }
-    let make ?(messages= [])  () = { messages }
+      messages: ErrorMessages.t ;
+      message: String.t option }
+    let make ?(messages= [])  ?message  () = { messages; message }
     let parse xml =
       Some
         {
           messages =
             (Util.of_option []
                (Util.option_bind (Xml.member "messages" xml)
-                  ErrorMessages.parse))
+                  ErrorMessages.parse));
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("messages.member", (ErrorMessages.to_query v.messages)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "messages"
+                       ([], (ErrorMessages.to_xml [x])))) v.messages))
+           @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some ("messages", (ErrorMessages.to_json v.messages))])
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)));
+           Some ("messages", (ErrorMessages.to_json v.messages))])
     let of_json j =
       {
         messages =
           (ErrorMessages.of_json
-             (Util.of_option_exn (Json.lookup j "messages")))
+             (Util.of_option_exn (Json.lookup j "messages")));
+        message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListTrafficPolicyInstancesByPolicyRequest =
+  struct
+    type t =
+      {
+      traffic_policy_id: String.t ;
+      traffic_policy_version: Integer.t ;
+      hosted_zone_id_marker: String.t option ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      max_items: String.t option }
+    let make ~traffic_policy_id  ~traffic_policy_version 
+      ?hosted_zone_id_marker  ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ?max_items  () =
+      {
+        traffic_policy_id;
+        traffic_policy_version;
+        hosted_zone_id_marker;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policy_id =
+            (Xml.required "id"
+               (Util.option_bind (Xml.member "id" xml) String.parse));
+          traffic_policy_version =
+            (Xml.required "version"
+               (Util.option_bind (Xml.member "version" xml) Integer.parse));
+          hosted_zone_id_marker =
+            (Util.option_bind (Xml.member "hostedzoneid" xml) String.parse);
+          traffic_policy_instance_name_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancename" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancetype" xml)
+               RRType.parse);
+          max_items =
+            (Util.option_bind (Xml.member "maxitems" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancetype", (RRType.to_query f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancename", (String.to_query f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> Query.Pair ("hostedzoneid", (String.to_query f)));
+           Some
+             (Query.Pair
+                ("version", (Integer.to_query v.traffic_policy_version)));
+           Some (Query.Pair ("id", (String.to_query v.traffic_policy_id)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Some
+                   (Ezxmlm.make_tag "id"
+                      ([], (String.to_xml v.traffic_policy_id)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "version"
+                     ([], (Integer.to_xml v.traffic_policy_version)))])
+              @
+              [Util.option_map v.hosted_zone_id_marker
+                 (fun f ->
+                    Ezxmlm.make_tag "hostedzoneid" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.traffic_policy_instance_name_marker
+                (fun f ->
+                   Ezxmlm.make_tag "trafficpolicyinstancename"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.traffic_policy_instance_type_marker
+               (fun f ->
+                  Ezxmlm.make_tag "trafficpolicyinstancetype"
+                    ([], (RRType.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> ("max_items", (String.to_json f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> ("hosted_zone_id_marker", (String.to_json f)));
+           Some
+             ("traffic_policy_version",
+               (Integer.to_json v.traffic_policy_version));
+           Some ("traffic_policy_id", (String.to_json v.traffic_policy_id))])
+    let of_json j =
+      {
+        traffic_policy_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_id")));
+        traffic_policy_version =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_version")));
+        hosted_zone_id_marker =
+          (Util.option_map (Json.lookup j "hosted_zone_id_marker")
+             String.of_json);
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        max_items =
+          (Util.option_map (Json.lookup j "max_items") String.of_json)
+      }
+  end
+module QueryLoggingConfigAlreadyExists =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
 module GetGeoLocationRequest =
@@ -2512,6 +5462,21 @@ module GetGeoLocationRequest =
              (fun f -> Query.Pair ("countrycode", (String.to_query f)));
            Util.option_map v.continent_code
              (fun f -> Query.Pair ("continentcode", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.continent_code
+                (fun f ->
+                   Ezxmlm.make_tag "continentcode" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.country_code
+               (fun f ->
+                  Ezxmlm.make_tag "countrycode" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.subdivision_code
+              (fun f ->
+                 Ezxmlm.make_tag "subdivisioncode" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2531,14 +5496,128 @@ module GetGeoLocationRequest =
           (Util.option_map (Json.lookup j "subdivision_code") String.of_json)
       }
   end
+module NotAuthorizedException =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListTrafficPolicyVersionsRequest =
+  struct
+    type t =
+      {
+      id: String.t ;
+      traffic_policy_version_marker: String.t option ;
+      max_items: String.t option }
+    let make ~id  ?traffic_policy_version_marker  ?max_items  () =
+      { id; traffic_policy_version_marker; max_items }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          traffic_policy_version_marker =
+            (Util.option_bind (Xml.member "trafficpolicyversion" xml)
+               String.parse);
+          max_items =
+            (Util.option_bind (Xml.member "maxitems" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
+           Util.option_map v.traffic_policy_version_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyversion", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+            [Util.option_map v.traffic_policy_version_marker
+               (fun f ->
+                  Ezxmlm.make_tag "trafficpolicyversion"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> ("max_items", (String.to_json f)));
+           Util.option_map v.traffic_policy_version_marker
+             (fun f -> ("traffic_policy_version_marker", (String.to_json f)));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        traffic_policy_version_marker =
+          (Util.option_map (Json.lookup j "traffic_policy_version_marker")
+             String.of_json);
+        max_items =
+          (Util.option_map (Json.lookup j "max_items") String.of_json)
+      }
+  end
 module GetHostedZoneCountRequest =
   struct
     type t = unit
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
+  end
+module TooManyVPCAssociationAuthorizations =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
   end
 module UpdateHealthCheckRequest =
   struct
@@ -2551,10 +5630,22 @@ module UpdateHealthCheckRequest =
       resource_path: String.t option ;
       fully_qualified_domain_name: String.t option ;
       search_string: String.t option ;
-      failure_threshold: Integer.t option }
+      failure_threshold: Integer.t option ;
+      inverted: Boolean.t option ;
+      disabled: Boolean.t option ;
+      health_threshold: Integer.t option ;
+      child_health_checks: ChildHealthCheckList.t ;
+      enable_s_n_i: Boolean.t option ;
+      regions: HealthCheckRegionList.t ;
+      alarm_identifier: AlarmIdentifier.t option ;
+      insufficient_data_health_status: InsufficientDataHealthStatus.t option ;
+      reset_elements: ResettableElementNameList.t }
     let make ~health_check_id  ?health_check_version  ?i_p_address  ?port 
       ?resource_path  ?fully_qualified_domain_name  ?search_string 
-      ?failure_threshold  () =
+      ?failure_threshold  ?inverted  ?disabled  ?health_threshold 
+      ?(child_health_checks= [])  ?enable_s_n_i  ?(regions= []) 
+      ?alarm_identifier  ?insufficient_data_health_status  ?(reset_elements=
+      [])  () =
       {
         health_check_id;
         health_check_version;
@@ -2563,7 +5654,16 @@ module UpdateHealthCheckRequest =
         resource_path;
         fully_qualified_domain_name;
         search_string;
-        failure_threshold
+        failure_threshold;
+        inverted;
+        disabled;
+        health_threshold;
+        child_health_checks;
+        enable_s_n_i;
+        regions;
+        alarm_identifier;
+        insufficient_data_health_status;
+        reset_elements
       }
     let parse xml =
       Some
@@ -2587,34 +5687,150 @@ module UpdateHealthCheckRequest =
             (Util.option_bind (Xml.member "SearchString" xml) String.parse);
           failure_threshold =
             (Util.option_bind (Xml.member "FailureThreshold" xml)
-               Integer.parse)
+               Integer.parse);
+          inverted =
+            (Util.option_bind (Xml.member "Inverted" xml) Boolean.parse);
+          disabled =
+            (Util.option_bind (Xml.member "Disabled" xml) Boolean.parse);
+          health_threshold =
+            (Util.option_bind (Xml.member "HealthThreshold" xml)
+               Integer.parse);
+          child_health_checks =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "ChildHealthChecks" xml)
+                  ChildHealthCheckList.parse));
+          enable_s_n_i =
+            (Util.option_bind (Xml.member "EnableSNI" xml) Boolean.parse);
+          regions =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Regions" xml)
+                  HealthCheckRegionList.parse));
+          alarm_identifier =
+            (Util.option_bind (Xml.member "AlarmIdentifier" xml)
+               AlarmIdentifier.parse);
+          insufficient_data_health_status =
+            (Util.option_bind (Xml.member "InsufficientDataHealthStatus" xml)
+               InsufficientDataHealthStatus.parse);
+          reset_elements =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "ResetElements" xml)
+                  ResettableElementNameList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.failure_threshold
-              (fun f -> Query.Pair ("FailureThreshold", (Integer.to_query f)));
-           Util.option_map v.search_string
-             (fun f -> Query.Pair ("SearchString", (String.to_query f)));
-           Util.option_map v.fully_qualified_domain_name
-             (fun f ->
-                Query.Pair ("FullyQualifiedDomainName", (String.to_query f)));
-           Util.option_map v.resource_path
-             (fun f -> Query.Pair ("ResourcePath", (String.to_query f)));
-           Util.option_map v.port
-             (fun f -> Query.Pair ("Port", (Integer.to_query f)));
-           Util.option_map v.i_p_address
-             (fun f -> Query.Pair ("IPAddress", (String.to_query f)));
-           Util.option_map v.health_check_version
-             (fun f -> Query.Pair ("HealthCheckVersion", (Long.to_query f)));
-           Some
-             (Query.Pair
-                ("HealthCheckId", (String.to_query v.health_check_id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((((((((((([] @
+                           [Some
+                              (Ezxmlm.make_tag "HealthCheckId"
+                                 ([], (String.to_xml v.health_check_id)))])
+                          @
+                          [Util.option_map v.health_check_version
+                             (fun f ->
+                                Ezxmlm.make_tag "HealthCheckVersion"
+                                  ([], (Long.to_xml f)))])
+                         @
+                         [Util.option_map v.i_p_address
+                            (fun f ->
+                               Ezxmlm.make_tag "IPAddress"
+                                 ([], (String.to_xml f)))])
+                        @
+                        [Util.option_map v.port
+                           (fun f ->
+                              Ezxmlm.make_tag "Port" ([], (Integer.to_xml f)))])
+                       @
+                       [Util.option_map v.resource_path
+                          (fun f ->
+                             Ezxmlm.make_tag "ResourcePath"
+                               ([], (String.to_xml f)))])
+                      @
+                      [Util.option_map v.fully_qualified_domain_name
+                         (fun f ->
+                            Ezxmlm.make_tag "FullyQualifiedDomainName"
+                              ([], (String.to_xml f)))])
+                     @
+                     [Util.option_map v.search_string
+                        (fun f ->
+                           Ezxmlm.make_tag "SearchString"
+                             ([], (String.to_xml f)))])
+                    @
+                    [Util.option_map v.failure_threshold
+                       (fun f ->
+                          Ezxmlm.make_tag "FailureThreshold"
+                            ([], (Integer.to_xml f)))])
+                   @
+                   [Util.option_map v.inverted
+                      (fun f ->
+                         Ezxmlm.make_tag "Inverted" ([], (Boolean.to_xml f)))])
+                  @
+                  [Util.option_map v.disabled
+                     (fun f ->
+                        Ezxmlm.make_tag "Disabled" ([], (Boolean.to_xml f)))])
+                 @
+                 [Util.option_map v.health_threshold
+                    (fun f ->
+                       Ezxmlm.make_tag "HealthThreshold"
+                         ([], (Integer.to_xml f)))])
+                @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "ChildHealthChecks"
+                           ([], (ChildHealthCheckList.to_xml [x]))))
+                   v.child_health_checks))
+               @
+               [Util.option_map v.enable_s_n_i
+                  (fun f ->
+                     Ezxmlm.make_tag "EnableSNI" ([], (Boolean.to_xml f)))])
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "Regions"
+                         ([], (HealthCheckRegionList.to_xml [x])))) v.regions))
+             @
+             [Util.option_map v.alarm_identifier
+                (fun f ->
+                   Ezxmlm.make_tag "AlarmIdentifier"
+                     ([], (AlarmIdentifier.to_xml f)))])
+            @
+            [Util.option_map v.insufficient_data_health_status
+               (fun f ->
+                  Ezxmlm.make_tag "InsufficientDataHealthStatus"
+                    ([], (InsufficientDataHealthStatus.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ResetElements"
+                      ([], (ResettableElementNameList.to_xml [x]))))
+              v.reset_elements))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.failure_threshold
-              (fun f -> ("failure_threshold", (Integer.to_json f)));
+           [Some
+              ("reset_elements",
+                (ResettableElementNameList.to_json v.reset_elements));
+           Util.option_map v.insufficient_data_health_status
+             (fun f ->
+                ("insufficient_data_health_status",
+                  (InsufficientDataHealthStatus.to_json f)));
+           Util.option_map v.alarm_identifier
+             (fun f -> ("alarm_identifier", (AlarmIdentifier.to_json f)));
+           Some ("regions", (HealthCheckRegionList.to_json v.regions));
+           Util.option_map v.enable_s_n_i
+             (fun f -> ("enable_s_n_i", (Boolean.to_json f)));
+           Some
+             ("child_health_checks",
+               (ChildHealthCheckList.to_json v.child_health_checks));
+           Util.option_map v.health_threshold
+             (fun f -> ("health_threshold", (Integer.to_json f)));
+           Util.option_map v.disabled
+             (fun f -> ("disabled", (Boolean.to_json f)));
+           Util.option_map v.inverted
+             (fun f -> ("inverted", (Boolean.to_json f)));
+           Util.option_map v.failure_threshold
+             (fun f -> ("failure_threshold", (Integer.to_json f)));
            Util.option_map v.search_string
              (fun f -> ("search_string", (String.to_json f)));
            Util.option_map v.fully_qualified_domain_name
@@ -2647,7 +5863,30 @@ module UpdateHealthCheckRequest =
           (Util.option_map (Json.lookup j "search_string") String.of_json);
         failure_threshold =
           (Util.option_map (Json.lookup j "failure_threshold")
-             Integer.of_json)
+             Integer.of_json);
+        inverted =
+          (Util.option_map (Json.lookup j "inverted") Boolean.of_json);
+        disabled =
+          (Util.option_map (Json.lookup j "disabled") Boolean.of_json);
+        health_threshold =
+          (Util.option_map (Json.lookup j "health_threshold") Integer.of_json);
+        child_health_checks =
+          (ChildHealthCheckList.of_json
+             (Util.of_option_exn (Json.lookup j "child_health_checks")));
+        enable_s_n_i =
+          (Util.option_map (Json.lookup j "enable_s_n_i") Boolean.of_json);
+        regions =
+          (HealthCheckRegionList.of_json
+             (Util.of_option_exn (Json.lookup j "regions")));
+        alarm_identifier =
+          (Util.option_map (Json.lookup j "alarm_identifier")
+             AlarmIdentifier.of_json);
+        insufficient_data_health_status =
+          (Util.option_map (Json.lookup j "insufficient_data_health_status")
+             InsufficientDataHealthStatus.of_json);
+        reset_elements =
+          (ResettableElementNameList.of_json
+             (Util.of_option_exn (Json.lookup j "reset_elements")))
       }
   end
 module GetHealthCheckCountResponse =
@@ -2663,12 +5902,14 @@ module GetHealthCheckCountResponse =
                (Util.option_bind (Xml.member "HealthCheckCount" xml)
                   Long.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheckCount", (Long.to_query v.health_check_count)))])
+              (Ezxmlm.make_tag "HealthCheckCount"
+                 ([], (Long.to_xml v.health_check_count)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2679,6 +5920,119 @@ module GetHealthCheckCountResponse =
           (Long.of_json
              (Util.of_option_exn (Json.lookup j "health_check_count")))
       }
+  end
+module ListVPCAssociationAuthorizationsResponse =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      next_token: String.t option ;
+      v_p_cs: VPCs.t }
+    let make ~hosted_zone_id  ?next_token  ~v_p_cs  () =
+      { hosted_zone_id; next_token; v_p_cs }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          next_token =
+            (Util.option_bind (Xml.member "NextToken" xml) String.parse);
+          v_p_cs =
+            (Xml.required "VPCs"
+               (Util.option_bind (Xml.member "VPCs" xml) VPCs.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "HostedZoneId"
+                   ([], (String.to_xml v.hosted_zone_id)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x -> Some (Ezxmlm.make_tag "VPCs" ([], (VPCs.to_xml [x]))))
+              v.v_p_cs))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("v_p_cs", (VPCs.to_json v.v_p_cs));
+           Util.option_map v.next_token
+             (fun f -> ("next_token", (String.to_json f)));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json);
+        v_p_cs = (VPCs.of_json (Util.of_option_exn (Json.lookup j "v_p_cs")))
+      }
+  end
+module CreateVPCAssociationAuthorizationResponse =
+  struct
+    type t = {
+      hosted_zone_id: String.t ;
+      v_p_c: VPC.t }
+    let make ~hosted_zone_id  ~v_p_c  () = { hosted_zone_id; v_p_c }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "HostedZoneId"
+               (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse));
+          v_p_c =
+            (Xml.required "VPC"
+               (Util.option_bind (Xml.member "VPC" xml) VPC.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "HostedZoneId"
+                  ([], (String.to_xml v.hosted_zone_id)))])
+           @ [Some (Ezxmlm.make_tag "VPC" ([], (VPC.to_xml v.v_p_c)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("v_p_c", (VPC.to_json v.v_p_c));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        v_p_c = (VPC.of_json (Util.of_option_exn (Json.lookup j "v_p_c")))
+      }
+  end
+module GetQueryLoggingConfigRequest =
+  struct
+    type t = {
+      id: String.t }
+    let make ~id  () = { id }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
+    let of_json j =
+      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
   end
 module NoSuchHostedZone =
   struct
@@ -2691,11 +6045,40 @@ module NoSuchHostedZone =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module TrafficPolicyAlreadyExists =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2717,14 +6100,42 @@ module DeleteReusableDelegationSetRequest =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let of_json j =
       { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
+  end
+module InvalidTrafficPolicyDocument =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
   end
 module VPCAssociationNotFound =
   struct
@@ -2737,11 +6148,13 @@ module VPCAssociationNotFound =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2762,11 +6175,40 @@ module ConflictingDomainExists =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module NoSuchCloudWatchLogsLogGroup =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2796,16 +6238,20 @@ module ListTagsForResourcesRequest =
                (Util.option_bind (Xml.member "ResourceIds" xml)
                   TagResourceIdList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("ResourceIds.member",
-                   (TagResourceIdList.to_query v.resource_ids)));
-           Some
-             (Query.Pair
-                ("ResourceType", (TagResourceType.to_query v.resource_type)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "ResourceType"
+                  ([], (TagResourceType.to_xml v.resource_type)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ResourceIds"
+                      ([], (TagResourceIdList.to_xml [x])))) v.resource_ids))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2848,6 +6294,19 @@ module ListHostedZonesRequest =
              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
            Util.option_map v.marker
              (fun f -> Query.Pair ("marker", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.marker
+                (fun f -> Ezxmlm.make_tag "marker" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.max_items
+               (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.delegation_set_id
+              (fun f ->
+                 Ezxmlm.make_tag "delegationsetid" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2893,19 +6352,29 @@ module ListHostedZonesResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_marker
-             (fun f -> Query.Pair ("NextMarker", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Util.option_map v.marker
-             (fun f -> Query.Pair ("Marker", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("HostedZones.member", (HostedZones.to_query v.hosted_zones)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "HostedZones"
+                          ([], (HostedZones.to_xml [x])))) v.hosted_zones))
+              @
+              [Util.option_map v.marker
+                 (fun f -> Ezxmlm.make_tag "Marker" ([], (String.to_xml f)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "IsTruncated"
+                   ([], (Boolean.to_xml v.is_truncated)))])
+            @
+            [Util.option_map v.next_marker
+               (fun f -> Ezxmlm.make_tag "NextMarker" ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2947,14 +6416,18 @@ module CreateReusableDelegationSetRequest =
           hosted_zone_id =
             (Util.option_bind (Xml.member "HostedZoneId" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "CallerReference"
+                  ([], (String.to_xml v.caller_reference)))])
+           @
            [Util.option_map v.hosted_zone_id
-              (fun f -> Query.Pair ("HostedZoneId", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("CallerReference", (String.to_query v.caller_reference)))])
+              (fun f ->
+                 Ezxmlm.make_tag "HostedZoneId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2983,13 +6456,14 @@ module ListTagsForResourceResponse =
                (Util.option_bind (Xml.member "ResourceTagSet" xml)
                   ResourceTagSet.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("ResourceTagSet",
-                   (ResourceTagSet.to_query v.resource_tag_set)))])
+              (Ezxmlm.make_tag "ResourceTagSet"
+                 ([], (ResourceTagSet.to_xml v.resource_tag_set)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3020,13 +6494,20 @@ module CreateHealthCheckResponse =
             (Xml.required "Location"
                (Util.option_bind (Xml.member "Location" xml) String.parse))
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
         (Util.list_filter_opt
-           [Some (Query.Pair ("Location", (String.to_query v.location)));
-           Some
-             (Query.Pair
-                ("HealthCheck", (HealthCheck.to_query v.health_check)))])
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "HealthCheck"
+                  ([], (HealthCheck.to_xml v.health_check)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3054,11 +6535,14 @@ module GetChangeResponse =
                (Util.option_bind (Xml.member "ChangeInfo" xml)
                   ChangeInfo.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)))])
+              (Ezxmlm.make_tag "ChangeInfo"
+                 ([], (ChangeInfo.to_xml v.change_info)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3081,11 +6565,13 @@ module InvalidVPCId =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3137,24 +6623,38 @@ module ListGeoLocationsResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_subdivision_code
-             (fun f ->
-                Query.Pair ("NextSubdivisionCode", (String.to_query f)));
-           Util.option_map v.next_country_code
-             (fun f -> Query.Pair ("NextCountryCode", (String.to_query f)));
-           Util.option_map v.next_continent_code
-             (fun f -> Query.Pair ("NextContinentCode", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Some
-             (Query.Pair
-                ("GeoLocationDetailsList.member",
-                  (GeoLocationDetailsList.to_query
-                     v.geo_location_details_list)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "GeoLocationDetailsList"
+                           ([], (GeoLocationDetailsList.to_xml [x]))))
+                   v.geo_location_details_list))
+               @
+               [Some
+                  (Ezxmlm.make_tag "IsTruncated"
+                     ([], (Boolean.to_xml v.is_truncated)))])
+              @
+              [Util.option_map v.next_continent_code
+                 (fun f ->
+                    Ezxmlm.make_tag "NextContinentCode"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.next_country_code
+                (fun f ->
+                   Ezxmlm.make_tag "NextCountryCode" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.next_subdivision_code
+               (fun f ->
+                  Ezxmlm.make_tag "NextSubdivisionCode"
+                    ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3189,6 +6689,108 @@ module ListGeoLocationsResponse =
           (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
+module UpdateTrafficPolicyInstanceRequest =
+  struct
+    type t =
+      {
+      id: String.t ;
+      t_t_l: Long.t ;
+      traffic_policy_id: String.t ;
+      traffic_policy_version: Integer.t }
+    let make ~id  ~t_t_l  ~traffic_policy_id  ~traffic_policy_version  () =
+      { id; t_t_l; traffic_policy_id; traffic_policy_version }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          t_t_l =
+            (Xml.required "TTL"
+               (Util.option_bind (Xml.member "TTL" xml) Long.parse));
+          traffic_policy_id =
+            (Xml.required "TrafficPolicyId"
+               (Util.option_bind (Xml.member "TrafficPolicyId" xml)
+                  String.parse));
+          traffic_policy_version =
+            (Xml.required "TrafficPolicyVersion"
+               (Util.option_bind (Xml.member "TrafficPolicyVersion" xml)
+                  Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+             [Some (Ezxmlm.make_tag "TTL" ([], (Long.to_xml v.t_t_l)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyId"
+                  ([], (String.to_xml v.traffic_policy_id)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyVersion"
+                 ([], (Integer.to_xml v.traffic_policy_version)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_version",
+                (Integer.to_json v.traffic_policy_version));
+           Some ("traffic_policy_id", (String.to_json v.traffic_policy_id));
+           Some ("t_t_l", (Long.to_json v.t_t_l));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        t_t_l = (Long.of_json (Util.of_option_exn (Json.lookup j "t_t_l")));
+        traffic_policy_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_id")));
+        traffic_policy_version =
+          (Integer.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_version")))
+      }
+  end
+module GetHostedZoneLimitResponse =
+  struct
+    type t = {
+      limit: HostedZoneLimit.t ;
+      count: Long.t }
+    let make ~limit  ~count  () = { limit; count }
+    let parse xml =
+      Some
+        {
+          limit =
+            (Xml.required "Limit"
+               (Util.option_bind (Xml.member "Limit" xml)
+                  HostedZoneLimit.parse));
+          count =
+            (Xml.required "Count"
+               (Util.option_bind (Xml.member "Count" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Limit"
+                  ([], (HostedZoneLimit.to_xml v.limit)))])
+           @ [Some (Ezxmlm.make_tag "Count" ([], (Long.to_xml v.count)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("count", (Long.to_json v.count));
+           Some ("limit", (HostedZoneLimit.to_json v.limit))])
+    let of_json j =
+      {
+        limit =
+          (HostedZoneLimit.of_json
+             (Util.of_option_exn (Json.lookup j "limit")));
+        count = (Long.of_json (Util.of_option_exn (Json.lookup j "count")))
+      }
+  end
 module ListHealthChecksResponse =
   struct
     type t =
@@ -3219,19 +6821,28 @@ module ListHealthChecksResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_marker
-             (fun f -> Query.Pair ("NextMarker", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Some (Query.Pair ("Marker", (String.to_query v.marker)));
-           Some
-             (Query.Pair
-                ("HealthChecks.member",
-                  (HealthChecks.to_query v.health_checks)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "HealthChecks"
+                          ([], (HealthChecks.to_xml [x])))) v.health_checks))
+              @
+              [Some (Ezxmlm.make_tag "Marker" ([], (String.to_xml v.marker)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "IsTruncated"
+                   ([], (Boolean.to_xml v.is_truncated)))])
+            @
+            [Util.option_map v.next_marker
+               (fun f -> Ezxmlm.make_tag "NextMarker" ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3268,11 +6879,13 @@ module IncompatibleVersion =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3280,6 +6893,105 @@ module IncompatibleVersion =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListQueryLoggingConfigsResponse =
+  struct
+    type t =
+      {
+      query_logging_configs: QueryLoggingConfigs.t ;
+      next_token: String.t option }
+    let make ~query_logging_configs  ?next_token  () =
+      { query_logging_configs; next_token }
+    let parse xml =
+      Some
+        {
+          query_logging_configs =
+            (Xml.required "QueryLoggingConfigs"
+               (Util.option_bind (Xml.member "QueryLoggingConfigs" xml)
+                  QueryLoggingConfigs.parse));
+          next_token =
+            (Util.option_bind (Xml.member "NextToken" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "QueryLoggingConfigs"
+                       ([], (QueryLoggingConfigs.to_xml [x]))))
+               v.query_logging_configs))
+           @
+           [Util.option_map v.next_token
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.next_token
+              (fun f -> ("next_token", (String.to_json f)));
+           Some
+             ("query_logging_configs",
+               (QueryLoggingConfigs.to_json v.query_logging_configs))])
+    let of_json j =
+      {
+        query_logging_configs =
+          (QueryLoggingConfigs.of_json
+             (Util.of_option_exn (Json.lookup j "query_logging_configs")));
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json)
+      }
+  end
+module CreateTrafficPolicyInstanceResponse =
+  struct
+    type t =
+      {
+      traffic_policy_instance: TrafficPolicyInstance.t ;
+      location: String.t }
+    let make ~traffic_policy_instance  ~location  () =
+      { traffic_policy_instance; location }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instance =
+            (Xml.required "TrafficPolicyInstance"
+               (Util.option_bind (Xml.member "TrafficPolicyInstance" xml)
+                  TrafficPolicyInstance.parse));
+          location =
+            (Xml.required "Location"
+               (Util.option_bind (Xml.member "Location" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
+        (Util.list_filter_opt
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyInstance"
+                  ([],
+                    (TrafficPolicyInstance.to_xml v.traffic_policy_instance)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("location", (String.to_json v.location));
+           Some
+             ("traffic_policy_instance",
+               (TrafficPolicyInstance.to_json v.traffic_policy_instance))])
+    let of_json j =
+      {
+        traffic_policy_instance =
+          (TrafficPolicyInstance.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instance")));
+        location =
+          (String.of_json (Util.of_option_exn (Json.lookup j "location")))
       }
   end
 module HealthCheckInUse =
@@ -3293,11 +7005,13 @@ module HealthCheckInUse =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3318,11 +7032,13 @@ module TooManyHealthChecks =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3330,6 +7046,42 @@ module TooManyHealthChecks =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module GetTrafficPolicyInstanceCountResponse =
+  struct
+    type t = {
+      traffic_policy_instance_count: Integer.t }
+    let make ~traffic_policy_instance_count  () =
+      { traffic_policy_instance_count }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instance_count =
+            (Xml.required "TrafficPolicyInstanceCount"
+               (Util.option_bind
+                  (Xml.member "TrafficPolicyInstanceCount" xml) Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyInstanceCount"
+                 ([], (Integer.to_xml v.traffic_policy_instance_count)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_instance_count",
+                (Integer.to_json v.traffic_policy_instance_count))])
+    let of_json j =
+      {
+        traffic_policy_instance_count =
+          (Integer.of_json
+             (Util.of_option_exn
+                (Json.lookup j "traffic_policy_instance_count")))
       }
   end
 module DeleteHostedZoneRequest =
@@ -3344,10 +7096,11 @@ module DeleteHostedZoneRequest =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let of_json j =
@@ -3366,12 +7119,14 @@ module UpdateHealthCheckResponse =
                (Util.option_bind (Xml.member "HealthCheck" xml)
                   HealthCheck.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheck", (HealthCheck.to_query v.health_check)))])
+              (Ezxmlm.make_tag "HealthCheck"
+                 ([], (HealthCheck.to_xml v.health_check)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3412,19 +7167,29 @@ module ChangeTagsForResourceRequest =
                (Util.option_bind (Xml.member "RemoveTagKeys" xml)
                   TagKeyList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("RemoveTagKeys.member",
-                   (TagKeyList.to_query v.remove_tag_keys)));
-           Some
-             (Query.Pair ("AddTags.member", (TagList.to_query v.add_tags)));
-           Some (Query.Pair ("ResourceId", (String.to_query v.resource_id)));
-           Some
-             (Query.Pair
-                ("ResourceType", (TagResourceType.to_query v.resource_type)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "ResourceType"
+                    ([], (TagResourceType.to_xml v.resource_type)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "ResourceId"
+                   ([], (String.to_xml v.resource_id)))])
+            @
+            (List.map
+               (fun x ->
+                  Some (Ezxmlm.make_tag "AddTags" ([], (TagList.to_xml [x]))))
+               v.add_tags))
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "RemoveTagKeys"
+                      ([], (TagKeyList.to_xml [x])))) v.remove_tag_keys))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3446,6 +7211,142 @@ module ChangeTagsForResourceRequest =
              (Util.of_option_exn (Json.lookup j "remove_tag_keys")))
       }
   end
+module CreateQueryLoggingConfigResponse =
+  struct
+    type t =
+      {
+      query_logging_config: QueryLoggingConfig.t ;
+      location: String.t }
+    let make ~query_logging_config  ~location  () =
+      { query_logging_config; location }
+    let parse xml =
+      Some
+        {
+          query_logging_config =
+            (Xml.required "QueryLoggingConfig"
+               (Util.option_bind (Xml.member "QueryLoggingConfig" xml)
+                  QueryLoggingConfig.parse));
+          location =
+            (Xml.required "Location"
+               (Util.option_bind (Xml.member "Location" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
+        (Util.list_filter_opt
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "QueryLoggingConfig"
+                  ([], (QueryLoggingConfig.to_xml v.query_logging_config)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("location", (String.to_json v.location));
+           Some
+             ("query_logging_config",
+               (QueryLoggingConfig.to_json v.query_logging_config))])
+    let of_json j =
+      {
+        query_logging_config =
+          (QueryLoggingConfig.of_json
+             (Util.of_option_exn (Json.lookup j "query_logging_config")));
+        location =
+          (String.of_json (Util.of_option_exn (Json.lookup j "location")))
+      }
+  end
+module TooManyTrafficPolicies =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListQueryLoggingConfigsRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t option ;
+      next_token: String.t option ;
+      max_results: String.t option }
+    let make ?hosted_zone_id  ?next_token  ?max_results  () =
+      { hosted_zone_id; next_token; max_results }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Util.option_bind (Xml.member "hostedzoneid" xml) String.parse);
+          next_token =
+            (Util.option_bind (Xml.member "nexttoken" xml) String.parse);
+          max_results =
+            (Util.option_bind (Xml.member "maxresults" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_results
+              (fun f -> Query.Pair ("maxresults", (String.to_query f)));
+           Util.option_map v.next_token
+             (fun f -> Query.Pair ("nexttoken", (String.to_query f)));
+           Util.option_map v.hosted_zone_id
+             (fun f -> Query.Pair ("hostedzoneid", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.hosted_zone_id
+                (fun f ->
+                   Ezxmlm.make_tag "hostedzoneid" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "nexttoken" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_results
+              (fun f -> Ezxmlm.make_tag "maxresults" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_results
+              (fun f -> ("max_results", (String.to_json f)));
+           Util.option_map v.next_token
+             (fun f -> ("next_token", (String.to_json f)));
+           Util.option_map v.hosted_zone_id
+             (fun f -> ("hosted_zone_id", (String.to_json f)))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (Util.option_map (Json.lookup j "hosted_zone_id") String.of_json);
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json);
+        max_results =
+          (Util.option_map (Json.lookup j "max_results") String.of_json)
+      }
+  end
 module DelegationSetNotAvailable =
   struct
     type t = {
@@ -3457,11 +7358,13 @@ module DelegationSetNotAvailable =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3469,6 +7372,72 @@ module DelegationSetNotAvailable =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module DeleteQueryLoggingConfigRequest =
+  struct
+    type t = {
+      id: String.t }
+    let make ~id  () = { id }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
+    let of_json j =
+      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
+  end
+module GetReusableDelegationSetLimitRequest =
+  struct
+    type t =
+      {
+      type_: ReusableDelegationSetLimitType.t ;
+      delegation_set_id: String.t }
+    let make ~type_  ~delegation_set_id  () = { type_; delegation_set_id }
+    let parse xml =
+      Some
+        {
+          type_ =
+            (Xml.required "Type"
+               (Util.option_bind (Xml.member "Type" xml)
+                  ReusableDelegationSetLimitType.parse));
+          delegation_set_id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Type"
+                  ([], (ReusableDelegationSetLimitType.to_xml v.type_)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Id" ([], (String.to_xml v.delegation_set_id)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("delegation_set_id", (String.to_json v.delegation_set_id));
+           Some ("type_", (ReusableDelegationSetLimitType.to_json v.type_))])
+    let of_json j =
+      {
+        type_ =
+          (ReusableDelegationSetLimitType.of_json
+             (Util.of_option_exn (Json.lookup j "type_")));
+        delegation_set_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "delegation_set_id")))
       }
   end
 module ListTagsForResourcesResponse =
@@ -3484,13 +7453,17 @@ module ListTagsForResourcesResponse =
                (Util.option_bind (Xml.member "ResourceTagSets" xml)
                   ResourceTagSetList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("ResourceTagSets.member",
-                   (ResourceTagSetList.to_query v.resource_tag_sets)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ResourceTagSets"
+                      ([], (ResourceTagSetList.to_xml [x]))))
+              v.resource_tag_sets))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3525,13 +7498,17 @@ module AssociateVPCWithHostedZoneRequest =
           comment =
             (Util.option_bind (Xml.member "Comment" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+            @ [Some (Ezxmlm.make_tag "VPC" ([], (VPC.to_xml v.v_p_c)))])
+           @
            [Util.option_map v.comment
-              (fun f -> Query.Pair ("Comment", (String.to_query f)));
-           Some (Query.Pair ("VPC", (VPC.to_query v.v_p_c)));
-           Some (Query.Pair ("Id", (String.to_query v.hosted_zone_id)))])
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3561,12 +7538,14 @@ module GetHostedZoneCountResponse =
                (Util.option_bind (Xml.member "HostedZoneCount" xml)
                   Long.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HostedZoneCount", (Long.to_query v.hosted_zone_count)))])
+              (Ezxmlm.make_tag "HostedZoneCount"
+                 ([], (Long.to_xml v.hosted_zone_count)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3589,11 +7568,13 @@ module TooManyHostedZones =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3624,13 +7605,17 @@ module DisassociateVPCFromHostedZoneRequest =
           comment =
             (Util.option_bind (Xml.member "Comment" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+            @ [Some (Ezxmlm.make_tag "VPC" ([], (VPC.to_xml v.v_p_c)))])
+           @
            [Util.option_map v.comment
-              (fun f -> Query.Pair ("Comment", (String.to_query f)));
-           Some (Query.Pair ("VPC", (VPC.to_query v.v_p_c)));
-           Some (Query.Pair ("Id", (String.to_query v.hosted_zone_id)))])
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3646,6 +7631,17 @@ module DisassociateVPCFromHostedZoneRequest =
         v_p_c = (VPC.of_json (Util.of_option_exn (Json.lookup j "v_p_c")));
         comment = (Util.option_map (Json.lookup j "comment") String.of_json)
       }
+  end
+module GetTrafficPolicyInstanceCountRequest =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
   end
 module ListGeoLocationsRequest =
   struct
@@ -3690,6 +7686,26 @@ module ListGeoLocationsRequest =
              (fun f -> Query.Pair ("startcountrycode", (String.to_query f)));
            Util.option_map v.start_continent_code
              (fun f -> Query.Pair ("startcontinentcode", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.start_continent_code
+                 (fun f ->
+                    Ezxmlm.make_tag "startcontinentcode"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.start_country_code
+                (fun f ->
+                   Ezxmlm.make_tag "startcountrycode" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.start_subdivision_code
+               (fun f ->
+                  Ezxmlm.make_tag "startsubdivisioncode"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3716,6 +7732,97 @@ module ListGeoLocationsRequest =
           (Util.option_map (Json.lookup j "max_items") String.of_json)
       }
   end
+module ListTrafficPolicyInstancesByHostedZoneRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id: String.t ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      max_items: String.t option }
+    let make ~hosted_zone_id  ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ?max_items  () =
+      {
+        hosted_zone_id;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "id"
+               (Util.option_bind (Xml.member "id" xml) String.parse));
+          traffic_policy_instance_name_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancename" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancetype" xml)
+               RRType.parse);
+          max_items =
+            (Util.option_bind (Xml.member "maxitems" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancetype", (RRType.to_query f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancename", (String.to_query f)));
+           Some (Query.Pair ("id", (String.to_query v.hosted_zone_id)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "id" ([], (String.to_xml v.hosted_zone_id)))])
+             @
+             [Util.option_map v.traffic_policy_instance_name_marker
+                (fun f ->
+                   Ezxmlm.make_tag "trafficpolicyinstancename"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.traffic_policy_instance_type_marker
+               (fun f ->
+                  Ezxmlm.make_tag "trafficpolicyinstancetype"
+                    ([], (RRType.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> ("max_items", (String.to_json f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        max_items =
+          (Util.option_map (Json.lookup j "max_items") String.of_json)
+      }
+  end
 module CreateReusableDelegationSetResponse =
   struct
     type t = {
@@ -3733,13 +7840,20 @@ module CreateReusableDelegationSetResponse =
             (Xml.required "Location"
                (Util.option_bind (Xml.member "Location" xml) String.parse))
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
         (Util.list_filter_opt
-           [Some (Query.Pair ("Location", (String.to_query v.location)));
-           Some
-             (Query.Pair
-                ("DelegationSet", (DelegationSet.to_query v.delegation_set)))])
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "DelegationSet"
+                  ([], (DelegationSet.to_xml v.delegation_set)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3752,6 +7866,42 @@ module CreateReusableDelegationSetResponse =
              (Util.of_option_exn (Json.lookup j "delegation_set")));
         location =
           (String.of_json (Util.of_option_exn (Json.lookup j "location")))
+      }
+  end
+module GetAccountLimitResponse =
+  struct
+    type t = {
+      limit: AccountLimit.t ;
+      count: Long.t }
+    let make ~limit  ~count  () = { limit; count }
+    let parse xml =
+      Some
+        {
+          limit =
+            (Xml.required "Limit"
+               (Util.option_bind (Xml.member "Limit" xml) AccountLimit.parse));
+          count =
+            (Xml.required "Count"
+               (Util.option_bind (Xml.member "Count" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Limit" ([], (AccountLimit.to_xml v.limit)))])
+           @ [Some (Ezxmlm.make_tag "Count" ([], (Long.to_xml v.count)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("count", (Long.to_json v.count));
+           Some ("limit", (AccountLimit.to_json v.limit))])
+    let of_json j =
+      {
+        limit =
+          (AccountLimit.of_json (Util.of_option_exn (Json.lookup j "limit")));
+        count = (Long.of_json (Util.of_option_exn (Json.lookup j "count")))
       }
   end
 module DisassociateVPCFromHostedZoneResponse =
@@ -3767,11 +7917,14 @@ module DisassociateVPCFromHostedZoneResponse =
                (Util.option_bind (Xml.member "ChangeInfo" xml)
                   ChangeInfo.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)))])
+              (Ezxmlm.make_tag "ChangeInfo"
+                 ([], (ChangeInfo.to_xml v.change_info)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3824,23 +7977,37 @@ module ListResourceRecordSetsResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_record_identifier
-             (fun f ->
-                Query.Pair ("NextRecordIdentifier", (String.to_query f)));
-           Util.option_map v.next_record_type
-             (fun f -> Query.Pair ("NextRecordType", (RRType.to_query f)));
-           Util.option_map v.next_record_name
-             (fun f -> Query.Pair ("NextRecordName", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Some
-             (Query.Pair
-                ("ResourceRecordSets.member",
-                  (ResourceRecordSets.to_query v.resource_record_sets)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "ResourceRecordSets"
+                           ([], (ResourceRecordSets.to_xml [x]))))
+                   v.resource_record_sets))
+               @
+               [Some
+                  (Ezxmlm.make_tag "IsTruncated"
+                     ([], (Boolean.to_xml v.is_truncated)))])
+              @
+              [Util.option_map v.next_record_name
+                 (fun f ->
+                    Ezxmlm.make_tag "NextRecordName" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.next_record_type
+                (fun f ->
+                   Ezxmlm.make_tag "NextRecordType" ([], (RRType.to_xml f)))])
+            @
+            [Util.option_map v.next_record_identifier
+               (fun f ->
+                  Ezxmlm.make_tag "NextRecordIdentifier"
+                    ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3874,6 +8041,55 @@ module ListResourceRecordSetsResponse =
           (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
+module ListTrafficPoliciesRequest =
+  struct
+    type t =
+      {
+      traffic_policy_id_marker: String.t option ;
+      max_items: String.t option }
+    let make ?traffic_policy_id_marker  ?max_items  () =
+      { traffic_policy_id_marker; max_items }
+    let parse xml =
+      Some
+        {
+          traffic_policy_id_marker =
+            (Util.option_bind (Xml.member "trafficpolicyid" xml) String.parse);
+          max_items =
+            (Util.option_bind (Xml.member "maxitems" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
+           Util.option_map v.traffic_policy_id_marker
+             (fun f -> Query.Pair ("trafficpolicyid", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.traffic_policy_id_marker
+               (fun f ->
+                  Ezxmlm.make_tag "trafficpolicyid" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> ("max_items", (String.to_json f)));
+           Util.option_map v.traffic_policy_id_marker
+             (fun f -> ("traffic_policy_id_marker", (String.to_json f)))])
+    let of_json j =
+      {
+        traffic_policy_id_marker =
+          (Util.option_map (Json.lookup j "traffic_policy_id_marker")
+             String.of_json);
+        max_items =
+          (Util.option_map (Json.lookup j "max_items") String.of_json)
+      }
+  end
 module NoSuchGeoLocation =
   struct
     type t = {
@@ -3885,11 +8101,13 @@ module NoSuchGeoLocation =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3899,14 +8117,177 @@ module NoSuchGeoLocation =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
+module UpdateTrafficPolicyCommentRequest =
+  struct
+    type t = {
+      id: String.t ;
+      version: Integer.t ;
+      comment: String.t }
+    let make ~id  ~version  ~comment  () = { id; version; comment }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          version =
+            (Xml.required "Version"
+               (Util.option_bind (Xml.member "Version" xml) Integer.parse));
+          comment =
+            (Xml.required "Comment"
+               (Util.option_bind (Xml.member "Comment" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+            [Some
+               (Ezxmlm.make_tag "Version" ([], (Integer.to_xml v.version)))])
+           @
+           [Some (Ezxmlm.make_tag "Comment" ([], (String.to_xml v.comment)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("comment", (String.to_json v.comment));
+           Some ("version", (Integer.to_json v.version));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        version =
+          (Integer.of_json (Util.of_option_exn (Json.lookup j "version")));
+        comment =
+          (String.of_json (Util.of_option_exn (Json.lookup j "comment")))
+      }
+  end
+module UpdateTrafficPolicyInstanceResponse =
+  struct
+    type t = {
+      traffic_policy_instance: TrafficPolicyInstance.t }
+    let make ~traffic_policy_instance  () = { traffic_policy_instance }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instance =
+            (Xml.required "TrafficPolicyInstance"
+               (Util.option_bind (Xml.member "TrafficPolicyInstance" xml)
+                  TrafficPolicyInstance.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicyInstance"
+                 ([],
+                   (TrafficPolicyInstance.to_xml v.traffic_policy_instance)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("traffic_policy_instance",
+                (TrafficPolicyInstance.to_json v.traffic_policy_instance))])
+    let of_json j =
+      {
+        traffic_policy_instance =
+          (TrafficPolicyInstance.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instance")))
+      }
+  end
+module DeleteVPCAssociationAuthorizationResponse =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
 module GetHealthCheckCountRequest =
   struct
     type t = unit
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
+  end
+module InsufficientCloudWatchLogsResourcePolicy =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module CreateTrafficPolicyVersionRequest =
+  struct
+    type t = {
+      id: String.t ;
+      document: String.t ;
+      comment: String.t option }
+    let make ~id  ~document  ?comment  () = { id; document; comment }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          document =
+            (Xml.required "Document"
+               (Util.option_bind (Xml.member "Document" xml) String.parse));
+          comment =
+            (Util.option_bind (Xml.member "Comment" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+            [Some
+               (Ezxmlm.make_tag "Document" ([], (String.to_xml v.document)))])
+           @
+           [Util.option_map v.comment
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.comment
+              (fun f -> ("comment", (String.to_json f)));
+           Some ("document", (String.to_json v.document));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        document =
+          (String.of_json (Util.of_option_exn (Json.lookup j "document")));
+        comment = (Util.option_map (Json.lookup j "comment") String.of_json)
+      }
   end
 module DelegationSetInUse =
   struct
@@ -3919,11 +8300,13 @@ module DelegationSetInUse =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3931,6 +8314,99 @@ module DelegationSetInUse =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListTrafficPolicyInstancesRequest =
+  struct
+    type t =
+      {
+      hosted_zone_id_marker: String.t option ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      max_items: String.t option }
+    let make ?hosted_zone_id_marker  ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ?max_items  () =
+      {
+        hosted_zone_id_marker;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id_marker =
+            (Util.option_bind (Xml.member "hostedzoneid" xml) String.parse);
+          traffic_policy_instance_name_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancename" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind (Xml.member "trafficpolicyinstancetype" xml)
+               RRType.parse);
+          max_items =
+            (Util.option_bind (Xml.member "maxitems" xml) String.parse)
+        }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> Query.Pair ("maxitems", (String.to_query f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancetype", (RRType.to_query f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                Query.Pair ("trafficpolicyinstancename", (String.to_query f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> Query.Pair ("hostedzoneid", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.hosted_zone_id_marker
+                 (fun f ->
+                    Ezxmlm.make_tag "hostedzoneid" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.traffic_policy_instance_name_marker
+                (fun f ->
+                   Ezxmlm.make_tag "trafficpolicyinstancename"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.traffic_policy_instance_type_marker
+               (fun f ->
+                  Ezxmlm.make_tag "trafficpolicyinstancetype"
+                    ([], (RRType.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_items
+              (fun f -> ("max_items", (String.to_json f)));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> ("hosted_zone_id_marker", (String.to_json f)))])
+    let of_json j =
+      {
+        hosted_zone_id_marker =
+          (Util.option_map (Json.lookup j "hosted_zone_id_marker")
+             String.of_json);
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        max_items =
+          (Util.option_map (Json.lookup j "max_items") String.of_json)
       }
   end
 module GetReusableDelegationSetRequest =
@@ -3945,14 +8421,42 @@ module GetReusableDelegationSetRequest =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Id", (String.to_query v.id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let of_json j =
       { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
+  end
+module TrafficPolicyInstanceAlreadyExists =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
   end
 module DeleteHostedZoneResponse =
   struct
@@ -3967,11 +8471,14 @@ module DeleteHostedZoneResponse =
                (Util.option_bind (Xml.member "ChangeInfo" xml)
                   ChangeInfo.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ChangeInfo", (ChangeInfo.to_query v.change_info)))])
+              (Ezxmlm.make_tag "ChangeInfo"
+                 ([], (ChangeInfo.to_xml v.change_info)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3981,6 +8488,119 @@ module DeleteHostedZoneResponse =
         change_info =
           (ChangeInfo.of_json
              (Util.of_option_exn (Json.lookup j "change_info")))
+      }
+  end
+module DeleteTrafficPolicyResponse =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
+module ListTrafficPolicyInstancesByHostedZoneResponse =
+  struct
+    type t =
+      {
+      traffic_policy_instances: TrafficPolicyInstances.t ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      is_truncated: Boolean.t ;
+      max_items: String.t }
+    let make ~traffic_policy_instances  ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ~is_truncated  ~max_items  () =
+      {
+        traffic_policy_instances;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        is_truncated;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instances =
+            (Xml.required "TrafficPolicyInstances"
+               (Util.option_bind (Xml.member "TrafficPolicyInstances" xml)
+                  TrafficPolicyInstances.parse));
+          traffic_policy_instance_name_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceNameMarker" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceTypeMarker" xml)
+               RRType.parse);
+          is_truncated =
+            (Xml.required "IsTruncated"
+               (Util.option_bind (Xml.member "IsTruncated" xml) Boolean.parse));
+          max_items =
+            (Xml.required "MaxItems"
+               (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "TrafficPolicyInstances"
+                          ([], (TrafficPolicyInstances.to_xml [x]))))
+                  v.traffic_policy_instances))
+              @
+              [Util.option_map v.traffic_policy_instance_name_marker
+                 (fun f ->
+                    Ezxmlm.make_tag "TrafficPolicyInstanceNameMarker"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.traffic_policy_instance_type_marker
+                (fun f ->
+                   Ezxmlm.make_tag "TrafficPolicyInstanceTypeMarker"
+                     ([], (RRType.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "IsTruncated"
+                  ([], (Boolean.to_xml v.is_truncated)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("max_items", (String.to_json v.max_items));
+           Some ("is_truncated", (Boolean.to_json v.is_truncated));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Some
+             ("traffic_policy_instances",
+               (TrafficPolicyInstances.to_json v.traffic_policy_instances))])
+    let of_json j =
+      {
+        traffic_policy_instances =
+          (TrafficPolicyInstances.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instances")));
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        is_truncated =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "is_truncated")));
+        max_items =
+          (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
 module NoSuchHealthCheck =
@@ -3994,11 +8614,40 @@ module NoSuchHealthCheck =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module NoSuchTrafficPolicy =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4019,11 +8668,13 @@ module DelegationSetNotReusable =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4031,6 +8682,45 @@ module DelegationSetNotReusable =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module GetReusableDelegationSetLimitResponse =
+  struct
+    type t = {
+      limit: ReusableDelegationSetLimit.t ;
+      count: Long.t }
+    let make ~limit  ~count  () = { limit; count }
+    let parse xml =
+      Some
+        {
+          limit =
+            (Xml.required "Limit"
+               (Util.option_bind (Xml.member "Limit" xml)
+                  ReusableDelegationSetLimit.parse));
+          count =
+            (Xml.required "Count"
+               (Util.option_bind (Xml.member "Count" xml) Long.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Limit"
+                  ([], (ReusableDelegationSetLimit.to_xml v.limit)))])
+           @ [Some (Ezxmlm.make_tag "Count" ([], (Long.to_xml v.count)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("count", (Long.to_json v.count));
+           Some ("limit", (ReusableDelegationSetLimit.to_json v.limit))])
+    let of_json j =
+      {
+        limit =
+          (ReusableDelegationSetLimit.of_json
+             (Util.of_option_exn (Json.lookup j "limit")));
+        count = (Long.of_json (Util.of_option_exn (Json.lookup j "count")))
       }
   end
 module HealthCheckVersionMismatch =
@@ -4044,11 +8734,13 @@ module HealthCheckVersionMismatch =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4069,11 +8761,13 @@ module InvalidDomainName =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4114,19 +8808,29 @@ module ListReusableDelegationSetsResponse =
             (Xml.required "MaxItems"
                (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("MaxItems", (String.to_query v.max_items)));
-           Util.option_map v.next_marker
-             (fun f -> Query.Pair ("NextMarker", (String.to_query f)));
-           Some
-             (Query.Pair ("IsTruncated", (Boolean.to_query v.is_truncated)));
-           Some (Query.Pair ("Marker", (String.to_query v.marker)));
-           Some
-             (Query.Pair
-                ("DelegationSets.member",
-                  (DelegationSets.to_query v.delegation_sets)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "DelegationSets"
+                          ([], (DelegationSets.to_xml [x]))))
+                  v.delegation_sets))
+              @
+              [Some (Ezxmlm.make_tag "Marker" ([], (String.to_xml v.marker)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "IsTruncated"
+                   ([], (Boolean.to_xml v.is_truncated)))])
+            @
+            [Util.option_map v.next_marker
+               (fun f -> Ezxmlm.make_tag "NextMarker" ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4159,6 +8863,8 @@ module DeleteHealthCheckResponse =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -4175,11 +8881,14 @@ module UpdateHostedZoneCommentResponse =
                (Util.option_bind (Xml.member "HostedZone" xml)
                   HostedZone.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("HostedZone", (HostedZone.to_query v.hosted_zone)))])
+              (Ezxmlm.make_tag "HostedZone"
+                 ([], (HostedZone.to_xml v.hosted_zone)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4189,6 +8898,92 @@ module UpdateHostedZoneCommentResponse =
         hosted_zone =
           (HostedZone.of_json
              (Util.of_option_exn (Json.lookup j "hosted_zone")))
+      }
+  end
+module NoSuchQueryLoggingConfig =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module TrafficPolicyInUse =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module UpdateTrafficPolicyCommentResponse =
+  struct
+    type t = {
+      traffic_policy: TrafficPolicy.t }
+    let make ~traffic_policy  () = { traffic_policy }
+    let parse xml =
+      Some
+        {
+          traffic_policy =
+            (Xml.required "TrafficPolicy"
+               (Util.option_bind (Xml.member "TrafficPolicy" xml)
+                  TrafficPolicy.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "TrafficPolicy"
+                 ([], (TrafficPolicy.to_xml v.traffic_policy)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("traffic_policy", (TrafficPolicy.to_json v.traffic_policy))])
+    let of_json j =
+      {
+        traffic_policy =
+          (TrafficPolicy.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy")))
       }
   end
 module CreateHealthCheckRequest =
@@ -4211,16 +9006,18 @@ module CreateHealthCheckRequest =
                (Util.option_bind (Xml.member "HealthCheckConfig" xml)
                   HealthCheckConfig.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "CallerReference"
+                  ([], (String.to_xml v.caller_reference)))])
+           @
            [Some
-              (Query.Pair
-                 ("HealthCheckConfig",
-                   (HealthCheckConfig.to_query v.health_check_config)));
-           Some
-             (Query.Pair
-                ("CallerReference", (String.to_query v.caller_reference)))])
+              (Ezxmlm.make_tag "HealthCheckConfig"
+                 ([], (HealthCheckConfig.to_xml v.health_check_config)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4268,21 +9065,28 @@ module CreateHostedZoneRequest =
           delegation_set_id =
             (Util.option_bind (Xml.member "DelegationSetId" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+              @
+              [Util.option_map v.v_p_c
+                 (fun f -> Ezxmlm.make_tag "VPC" ([], (VPC.to_xml f)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "CallerReference"
+                   ([], (String.to_xml v.caller_reference)))])
+            @
+            [Util.option_map v.hosted_zone_config
+               (fun f ->
+                  Ezxmlm.make_tag "HostedZoneConfig"
+                    ([], (HostedZoneConfig.to_xml f)))])
+           @
            [Util.option_map v.delegation_set_id
-              (fun f -> Query.Pair ("DelegationSetId", (String.to_query f)));
-           Util.option_map v.hosted_zone_config
-             (fun f ->
-                Query.Pair
-                  ("HostedZoneConfig", (HostedZoneConfig.to_query f)));
-           Some
-             (Query.Pair
-                ("CallerReference", (String.to_query v.caller_reference)));
-           Util.option_map v.v_p_c
-             (fun f -> Query.Pair ("VPC", (VPC.to_query f)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DelegationSetId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4307,6 +9111,152 @@ module CreateHostedZoneRequest =
           (Util.option_map (Json.lookup j "delegation_set_id") String.of_json)
       }
   end
+module DeleteTrafficPolicyInstanceRequest =
+  struct
+    type t = {
+      id: String.t }
+    let make ~id  () = { id }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
+    let of_json j =
+      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
+  end
+module GetTrafficPolicyRequest =
+  struct
+    type t = {
+      id: String.t ;
+      version: Integer.t }
+    let make ~id  ~version  () = { id; version }
+    let parse xml =
+      Some
+        {
+          id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          version =
+            (Xml.required "Version"
+               (Util.option_bind (Xml.member "Version" xml) Integer.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
+           [Some (Ezxmlm.make_tag "Version" ([], (Integer.to_xml v.version)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("version", (Integer.to_json v.version));
+           Some ("id", (String.to_json v.id))])
+    let of_json j =
+      {
+        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
+        version =
+          (Integer.of_json (Util.of_option_exn (Json.lookup j "version")))
+      }
+  end
+module CreateTrafficPolicyVersionResponse =
+  struct
+    type t = {
+      traffic_policy: TrafficPolicy.t ;
+      location: String.t }
+    let make ~traffic_policy  ~location  () = { traffic_policy; location }
+    let parse xml =
+      Some
+        {
+          traffic_policy =
+            (Xml.required "TrafficPolicy"
+               (Util.option_bind (Xml.member "TrafficPolicy" xml)
+                  TrafficPolicy.parse));
+          location =
+            (Xml.required "Location"
+               (Util.option_bind (Xml.member "Location" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
+        (Util.list_filter_opt
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicy"
+                  ([], (TrafficPolicy.to_xml v.traffic_policy)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("location", (String.to_json v.location));
+           Some ("traffic_policy", (TrafficPolicy.to_json v.traffic_policy))])
+    let of_json j =
+      {
+        traffic_policy =
+          (TrafficPolicy.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy")));
+        location =
+          (String.of_json (Util.of_option_exn (Json.lookup j "location")))
+      }
+  end
+module CreateTrafficPolicyRequest =
+  struct
+    type t = {
+      name: String.t ;
+      document: String.t ;
+      comment: String.t option }
+    let make ~name  ~document  ?comment  () = { name; document; comment }
+    let parse xml =
+      Some
+        {
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          document =
+            (Xml.required "Document"
+               (Util.option_bind (Xml.member "Document" xml) String.parse));
+          comment =
+            (Util.option_bind (Xml.member "Comment" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "Document" ([], (String.to_xml v.document)))])
+           @
+           [Util.option_map v.comment
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.comment
+              (fun f -> ("comment", (String.to_json f)));
+           Some ("document", (String.to_json v.document));
+           Some ("name", (String.to_json v.name))])
+    let of_json j =
+      {
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        document =
+          (String.of_json (Util.of_option_exn (Json.lookup j "document")));
+        comment = (Util.option_map (Json.lookup j "comment") String.of_json)
+      }
+  end
 module DeleteHealthCheckRequest =
   struct
     type t = {
@@ -4320,12 +9270,14 @@ module DeleteHealthCheckRequest =
                (Util.option_bind (Xml.member "HealthCheckId" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("HealthCheckId", (String.to_query v.health_check_id)))])
+              (Ezxmlm.make_tag "HealthCheckId"
+                 ([], (String.to_xml v.health_check_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4348,11 +9300,13 @@ module LastVPCAssociation =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4360,6 +9314,88 @@ module LastVPCAssociation =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListTrafficPoliciesResponse =
+  struct
+    type t =
+      {
+      traffic_policy_summaries: TrafficPolicySummaries.t ;
+      is_truncated: Boolean.t ;
+      traffic_policy_id_marker: String.t ;
+      max_items: String.t }
+    let make ~traffic_policy_summaries  ~is_truncated 
+      ~traffic_policy_id_marker  ~max_items  () =
+      {
+        traffic_policy_summaries;
+        is_truncated;
+        traffic_policy_id_marker;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policy_summaries =
+            (Xml.required "TrafficPolicySummaries"
+               (Util.option_bind (Xml.member "TrafficPolicySummaries" xml)
+                  TrafficPolicySummaries.parse));
+          is_truncated =
+            (Xml.required "IsTruncated"
+               (Util.option_bind (Xml.member "IsTruncated" xml) Boolean.parse));
+          traffic_policy_id_marker =
+            (Xml.required "TrafficPolicyIdMarker"
+               (Util.option_bind (Xml.member "TrafficPolicyIdMarker" xml)
+                  String.parse));
+          max_items =
+            (Xml.required "MaxItems"
+               (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "TrafficPolicySummaries"
+                         ([], (TrafficPolicySummaries.to_xml [x]))))
+                 v.traffic_policy_summaries))
+             @
+             [Some
+                (Ezxmlm.make_tag "IsTruncated"
+                   ([], (Boolean.to_xml v.is_truncated)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicyIdMarker"
+                  ([], (String.to_xml v.traffic_policy_id_marker)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("max_items", (String.to_json v.max_items));
+           Some
+             ("traffic_policy_id_marker",
+               (String.to_json v.traffic_policy_id_marker));
+           Some ("is_truncated", (Boolean.to_json v.is_truncated));
+           Some
+             ("traffic_policy_summaries",
+               (TrafficPolicySummaries.to_json v.traffic_policy_summaries))])
+    let of_json j =
+      {
+        traffic_policy_summaries =
+          (TrafficPolicySummaries.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_summaries")));
+        is_truncated =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "is_truncated")));
+        traffic_policy_id_marker =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_id_marker")));
+        max_items =
+          (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
 module PriorRequestNotComplete =
@@ -4373,11 +9409,40 @@ module PriorRequestNotComplete =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module HostedZoneNotPrivate =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4405,13 +9470,17 @@ module ChangeResourceRecordSetsRequest =
                (Util.option_bind (Xml.member "ChangeBatch" xml)
                   ChangeBatch.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+           @
            [Some
-              (Query.Pair
-                 ("ChangeBatch", (ChangeBatch.to_query v.change_batch)));
-           Some (Query.Pair ("Id", (String.to_query v.hosted_zone_id)))])
+              (Ezxmlm.make_tag "ChangeBatch"
+                 ([], (ChangeBatch.to_xml v.change_batch)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4450,15 +9519,23 @@ module GetHostedZoneResponse =
             (Util.of_option []
                (Util.option_bind (Xml.member "VPCs" xml) VPCs.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("VPCs.member", (VPCs.to_query v.v_p_cs)));
-           Util.option_map v.delegation_set
-             (fun f ->
-                Query.Pair ("DelegationSet", (DelegationSet.to_query f)));
-           Some
-             (Query.Pair ("HostedZone", (HostedZone.to_query v.hosted_zone)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "HostedZone"
+                   ([], (HostedZone.to_xml v.hosted_zone)))])
+            @
+            [Util.option_map v.delegation_set
+               (fun f ->
+                  Ezxmlm.make_tag "DelegationSet"
+                    ([], (DelegationSet.to_xml f)))])
+           @
+           (List.map
+              (fun x -> Some (Ezxmlm.make_tag "VPCs" ([], (VPCs.to_xml [x]))))
+              v.v_p_cs))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4477,6 +9554,51 @@ module GetHostedZoneResponse =
         v_p_cs = (VPCs.of_json (Util.of_option_exn (Json.lookup j "v_p_cs")))
       }
   end
+module CreateTrafficPolicyResponse =
+  struct
+    type t = {
+      traffic_policy: TrafficPolicy.t ;
+      location: String.t }
+    let make ~traffic_policy  ~location  () = { traffic_policy; location }
+    let parse xml =
+      Some
+        {
+          traffic_policy =
+            (Xml.required "TrafficPolicy"
+               (Util.option_bind (Xml.member "TrafficPolicy" xml)
+                  TrafficPolicy.parse));
+          location =
+            (Xml.required "Location"
+               (Util.option_bind (Xml.member "Location" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v =
+      Headers.List
+        (Util.list_filter_opt
+           [Some (Headers.Pair ("Location", (String.to_headers v.location)))])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "TrafficPolicy"
+                  ([], (TrafficPolicy.to_xml v.traffic_policy)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Location" ([], (String.to_xml v.location)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("location", (String.to_json v.location));
+           Some ("traffic_policy", (TrafficPolicy.to_json v.traffic_policy))])
+    let of_json j =
+      {
+        traffic_policy =
+          (TrafficPolicy.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy")));
+        location =
+          (String.of_json (Util.of_option_exn (Json.lookup j "location")))
+      }
+  end
 module HostedZoneAlreadyExists =
   struct
     type t = {
@@ -4488,11 +9610,13 @@ module HostedZoneAlreadyExists =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4500,6 +9624,124 @@ module HostedZoneAlreadyExists =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module ListTrafficPolicyInstancesByPolicyResponse =
+  struct
+    type t =
+      {
+      traffic_policy_instances: TrafficPolicyInstances.t ;
+      hosted_zone_id_marker: String.t option ;
+      traffic_policy_instance_name_marker: String.t option ;
+      traffic_policy_instance_type_marker: RRType.t option ;
+      is_truncated: Boolean.t ;
+      max_items: String.t }
+    let make ~traffic_policy_instances  ?hosted_zone_id_marker 
+      ?traffic_policy_instance_name_marker 
+      ?traffic_policy_instance_type_marker  ~is_truncated  ~max_items  () =
+      {
+        traffic_policy_instances;
+        hosted_zone_id_marker;
+        traffic_policy_instance_name_marker;
+        traffic_policy_instance_type_marker;
+        is_truncated;
+        max_items
+      }
+    let parse xml =
+      Some
+        {
+          traffic_policy_instances =
+            (Xml.required "TrafficPolicyInstances"
+               (Util.option_bind (Xml.member "TrafficPolicyInstances" xml)
+                  TrafficPolicyInstances.parse));
+          hosted_zone_id_marker =
+            (Util.option_bind (Xml.member "HostedZoneIdMarker" xml)
+               String.parse);
+          traffic_policy_instance_name_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceNameMarker" xml)
+               String.parse);
+          traffic_policy_instance_type_marker =
+            (Util.option_bind
+               (Xml.member "TrafficPolicyInstanceTypeMarker" xml)
+               RRType.parse);
+          is_truncated =
+            (Xml.required "IsTruncated"
+               (Util.option_bind (Xml.member "IsTruncated" xml) Boolean.parse));
+          max_items =
+            (Xml.required "MaxItems"
+               (Util.option_bind (Xml.member "MaxItems" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "TrafficPolicyInstances"
+                           ([], (TrafficPolicyInstances.to_xml [x]))))
+                   v.traffic_policy_instances))
+               @
+               [Util.option_map v.hosted_zone_id_marker
+                  (fun f ->
+                     Ezxmlm.make_tag "HostedZoneIdMarker"
+                       ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.traffic_policy_instance_name_marker
+                 (fun f ->
+                    Ezxmlm.make_tag "TrafficPolicyInstanceNameMarker"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.traffic_policy_instance_type_marker
+                (fun f ->
+                   Ezxmlm.make_tag "TrafficPolicyInstanceTypeMarker"
+                     ([], (RRType.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "IsTruncated"
+                  ([], (Boolean.to_xml v.is_truncated)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "MaxItems" ([], (String.to_xml v.max_items)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("max_items", (String.to_json v.max_items));
+           Some ("is_truncated", (Boolean.to_json v.is_truncated));
+           Util.option_map v.traffic_policy_instance_type_marker
+             (fun f ->
+                ("traffic_policy_instance_type_marker", (RRType.to_json f)));
+           Util.option_map v.traffic_policy_instance_name_marker
+             (fun f ->
+                ("traffic_policy_instance_name_marker", (String.to_json f)));
+           Util.option_map v.hosted_zone_id_marker
+             (fun f -> ("hosted_zone_id_marker", (String.to_json f)));
+           Some
+             ("traffic_policy_instances",
+               (TrafficPolicyInstances.to_json v.traffic_policy_instances))])
+    let of_json j =
+      {
+        traffic_policy_instances =
+          (TrafficPolicyInstances.of_json
+             (Util.of_option_exn (Json.lookup j "traffic_policy_instances")));
+        hosted_zone_id_marker =
+          (Util.option_map (Json.lookup j "hosted_zone_id_marker")
+             String.of_json);
+        traffic_policy_instance_name_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_name_marker")
+             String.of_json);
+        traffic_policy_instance_type_marker =
+          (Util.option_map
+             (Json.lookup j "traffic_policy_instance_type_marker")
+             RRType.of_json);
+        is_truncated =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "is_truncated")));
+        max_items =
+          (String.of_json (Util.of_option_exn (Json.lookup j "max_items")))
       }
   end
 module ListHostedZonesByNameRequest =
@@ -4530,6 +9772,19 @@ module ListHostedZonesByNameRequest =
              (fun f -> Query.Pair ("hostedzoneid", (String.to_query f)));
            Util.option_map v.d_n_s_name
              (fun f -> Query.Pair ("dnsname", (String.to_query f)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.d_n_s_name
+                (fun f -> Ezxmlm.make_tag "dnsname" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.hosted_zone_id
+               (fun f ->
+                  Ezxmlm.make_tag "hostedzoneid" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_items
+              (fun f -> Ezxmlm.make_tag "maxitems" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4564,12 +9819,13 @@ module UpdateHostedZoneCommentRequest =
           comment =
             (Util.option_bind (Xml.member "Comment" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
            [Util.option_map v.comment
-              (fun f -> Query.Pair ("Comment", (String.to_query f)));
-           Some (Query.Pair ("Id", (String.to_query v.id)))])
+              (fun f -> Ezxmlm.make_tag "Comment" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4580,6 +9836,97 @@ module UpdateHostedZoneCommentRequest =
       {
         id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
         comment = (Util.option_map (Json.lookup j "comment") String.of_json)
+      }
+  end
+module ConflictingTypes =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module CreateVPCAssociationAuthorizationRequest =
+  struct
+    type t = {
+      hosted_zone_id: String.t ;
+      v_p_c: VPC.t }
+    let make ~hosted_zone_id  ~v_p_c  () = { hosted_zone_id; v_p_c }
+    let parse xml =
+      Some
+        {
+          hosted_zone_id =
+            (Xml.required "Id"
+               (Util.option_bind (Xml.member "Id" xml) String.parse));
+          v_p_c =
+            (Xml.required "VPC"
+               (Util.option_bind (Xml.member "VPC" xml) VPC.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Id" ([], (String.to_xml v.hosted_zone_id)))])
+           @ [Some (Ezxmlm.make_tag "VPC" ([], (VPC.to_xml v.v_p_c)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("v_p_c", (VPC.to_json v.v_p_c));
+           Some ("hosted_zone_id", (String.to_json v.hosted_zone_id))])
+    let of_json j =
+      {
+        hosted_zone_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "hosted_zone_id")));
+        v_p_c = (VPC.of_json (Util.of_option_exn (Json.lookup j "v_p_c")))
+      }
+  end
+module ConcurrentModification =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
 module HealthCheckAlreadyExists =
@@ -4593,11 +9940,13 @@ module HealthCheckAlreadyExists =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4605,5 +9954,104 @@ module HealthCheckAlreadyExists =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module TestDNSAnswerResponse =
+  struct
+    type t =
+      {
+      nameserver: String.t ;
+      record_name: String.t ;
+      record_type: RRType.t ;
+      record_data: RecordData.t ;
+      response_code: String.t ;
+      protocol: String.t }
+    let make ~nameserver  ~record_name  ~record_type  ~record_data 
+      ~response_code  ~protocol  () =
+      {
+        nameserver;
+        record_name;
+        record_type;
+        record_data;
+        response_code;
+        protocol
+      }
+    let parse xml =
+      Some
+        {
+          nameserver =
+            (Xml.required "Nameserver"
+               (Util.option_bind (Xml.member "Nameserver" xml) String.parse));
+          record_name =
+            (Xml.required "RecordName"
+               (Util.option_bind (Xml.member "RecordName" xml) String.parse));
+          record_type =
+            (Xml.required "RecordType"
+               (Util.option_bind (Xml.member "RecordType" xml) RRType.parse));
+          record_data =
+            (Xml.required "RecordData"
+               (Util.option_bind (Xml.member "RecordData" xml)
+                  RecordData.parse));
+          response_code =
+            (Xml.required "ResponseCode"
+               (Util.option_bind (Xml.member "ResponseCode" xml) String.parse));
+          protocol =
+            (Xml.required "Protocol"
+               (Util.option_bind (Xml.member "Protocol" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Some
+                   (Ezxmlm.make_tag "Nameserver"
+                      ([], (String.to_xml v.nameserver)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "RecordName"
+                     ([], (String.to_xml v.record_name)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "RecordType"
+                    ([], (RRType.to_xml v.record_type)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "RecordData"
+                        ([], (RecordData.to_xml [x])))) v.record_data))
+            @
+            [Some
+               (Ezxmlm.make_tag "ResponseCode"
+                  ([], (String.to_xml v.response_code)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "Protocol" ([], (String.to_xml v.protocol)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("protocol", (String.to_json v.protocol));
+           Some ("response_code", (String.to_json v.response_code));
+           Some ("record_data", (RecordData.to_json v.record_data));
+           Some ("record_type", (RRType.to_json v.record_type));
+           Some ("record_name", (String.to_json v.record_name));
+           Some ("nameserver", (String.to_json v.nameserver))])
+    let of_json j =
+      {
+        nameserver =
+          (String.of_json (Util.of_option_exn (Json.lookup j "nameserver")));
+        record_name =
+          (String.of_json (Util.of_option_exn (Json.lookup j "record_name")));
+        record_type =
+          (RRType.of_json (Util.of_option_exn (Json.lookup j "record_type")));
+        record_data =
+          (RecordData.of_json
+             (Util.of_option_exn (Json.lookup j "record_data")));
+        response_code =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "response_code")));
+        protocol =
+          (String.of_json (Util.of_option_exn (Json.lookup j "protocol")))
       }
   end

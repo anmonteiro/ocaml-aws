@@ -8,13 +8,19 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            "/2013-04-01/checkeripranges"))
       [("Version", ["2013-04-01"]); ("Action", ["GetCheckerIpRanges"])] in
-  (`GET, uri, [])
+  (`GET, uri, (Headers.render (Headers.List [])), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "GetCheckerIpRangesResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise
+            (Failure "Could not find well formed GetCheckerIpRangesResponse.") in
     try
       Util.or_error (Util.option_bind resp GetCheckerIpRangesResponse.parse)
         (let open Error in
