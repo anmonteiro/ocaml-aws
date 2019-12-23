@@ -3,4 +3,4 @@
  (public_name aws_elasticloadbalancing)
  (synopsis "aws-Elastic Load Balancing")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

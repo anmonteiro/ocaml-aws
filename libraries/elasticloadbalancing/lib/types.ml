@@ -9,6 +9,9 @@ module PolicyNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -51,19 +54,30 @@ module Listener =
             (Util.option_bind (Xml.member "SSLCertificateId" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "Protocol"
+                     ([], (String.to_xml v.protocol)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "LoadBalancerPort"
+                    ([], (Integer.to_xml v.load_balancer_port)))])
+             @
+             [Util.option_map v.instance_protocol
+                (fun f ->
+                   Ezxmlm.make_tag "InstanceProtocol" ([], (String.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "InstancePort"
+                  ([], (Integer.to_xml v.instance_port)))])
+           @
            [Util.option_map v.s_s_l_certificate_id
-              (fun f -> Query.Pair ("SSLCertificateId", (String.to_query f)));
-           Some
-             (Query.Pair ("InstancePort", (Integer.to_query v.instance_port)));
-           Util.option_map v.instance_protocol
-             (fun f -> Query.Pair ("InstanceProtocol", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LoadBalancerPort", (Integer.to_query v.load_balancer_port)));
-           Some (Query.Pair ("Protocol", (String.to_query v.protocol)))])
+              (fun f ->
+                 Ezxmlm.make_tag "SSLCertificateId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -106,13 +120,16 @@ module AppCookieStickinessPolicy =
           cookie_name =
             (Util.option_bind (Xml.member "CookieName" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.policy_name
+               (fun f -> Ezxmlm.make_tag "PolicyName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.cookie_name
-              (fun f -> Query.Pair ("CookieName", (String.to_query f)));
-           Util.option_map v.policy_name
-             (fun f -> Query.Pair ("PolicyName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "CookieName" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -145,14 +162,18 @@ module LBCookieStickinessPolicy =
             (Util.option_bind (Xml.member "CookieExpirationPeriod" xml)
                Long.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.policy_name
+               (fun f -> Ezxmlm.make_tag "PolicyName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.cookie_expiration_period
               (fun f ->
-                 Query.Pair ("CookieExpirationPeriod", (Long.to_query f)));
-           Util.option_map v.policy_name
-             (fun f -> Query.Pair ("PolicyName", (String.to_query f)))])
+                 Ezxmlm.make_tag "CookieExpirationPeriod"
+                   ([], (Long.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -183,12 +204,13 @@ module Tag =
                (Util.option_bind (Xml.member "Key" xml) String.parse));
           value = (Util.option_bind (Xml.member "Value" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Key" ([], (String.to_xml v.key)))]) @
            [Util.option_map v.value
-              (fun f -> Query.Pair ("Value", (String.to_query f)));
-           Some (Query.Pair ("Key", (String.to_query v.key)))])
+              (fun f -> Ezxmlm.make_tag "Value" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -216,13 +238,18 @@ module PolicyAttributeDescription =
           attribute_value =
             (Util.option_bind (Xml.member "AttributeValue" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.attribute_name
+               (fun f ->
+                  Ezxmlm.make_tag "AttributeName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.attribute_value
-              (fun f -> Query.Pair ("AttributeValue", (String.to_query f)));
-           Util.option_map v.attribute_name
-             (fun f -> Query.Pair ("AttributeName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "AttributeValue" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -270,19 +297,29 @@ module PolicyAttributeTypeDescription =
           cardinality =
             (Util.option_bind (Xml.member "Cardinality" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Util.option_map v.attribute_name
+                  (fun f ->
+                     Ezxmlm.make_tag "AttributeName" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.attribute_type
+                 (fun f ->
+                    Ezxmlm.make_tag "AttributeType" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.description
+                (fun f ->
+                   Ezxmlm.make_tag "Description" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.default_value
+               (fun f ->
+                  Ezxmlm.make_tag "DefaultValue" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.cardinality
-              (fun f -> Query.Pair ("Cardinality", (String.to_query f)));
-           Util.option_map v.default_value
-             (fun f -> Query.Pair ("DefaultValue", (String.to_query f)));
-           Util.option_map v.description
-             (fun f -> Query.Pair ("Description", (String.to_query f)));
-           Util.option_map v.attribute_type
-             (fun f -> Query.Pair ("AttributeType", (String.to_query f)));
-           Util.option_map v.attribute_name
-             (fun f -> Query.Pair ("AttributeName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Cardinality" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -327,15 +364,20 @@ module BackendServerDescription =
                (Util.option_bind (Xml.member "PolicyNames" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyNames.member",
-                   (PolicyNames.to_query v.policy_names)));
-           Util.option_map v.instance_port
-             (fun f -> Query.Pair ("InstancePort", (Integer.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.instance_port
+               (fun f ->
+                  Ezxmlm.make_tag "InstancePort" ([], (Integer.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyNames"
+                      ([], (PolicyNames.to_xml [x])))) v.policy_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -362,11 +404,13 @@ module Instance =
           instance_id =
             (Util.option_bind (Xml.member "InstanceId" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.instance_id
-              (fun f -> Query.Pair ("InstanceId", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "InstanceId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -394,15 +438,19 @@ module ListenerDescription =
                (Util.option_bind (Xml.member "PolicyNames" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyNames.member",
-                   (PolicyNames.to_query v.policy_names)));
-           Util.option_map v.listener
-             (fun f -> Query.Pair ("Listener", (Listener.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.listener
+               (fun f -> Ezxmlm.make_tag "Listener" ([], (Listener.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyNames"
+                      ([], (PolicyNames.to_xml [x])))) v.policy_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -426,6 +474,13 @@ module AppCookieStickinessPolicies =
       Util.option_all
         (List.map AppCookieStickinessPolicy.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list AppCookieStickinessPolicy.to_query v
+    let to_headers v =
+      Headers.to_headers_list AppCookieStickinessPolicy.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (AppCookieStickinessPolicy.to_xml x))) v
     let to_json v = `List (List.map AppCookieStickinessPolicy.to_json v)
     let of_json j = Json.to_list AppCookieStickinessPolicy.of_json j
   end
@@ -437,6 +492,13 @@ module LBCookieStickinessPolicies =
       Util.option_all
         (List.map LBCookieStickinessPolicy.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list LBCookieStickinessPolicy.to_query v
+    let to_headers v =
+      Headers.to_headers_list LBCookieStickinessPolicy.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (LBCookieStickinessPolicy.to_xml x)))
+        v
     let to_json v = `List (List.map LBCookieStickinessPolicy.to_json v)
     let of_json j = Json.to_list LBCookieStickinessPolicy.of_json j
   end
@@ -447,6 +509,9 @@ module TagList =
     let parse xml =
       Util.option_all (List.map Tag.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Tag.to_query v
+    let to_headers v = Headers.to_headers_list Tag.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Tag.to_xml x))) v
     let to_json v = `List (List.map Tag.to_json v)
     let of_json j = Json.to_list Tag.of_json j
   end
@@ -462,13 +527,16 @@ module AdditionalAttribute =
           key = (Util.option_bind (Xml.member "Key" xml) String.parse);
           value = (Util.option_bind (Xml.member "Value" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.key
+               (fun f -> Ezxmlm.make_tag "Key" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.value
-              (fun f -> Query.Pair ("Value", (String.to_query f)));
-           Util.option_map v.key
-             (fun f -> Query.Pair ("Key", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Value" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -489,6 +557,13 @@ module PolicyAttributeDescriptions =
         (List.map PolicyAttributeDescription.parse (Xml.members "member" xml))
     let to_query v =
       Query.to_query_list PolicyAttributeDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list PolicyAttributeDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (PolicyAttributeDescription.to_xml x))) v
     let to_json v = `List (List.map PolicyAttributeDescription.to_json v)
     let of_json j = Json.to_list PolicyAttributeDescription.of_json j
   end
@@ -502,6 +577,13 @@ module PolicyAttributeTypeDescriptions =
            (Xml.members "member" xml))
     let to_query v =
       Query.to_query_list PolicyAttributeTypeDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list PolicyAttributeTypeDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (PolicyAttributeTypeDescription.to_xml x))) v
     let to_json v = `List (List.map PolicyAttributeTypeDescription.to_json v)
     let of_json j = Json.to_list PolicyAttributeTypeDescription.of_json j
   end
@@ -512,6 +594,9 @@ module AvailabilityZones =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -523,6 +608,13 @@ module BackendServerDescriptions =
       Util.option_all
         (List.map BackendServerDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list BackendServerDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list BackendServerDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (BackendServerDescription.to_xml x)))
+        v
     let to_json v = `List (List.map BackendServerDescription.to_json v)
     let of_json j = Json.to_list BackendServerDescription.of_json j
   end
@@ -559,19 +651,28 @@ module HealthCheck =
                (Util.option_bind (Xml.member "HealthyThreshold" xml)
                   Integer.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "Target" ([], (String.to_xml v.target)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "Interval"
+                    ([], (Integer.to_xml v.interval)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "Timeout" ([], (Integer.to_xml v.timeout)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "UnhealthyThreshold"
+                  ([], (Integer.to_xml v.unhealthy_threshold)))])
+           @
            [Some
-              (Query.Pair
-                 ("HealthyThreshold", (Integer.to_query v.healthy_threshold)));
-           Some
-             (Query.Pair
-                ("UnhealthyThreshold",
-                  (Integer.to_query v.unhealthy_threshold)));
-           Some (Query.Pair ("Timeout", (Integer.to_query v.timeout)));
-           Some (Query.Pair ("Interval", (Integer.to_query v.interval)));
-           Some (Query.Pair ("Target", (String.to_query v.target)))])
+              (Ezxmlm.make_tag "HealthyThreshold"
+                 ([], (Integer.to_xml v.healthy_threshold)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -604,6 +705,10 @@ module Instances =
     let parse xml =
       Util.option_all (List.map Instance.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Instance.to_query v
+    let to_headers v = Headers.to_headers_list Instance.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Instance.to_xml x)))
+        v
     let to_json v = `List (List.map Instance.to_json v)
     let of_json j = Json.to_list Instance.of_json j
   end
@@ -615,6 +720,12 @@ module ListenerDescriptions =
       Util.option_all
         (List.map ListenerDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list ListenerDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list ListenerDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (ListenerDescription.to_xml x))) v
     let to_json v = `List (List.map ListenerDescription.to_json v)
     let of_json j = Json.to_list ListenerDescription.of_json j
   end
@@ -650,23 +761,30 @@ module Policies =
                (Util.option_bind (Xml.member "OtherPolicies" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("OtherPolicies.member",
-                   (PolicyNames.to_query v.other_policies)));
-           Some
-             (Query.Pair
-                ("LBCookieStickinessPolicies.member",
-                  (LBCookieStickinessPolicies.to_query
-                     v.l_b_cookie_stickiness_policies)));
-           Some
-             (Query.Pair
-                ("AppCookieStickinessPolicies.member",
-                  (AppCookieStickinessPolicies.to_query
-                     v.app_cookie_stickiness_policies)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "AppCookieStickinessPolicies"
+                        ([], (AppCookieStickinessPolicies.to_xml [x]))))
+                v.app_cookie_stickiness_policies))
+            @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LBCookieStickinessPolicies"
+                       ([], (LBCookieStickinessPolicies.to_xml [x]))))
+               v.l_b_cookie_stickiness_policies))
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "OtherPolicies"
+                      ([], (PolicyNames.to_xml [x])))) v.other_policies))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -701,6 +819,9 @@ module SecurityGroups =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -718,13 +839,16 @@ module SourceSecurityGroup =
           group_name =
             (Util.option_bind (Xml.member "GroupName" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.owner_alias
+               (fun f -> Ezxmlm.make_tag "OwnerAlias" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.group_name
-              (fun f -> Query.Pair ("GroupName", (String.to_query f)));
-           Util.option_map v.owner_alias
-             (fun f -> Query.Pair ("OwnerAlias", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "GroupName" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -747,6 +871,9 @@ module Subnets =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -767,12 +894,19 @@ module TagDescription =
             (Util.of_option []
                (Util.option_bind (Xml.member "Tags" xml) TagList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (TagList.to_query v.tags)));
-           Util.option_map v.load_balancer_name
-             (fun f -> Query.Pair ("LoadBalancerName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.load_balancer_name
+               (fun f ->
+                  Ezxmlm.make_tag "LoadBalancerName" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagList.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -810,16 +944,25 @@ module AccessLog =
           s3_bucket_prefix =
             (Util.option_bind (Xml.member "S3BucketPrefix" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "Enabled" ([], (Boolean.to_xml v.enabled)))])
+             @
+             [Util.option_map v.s3_bucket_name
+                (fun f ->
+                   Ezxmlm.make_tag "S3BucketName" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.emit_interval
+               (fun f ->
+                  Ezxmlm.make_tag "EmitInterval" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.s3_bucket_prefix
-              (fun f -> Query.Pair ("S3BucketPrefix", (String.to_query f)));
-           Util.option_map v.emit_interval
-             (fun f -> Query.Pair ("EmitInterval", (Integer.to_query f)));
-           Util.option_map v.s3_bucket_name
-             (fun f -> Query.Pair ("S3BucketName", (String.to_query f)));
-           Some (Query.Pair ("Enabled", (Boolean.to_query v.enabled)))])
+              (fun f ->
+                 Ezxmlm.make_tag "S3BucketPrefix" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -850,6 +993,12 @@ module AdditionalAttributes =
       Util.option_all
         (List.map AdditionalAttribute.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list AdditionalAttribute.to_query v
+    let to_headers v =
+      Headers.to_headers_list AdditionalAttribute.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (AdditionalAttribute.to_xml x))) v
     let to_json v = `List (List.map AdditionalAttribute.to_json v)
     let of_json j = Json.to_list AdditionalAttribute.of_json j
   end
@@ -868,12 +1017,16 @@ module ConnectionDraining =
           timeout =
             (Util.option_bind (Xml.member "Timeout" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "Enabled" ([], (Boolean.to_xml v.enabled)))])
+           @
            [Util.option_map v.timeout
-              (fun f -> Query.Pair ("Timeout", (Integer.to_query f)));
-           Some (Query.Pair ("Enabled", (Boolean.to_query v.enabled)))])
+              (fun f -> Ezxmlm.make_tag "Timeout" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -899,11 +1052,14 @@ module ConnectionSettings =
             (Xml.required "IdleTimeout"
                (Util.option_bind (Xml.member "IdleTimeout" xml) Integer.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("IdleTimeout", (Integer.to_query v.idle_timeout)))])
+              (Ezxmlm.make_tag "IdleTimeout"
+                 ([], (Integer.to_xml v.idle_timeout)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -927,10 +1083,12 @@ module CrossZoneLoadBalancing =
             (Xml.required "Enabled"
                (Util.option_bind (Xml.member "Enabled" xml) Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Enabled", (Boolean.to_query v.enabled)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some (Ezxmlm.make_tag "Enabled" ([], (Boolean.to_xml v.enabled)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt [Some ("enabled", (Boolean.to_json v.enabled))])
@@ -956,13 +1114,18 @@ module PolicyAttribute =
           attribute_value =
             (Util.option_bind (Xml.member "AttributeValue" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.attribute_name
+               (fun f ->
+                  Ezxmlm.make_tag "AttributeName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.attribute_value
-              (fun f -> Query.Pair ("AttributeValue", (String.to_query f)));
-           Util.option_map v.attribute_name
-             (fun f -> Query.Pair ("AttributeName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "AttributeValue" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -985,11 +1148,13 @@ module TagKeyOnly =
     let make ?key  () = { key }
     let parse xml =
       Some { key = (Util.option_bind (Xml.member "Key" xml) String.parse) }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.key
-              (fun f -> Query.Pair ("Key", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Key" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1020,18 +1185,25 @@ module PolicyDescription =
                   (Xml.member "PolicyAttributeDescriptions" xml)
                   PolicyAttributeDescriptions.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyAttributeDescriptions.member",
-                   (PolicyAttributeDescriptions.to_query
-                      v.policy_attribute_descriptions)));
-           Util.option_map v.policy_type_name
-             (fun f -> Query.Pair ("PolicyTypeName", (String.to_query f)));
-           Util.option_map v.policy_name
-             (fun f -> Query.Pair ("PolicyName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.policy_name
+                (fun f ->
+                   Ezxmlm.make_tag "PolicyName" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.policy_type_name
+               (fun f ->
+                  Ezxmlm.make_tag "PolicyTypeName" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyAttributeDescriptions"
+                      ([], (PolicyAttributeDescriptions.to_xml [x]))))
+              v.policy_attribute_descriptions))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1076,17 +1248,23 @@ module InstanceState =
           description =
             (Util.option_bind (Xml.member "Description" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.instance_id
+                 (fun f ->
+                    Ezxmlm.make_tag "InstanceId" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.state
+                (fun f -> Ezxmlm.make_tag "State" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.reason_code
+               (fun f -> Ezxmlm.make_tag "ReasonCode" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.description
-              (fun f -> Query.Pair ("Description", (String.to_query f)));
-           Util.option_map v.reason_code
-             (fun f -> Query.Pair ("ReasonCode", (String.to_query f)));
-           Util.option_map v.state
-             (fun f -> Query.Pair ("State", (String.to_query f)));
-           Util.option_map v.instance_id
-             (fun f -> Query.Pair ("InstanceId", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Description" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1131,18 +1309,25 @@ module PolicyTypeDescription =
                   (Xml.member "PolicyAttributeTypeDescriptions" xml)
                   PolicyAttributeTypeDescriptions.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyAttributeTypeDescriptions.member",
-                   (PolicyAttributeTypeDescriptions.to_query
-                      v.policy_attribute_type_descriptions)));
-           Util.option_map v.description
-             (fun f -> Query.Pair ("Description", (String.to_query f)));
-           Util.option_map v.policy_type_name
-             (fun f -> Query.Pair ("PolicyTypeName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.policy_type_name
+                (fun f ->
+                   Ezxmlm.make_tag "PolicyTypeName" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.description
+               (fun f ->
+                  Ezxmlm.make_tag "Description" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyAttributeTypeDescriptions"
+                      ([], (PolicyAttributeTypeDescriptions.to_xml [x]))))
+              v.policy_attribute_type_descriptions))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1259,54 +1444,94 @@ module LoadBalancerDescription =
             (Util.option_bind (Xml.member "CreatedTime" xml) DateTime.parse);
           scheme = (Util.option_bind (Xml.member "Scheme" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((((((([] @
+                          [Util.option_map v.load_balancer_name
+                             (fun f ->
+                                Ezxmlm.make_tag "LoadBalancerName"
+                                  ([], (String.to_xml f)))])
+                         @
+                         [Util.option_map v.d_n_s_name
+                            (fun f ->
+                               Ezxmlm.make_tag "DNSName"
+                                 ([], (String.to_xml f)))])
+                        @
+                        [Util.option_map v.canonical_hosted_zone_name
+                           (fun f ->
+                              Ezxmlm.make_tag "CanonicalHostedZoneName"
+                                ([], (String.to_xml f)))])
+                       @
+                       [Util.option_map v.canonical_hosted_zone_name_i_d
+                          (fun f ->
+                             Ezxmlm.make_tag "CanonicalHostedZoneNameID"
+                               ([], (String.to_xml f)))])
+                      @
+                      (List.map
+                         (fun x ->
+                            Some
+                              (Ezxmlm.make_tag "ListenerDescriptions"
+                                 ([], (ListenerDescriptions.to_xml [x]))))
+                         v.listener_descriptions))
+                     @
+                     [Util.option_map v.policies
+                        (fun f ->
+                           Ezxmlm.make_tag "Policies"
+                             ([], (Policies.to_xml f)))])
+                    @
+                    (List.map
+                       (fun x ->
+                          Some
+                            (Ezxmlm.make_tag "BackendServerDescriptions"
+                               ([], (BackendServerDescriptions.to_xml [x]))))
+                       v.backend_server_descriptions))
+                   @
+                   (List.map
+                      (fun x ->
+                         Some
+                           (Ezxmlm.make_tag "AvailabilityZones"
+                              ([], (AvailabilityZones.to_xml [x]))))
+                      v.availability_zones))
+                  @
+                  (List.map
+                     (fun x ->
+                        Some
+                          (Ezxmlm.make_tag "Subnets"
+                             ([], (Subnets.to_xml [x])))) v.subnets))
+                 @
+                 [Util.option_map v.v_p_c_id
+                    (fun f -> Ezxmlm.make_tag "VPCId" ([], (String.to_xml f)))])
+                @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "Instances"
+                           ([], (Instances.to_xml [x])))) v.instances))
+               @
+               [Util.option_map v.health_check
+                  (fun f ->
+                     Ezxmlm.make_tag "HealthCheck"
+                       ([], (HealthCheck.to_xml f)))])
+              @
+              [Util.option_map v.source_security_group
+                 (fun f ->
+                    Ezxmlm.make_tag "SourceSecurityGroup"
+                      ([], (SourceSecurityGroup.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "SecurityGroups"
+                        ([], (SecurityGroups.to_xml [x])))) v.security_groups))
+            @
+            [Util.option_map v.created_time
+               (fun f ->
+                  Ezxmlm.make_tag "CreatedTime" ([], (DateTime.to_xml f)))])
+           @
            [Util.option_map v.scheme
-              (fun f -> Query.Pair ("Scheme", (String.to_query f)));
-           Util.option_map v.created_time
-             (fun f -> Query.Pair ("CreatedTime", (DateTime.to_query f)));
-           Some
-             (Query.Pair
-                ("SecurityGroups.member",
-                  (SecurityGroups.to_query v.security_groups)));
-           Util.option_map v.source_security_group
-             (fun f ->
-                Query.Pair
-                  ("SourceSecurityGroup", (SourceSecurityGroup.to_query f)));
-           Util.option_map v.health_check
-             (fun f -> Query.Pair ("HealthCheck", (HealthCheck.to_query f)));
-           Some
-             (Query.Pair
-                ("Instances.member", (Instances.to_query v.instances)));
-           Util.option_map v.v_p_c_id
-             (fun f -> Query.Pair ("VPCId", (String.to_query f)));
-           Some (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)));
-           Some
-             (Query.Pair
-                ("AvailabilityZones.member",
-                  (AvailabilityZones.to_query v.availability_zones)));
-           Some
-             (Query.Pair
-                ("BackendServerDescriptions.member",
-                  (BackendServerDescriptions.to_query
-                     v.backend_server_descriptions)));
-           Util.option_map v.policies
-             (fun f -> Query.Pair ("Policies", (Policies.to_query f)));
-           Some
-             (Query.Pair
-                ("ListenerDescriptions.member",
-                  (ListenerDescriptions.to_query v.listener_descriptions)));
-           Util.option_map v.canonical_hosted_zone_name_i_d
-             (fun f ->
-                Query.Pair ("CanonicalHostedZoneNameID", (String.to_query f)));
-           Util.option_map v.canonical_hosted_zone_name
-             (fun f ->
-                Query.Pair ("CanonicalHostedZoneName", (String.to_query f)));
-           Util.option_map v.d_n_s_name
-             (fun f -> Query.Pair ("DNSName", (String.to_query f)));
-           Util.option_map v.load_balancer_name
-             (fun f -> Query.Pair ("LoadBalancerName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Scheme" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1397,6 +1622,10 @@ module TagDescriptions =
       Util.option_all
         (List.map TagDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list TagDescription.to_query v
+    let to_headers v = Headers.to_headers_list TagDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (TagDescription.to_xml x))) v
     let to_json v = `List (List.map TagDescription.to_json v)
     let of_json j = Json.to_list TagDescription.of_json j
   end
@@ -1437,28 +1666,36 @@ module LoadBalancerAttributes =
                (Util.option_bind (Xml.member "AdditionalAttributes" xml)
                   AdditionalAttributes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AdditionalAttributes.member",
-                   (AdditionalAttributes.to_query v.additional_attributes)));
-           Util.option_map v.connection_settings
-             (fun f ->
-                Query.Pair
-                  ("ConnectionSettings", (ConnectionSettings.to_query f)));
-           Util.option_map v.connection_draining
-             (fun f ->
-                Query.Pair
-                  ("ConnectionDraining", (ConnectionDraining.to_query f)));
-           Util.option_map v.access_log
-             (fun f -> Query.Pair ("AccessLog", (AccessLog.to_query f)));
-           Util.option_map v.cross_zone_load_balancing
-             (fun f ->
-                Query.Pair
-                  ("CrossZoneLoadBalancing",
-                    (CrossZoneLoadBalancing.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Util.option_map v.cross_zone_load_balancing
+                  (fun f ->
+                     Ezxmlm.make_tag "CrossZoneLoadBalancing"
+                       ([], (CrossZoneLoadBalancing.to_xml f)))])
+              @
+              [Util.option_map v.access_log
+                 (fun f ->
+                    Ezxmlm.make_tag "AccessLog" ([], (AccessLog.to_xml f)))])
+             @
+             [Util.option_map v.connection_draining
+                (fun f ->
+                   Ezxmlm.make_tag "ConnectionDraining"
+                     ([], (ConnectionDraining.to_xml f)))])
+            @
+            [Util.option_map v.connection_settings
+               (fun f ->
+                  Ezxmlm.make_tag "ConnectionSettings"
+                    ([], (ConnectionSettings.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AdditionalAttributes"
+                      ([], (AdditionalAttributes.to_xml [x]))))
+              v.additional_attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1502,6 +1739,9 @@ module LoadBalancerNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -1512,6 +1752,10 @@ module Listeners =
     let parse xml =
       Util.option_all (List.map Listener.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Listener.to_query v
+    let to_headers v = Headers.to_headers_list Listener.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Listener.to_xml x)))
+        v
     let to_json v = `List (List.map Listener.to_json v)
     let of_json j = Json.to_list Listener.of_json j
   end
@@ -1523,6 +1767,11 @@ module PolicyAttributes =
       Util.option_all
         (List.map PolicyAttribute.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list PolicyAttribute.to_query v
+    let to_headers v = Headers.to_headers_list PolicyAttribute.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (PolicyAttribute.to_xml x)))
+        v
     let to_json v = `List (List.map PolicyAttribute.to_json v)
     let of_json j = Json.to_list PolicyAttribute.of_json j
   end
@@ -1533,6 +1782,10 @@ module TagKeyList =
     let parse xml =
       Util.option_all (List.map TagKeyOnly.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list TagKeyOnly.to_query v
+    let to_headers v = Headers.to_headers_list TagKeyOnly.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (TagKeyOnly.to_xml x))) v
     let to_json v = `List (List.map TagKeyOnly.to_json v)
     let of_json j = Json.to_list TagKeyOnly.of_json j
   end
@@ -1544,6 +1797,11 @@ module PolicyDescriptions =
       Util.option_all
         (List.map PolicyDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list PolicyDescription.to_query v
+    let to_headers v = Headers.to_headers_list PolicyDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (PolicyDescription.to_xml x)))
+        v
     let to_json v = `List (List.map PolicyDescription.to_json v)
     let of_json j = Json.to_list PolicyDescription.of_json j
   end
@@ -1555,6 +1813,10 @@ module InstanceStates =
       Util.option_all
         (List.map InstanceState.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list InstanceState.to_query v
+    let to_headers v = Headers.to_headers_list InstanceState.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (InstanceState.to_xml x))) v
     let to_json v = `List (List.map InstanceState.to_json v)
     let of_json j = Json.to_list InstanceState.of_json j
   end
@@ -1565,6 +1827,9 @@ module LoadBalancerNamesMax20 =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -1575,6 +1840,9 @@ module PolicyTypeNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -1585,6 +1853,9 @@ module Ports =
     let parse xml =
       Util.option_all (List.map Integer.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Integer.to_query v
+    let to_headers v = Headers.to_headers_list Integer.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Integer.to_xml x))) v
     let to_json v = `List (List.map Integer.to_json v)
     let of_json j = Json.to_list Integer.of_json j
   end
@@ -1596,6 +1867,12 @@ module PolicyTypeDescriptions =
       Util.option_all
         (List.map PolicyTypeDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list PolicyTypeDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list PolicyTypeDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (PolicyTypeDescription.to_xml x))) v
     let to_json v = `List (List.map PolicyTypeDescription.to_json v)
     let of_json j = Json.to_list PolicyTypeDescription.of_json j
   end
@@ -1607,6 +1884,13 @@ module LoadBalancerDescriptions =
       Util.option_all
         (List.map LoadBalancerDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list LoadBalancerDescription.to_query v
+    let to_headers v =
+      Headers.to_headers_list LoadBalancerDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (LoadBalancerDescription.to_xml x)))
+        v
     let to_json v = `List (List.map LoadBalancerDescription.to_json v)
     let of_json j = Json.to_list LoadBalancerDescription.of_json j
   end
@@ -1623,13 +1907,16 @@ module DescribeTagsOutput =
                (Util.option_bind (Xml.member "TagDescriptions" xml)
                   TagDescriptions.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("TagDescriptions.member",
-                   (TagDescriptions.to_query v.tag_descriptions)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "TagDescriptions"
+                      ([], (TagDescriptions.to_xml [x])))) v.tag_descriptions))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1655,11 +1942,14 @@ module ConfigureHealthCheckOutput =
             (Util.option_bind (Xml.member "HealthCheck" xml)
                HealthCheck.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.health_check
-              (fun f -> Query.Pair ("HealthCheck", (HealthCheck.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "HealthCheck" ([], (HealthCheck.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1689,16 +1979,19 @@ module ModifyLoadBalancerAttributesOutput =
             (Util.option_bind (Xml.member "LoadBalancerAttributes" xml)
                LoadBalancerAttributes.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.load_balancer_name
+               (fun f ->
+                  Ezxmlm.make_tag "LoadBalancerName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.load_balancer_attributes
               (fun f ->
-                 Query.Pair
-                   ("LoadBalancerAttributes",
-                     (LoadBalancerAttributes.to_query f)));
-           Util.option_map v.load_balancer_name
-             (fun f -> Query.Pair ("LoadBalancerName", (String.to_query f)))])
+                 Ezxmlm.make_tag "LoadBalancerAttributes"
+                   ([], (LoadBalancerAttributes.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1724,6 +2017,8 @@ module SetLoadBalancerPoliciesForBackendServerOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -1744,14 +2039,22 @@ module AddTagsInput =
             (Xml.required "Tags"
                (Util.option_bind (Xml.member "Tags" xml) TagList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (TagList.to_query v.tags)));
-           Some
-             (Query.Pair
-                ("LoadBalancerNames.member",
-                  (LoadBalancerNames.to_query v.load_balancer_names)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LoadBalancerNames"
+                       ([], (LoadBalancerNames.to_xml [x]))))
+               v.load_balancer_names))
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagList.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1785,15 +2088,20 @@ module CreateLoadBalancerListenerInput =
             (Xml.required "Listeners"
                (Util.option_bind (Xml.member "Listeners" xml) Listeners.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Listeners.member", (Listeners.to_query v.listeners)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Listeners" ([], (Listeners.to_xml [x]))))
+              v.listeners))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1839,20 +2147,29 @@ module CreateLoadBalancerPolicyInput =
                (Util.option_bind (Xml.member "PolicyAttributes" xml)
                   PolicyAttributes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyAttributes.member",
-                   (PolicyAttributes.to_query v.policy_attributes)));
-           Some
-             (Query.Pair
-                ("PolicyTypeName", (String.to_query v.policy_type_name)));
-           Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "LoadBalancerName"
+                    ([], (String.to_xml v.load_balancer_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "PolicyName"
+                   ([], (String.to_xml v.policy_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "PolicyTypeName"
+                  ([], (String.to_xml v.policy_type_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyAttributes"
+                      ([], (PolicyAttributes.to_xml [x]))))
+              v.policy_attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1883,6 +2200,8 @@ module DuplicateTagKeysException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -1897,11 +2216,13 @@ module CreateAccessPointOutput =
           d_n_s_name =
             (Util.option_bind (Xml.member "DNSName" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.d_n_s_name
-              (fun f -> Query.Pair ("DNSName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "DNSName" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1932,15 +2253,20 @@ module DescribeLoadBalancerPoliciesInput =
                (Util.option_bind (Xml.member "PolicyNames" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyNames.member",
-                   (PolicyNames.to_query v.policy_names)));
-           Util.option_map v.load_balancer_name
-             (fun f -> Query.Pair ("LoadBalancerName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.load_balancer_name
+               (fun f ->
+                  Ezxmlm.make_tag "LoadBalancerName" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyNames"
+                      ([], (PolicyNames.to_xml [x])))) v.policy_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1963,6 +2289,8 @@ module LoadBalancerAttributeNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -1972,6 +2300,8 @@ module TooManyTagsException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -1993,14 +2323,19 @@ module AttachLoadBalancerToSubnetsInput =
             (Xml.required "Subnets"
                (Util.option_bind (Xml.member "Subnets" xml) Subnets.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Subnets" ([], (Subnets.to_xml [x]))))
+              v.subnets))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2033,15 +2368,20 @@ module DeregisterEndPointsInput =
             (Xml.required "Instances"
                (Util.option_bind (Xml.member "Instances" xml) Instances.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Instances.member", (Instances.to_query v.instances)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Instances" ([], (Instances.to_xml [x]))))
+              v.instances))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2069,13 +2409,17 @@ module AddAvailabilityZonesOutput =
                (Util.option_bind (Xml.member "AvailabilityZones" xml)
                   AvailabilityZones.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AvailabilityZones.member",
-                   (AvailabilityZones.to_query v.availability_zones)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AvailabilityZones"
+                      ([], (AvailabilityZones.to_xml [x]))))
+              v.availability_zones))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2095,6 +2439,8 @@ module ListenerNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2104,6 +2450,8 @@ module CreateLoadBalancerPolicyOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2113,6 +2461,8 @@ module InvalidEndPointException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2122,6 +2472,8 @@ module SubnetNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2142,14 +2494,22 @@ module RemoveTagsInput =
             (Xml.required "Tags"
                (Util.option_bind (Xml.member "Tags" xml) TagKeyList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (TagKeyList.to_query v.tags)));
-           Some
-             (Query.Pair
-                ("LoadBalancerNames.member",
-                  (LoadBalancerNames.to_query v.load_balancer_names)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LoadBalancerNames"
+                       ([], (LoadBalancerNames.to_xml [x]))))
+               v.load_balancer_names))
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagKeyList.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2191,18 +2551,24 @@ module SetLoadBalancerPoliciesForBackendServerInput =
                (Util.option_bind (Xml.member "PolicyNames" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyNames.member",
-                   (PolicyNames.to_query v.policy_names)));
-           Some
-             (Query.Pair ("InstancePort", (Integer.to_query v.instance_port)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "LoadBalancerName"
+                   ([], (String.to_xml v.load_balancer_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "InstancePort"
+                  ([], (Integer.to_xml v.instance_port)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyNames"
+                      ([], (PolicyNames.to_xml [x])))) v.policy_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2228,6 +2594,8 @@ module SetLoadBalancerListenerSSLCertificateOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2237,6 +2605,8 @@ module TooManyAccessPointsException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2288,27 +2658,47 @@ module CreateAccessPointInput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Tags" xml) TagList.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (TagList.to_query v.tags)));
-           Util.option_map v.scheme
-             (fun f -> Query.Pair ("Scheme", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SecurityGroups.member",
-                  (SecurityGroups.to_query v.security_groups)));
-           Some (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)));
-           Some
-             (Query.Pair
-                ("AvailabilityZones.member",
-                  (AvailabilityZones.to_query v.availability_zones)));
-           Some
-             (Query.Pair
-                ("Listeners.member", (Listeners.to_query v.listeners)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 [Some
+                    (Ezxmlm.make_tag "LoadBalancerName"
+                       ([], (String.to_xml v.load_balancer_name)))])
+                @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "Listeners"
+                           ([], (Listeners.to_xml [x])))) v.listeners))
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "AvailabilityZones"
+                          ([], (AvailabilityZones.to_xml [x]))))
+                  v.availability_zones))
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "Subnets" ([], (Subnets.to_xml [x]))))
+                 v.subnets))
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "SecurityGroups"
+                        ([], (SecurityGroups.to_xml [x])))) v.security_groups))
+            @
+            [Util.option_map v.scheme
+               (fun f -> Ezxmlm.make_tag "Scheme" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagList.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2361,17 +2751,23 @@ module DescribeAccessPointsInput =
           page_size =
             (Util.option_bind (Xml.member "PageSize" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "LoadBalancerNames"
+                        ([], (LoadBalancerNames.to_xml [x]))))
+                v.load_balancer_names))
+            @
+            [Util.option_map v.marker
+               (fun f -> Ezxmlm.make_tag "Marker" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.page_size
-              (fun f -> Query.Pair ("PageSize", (Integer.to_query f)));
-           Util.option_map v.marker
-             (fun f -> Query.Pair ("Marker", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LoadBalancerNames.member",
-                  (LoadBalancerNames.to_query v.load_balancer_names)))])
+              (fun f -> Ezxmlm.make_tag "PageSize" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2397,6 +2793,8 @@ module InvalidSchemeException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2406,6 +2804,8 @@ module SetLoadBalancerPoliciesOfListenerOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2415,6 +2815,8 @@ module InvalidSecurityGroupException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2424,6 +2826,8 @@ module CreateLoadBalancerListenerOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2439,11 +2843,15 @@ module DetachLoadBalancerFromSubnetsOutput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Subnets" xml) Subnets.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Subnets" ([], (Subnets.to_xml [x]))))
+              v.subnets))
     let to_json v =
       `Assoc
         (Util.list_filter_opt [Some ("subnets", (Subnets.to_json v.subnets))])
@@ -2466,12 +2874,14 @@ module DescribeLoadBalancerAttributesInput =
                (Util.option_bind (Xml.member "LoadBalancerName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+              (Ezxmlm.make_tag "LoadBalancerName"
+                 ([], (String.to_xml v.load_balancer_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2490,6 +2900,8 @@ module DuplicateListenerException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2499,6 +2911,8 @@ module CertificateNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2515,13 +2929,17 @@ module DescribeLoadBalancerPoliciesOutput =
                (Util.option_bind (Xml.member "PolicyDescriptions" xml)
                   PolicyDescriptions.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyDescriptions.member",
-                   (PolicyDescriptions.to_query v.policy_descriptions)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyDescriptions"
+                      ([], (PolicyDescriptions.to_xml [x]))))
+              v.policy_descriptions))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2541,6 +2959,8 @@ module PolicyTypeNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2564,16 +2984,21 @@ module RemoveAvailabilityZonesInput =
                (Util.option_bind (Xml.member "AvailabilityZones" xml)
                   AvailabilityZones.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AvailabilityZones.member",
-                   (AvailabilityZones.to_query v.availability_zones)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AvailabilityZones"
+                      ([], (AvailabilityZones.to_xml [x]))))
+              v.availability_zones))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2597,6 +3022,8 @@ module InvalidSubnetException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2618,13 +3045,18 @@ module DeleteLoadBalancerPolicyInput =
             (Xml.required "PolicyName"
                (Util.option_bind (Xml.member "PolicyName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "PolicyName"
+                 ([], (String.to_xml v.policy_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2651,11 +3083,15 @@ module AttachLoadBalancerToSubnetsOutput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Subnets" xml) Subnets.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Subnets" ([], (Subnets.to_xml [x]))))
+              v.subnets))
     let to_json v =
       `Assoc
         (Util.list_filter_opt [Some ("subnets", (Subnets.to_json v.subnets))])
@@ -2671,6 +3107,8 @@ module CreateAppCookieStickinessPolicyOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2687,13 +3125,16 @@ module DescribeEndPointStateOutput =
                (Util.option_bind (Xml.member "InstanceStates" xml)
                   InstanceStates.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("InstanceStates.member",
-                   (InstanceStates.to_query v.instance_states)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "InstanceStates"
+                      ([], (InstanceStates.to_xml [x])))) v.instance_states))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2712,6 +3153,8 @@ module AddTagsOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2721,6 +3164,8 @@ module DeleteAccessPointOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2730,6 +3175,8 @@ module RemoveTagsOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2746,13 +3193,17 @@ module RemoveAvailabilityZonesOutput =
                (Util.option_bind (Xml.member "AvailabilityZones" xml)
                   AvailabilityZones.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AvailabilityZones.member",
-                   (AvailabilityZones.to_query v.availability_zones)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AvailabilityZones"
+                      ([], (AvailabilityZones.to_xml [x]))))
+              v.availability_zones))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2786,16 +3237,20 @@ module ApplySecurityGroupsToLoadBalancerInput =
                (Util.option_bind (Xml.member "SecurityGroups" xml)
                   SecurityGroups.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("SecurityGroups.member",
-                   (SecurityGroups.to_query v.security_groups)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "SecurityGroups"
+                      ([], (SecurityGroups.to_xml [x])))) v.security_groups))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2837,19 +3292,24 @@ module SetLoadBalancerPoliciesOfListenerInput =
                (Util.option_bind (Xml.member "PolicyNames" xml)
                   PolicyNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyNames.member",
-                   (PolicyNames.to_query v.policy_names)));
-           Some
-             (Query.Pair
-                ("LoadBalancerPort", (Integer.to_query v.load_balancer_port)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "LoadBalancerName"
+                   ([], (String.to_xml v.load_balancer_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerPort"
+                  ([], (Integer.to_xml v.load_balancer_port)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyNames"
+                      ([], (PolicyNames.to_xml [x])))) v.policy_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2893,14 +3353,22 @@ module CreateAppCookieStickinessPolicyInput =
             (Xml.required "CookieName"
                (Util.option_bind (Xml.member "CookieName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("CookieName", (String.to_query v.cookie_name)));
-           Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "LoadBalancerName"
+                   ([], (String.to_xml v.load_balancer_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "PolicyName"
+                  ([], (String.to_xml v.policy_name)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "CookieName"
+                 ([], (String.to_xml v.cookie_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2931,13 +3399,17 @@ module DescribeTagsInput =
                (Util.option_bind (Xml.member "LoadBalancerNames" xml)
                   LoadBalancerNamesMax20.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LoadBalancerNames.member",
-                   (LoadBalancerNamesMax20.to_query v.load_balancer_names)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LoadBalancerNames"
+                      ([], (LoadBalancerNamesMax20.to_xml [x]))))
+              v.load_balancer_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2957,6 +3429,8 @@ module DeleteLoadBalancerPolicyOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2966,6 +3440,8 @@ module DuplicatePolicyNameException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2975,6 +3451,8 @@ module DeleteLoadBalancerListenerOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2984,6 +3462,8 @@ module TooManyPoliciesException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3007,17 +3487,19 @@ module ModifyLoadBalancerAttributesInput =
                (Util.option_bind (Xml.member "LoadBalancerAttributes" xml)
                   LoadBalancerAttributes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("LoadBalancerAttributes",
-                   (LoadBalancerAttributes.to_query
-                      v.load_balancer_attributes)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+              (Ezxmlm.make_tag "LoadBalancerAttributes"
+                 ([],
+                   (LoadBalancerAttributes.to_xml v.load_balancer_attributes)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3058,16 +3540,23 @@ module CreateLBCookieStickinessPolicyInput =
             (Util.option_bind (Xml.member "CookieExpirationPeriod" xml)
                Long.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "LoadBalancerName"
+                   ([], (String.to_xml v.load_balancer_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "PolicyName"
+                  ([], (String.to_xml v.policy_name)))])
+           @
            [Util.option_map v.cookie_expiration_period
               (fun f ->
-                 Query.Pair ("CookieExpirationPeriod", (Long.to_query f)));
-           Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+                 Ezxmlm.make_tag "CookieExpirationPeriod"
+                   ([], (Long.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3100,13 +3589,16 @@ module ApplySecurityGroupsToLoadBalancerOutput =
                (Util.option_bind (Xml.member "SecurityGroups" xml)
                   SecurityGroups.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("SecurityGroups.member",
-                   (SecurityGroups.to_query v.security_groups)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "SecurityGroups"
+                      ([], (SecurityGroups.to_xml [x])))) v.security_groups))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3138,15 +3630,18 @@ module ConfigureHealthCheckInput =
                (Util.option_bind (Xml.member "HealthCheck" xml)
                   HealthCheck.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("HealthCheck", (HealthCheck.to_query v.health_check)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+              (Ezxmlm.make_tag "HealthCheck"
+                 ([], (HealthCheck.to_xml v.health_check)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3168,6 +3663,8 @@ module DuplicateAccessPointNameException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3189,15 +3686,20 @@ module DescribeEndPointStateInput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Instances" xml) Instances.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Instances.member", (Instances.to_query v.instances)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Instances" ([], (Instances.to_xml [x]))))
+              v.instances))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3225,13 +3727,17 @@ module DescribeLoadBalancerPolicyTypesInput =
                (Util.option_bind (Xml.member "PolicyTypeNames" xml)
                   PolicyTypeNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyTypeNames.member",
-                   (PolicyTypeNames.to_query v.policy_type_names)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyTypeNames"
+                      ([], (PolicyTypeNames.to_xml [x]))))
+              v.policy_type_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3257,12 +3763,16 @@ module DeregisterEndPointsOutput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Instances" xml) Instances.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Instances.member", (Instances.to_query v.instances)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Instances" ([], (Instances.to_xml [x]))))
+              v.instances))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3285,14 +3795,15 @@ module DescribeLoadBalancerAttributesOutput =
             (Util.option_bind (Xml.member "LoadBalancerAttributes" xml)
                LoadBalancerAttributes.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.load_balancer_attributes
               (fun f ->
-                 Query.Pair
-                   ("LoadBalancerAttributes",
-                     (LoadBalancerAttributes.to_query f)))])
+                 Ezxmlm.make_tag "LoadBalancerAttributes"
+                   ([], (LoadBalancerAttributes.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3332,19 +3843,22 @@ module SetLoadBalancerListenerSSLCertificateInput =
                (Util.option_bind (Xml.member "SSLCertificateId" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "LoadBalancerName"
+                   ([], (String.to_xml v.load_balancer_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerPort"
+                  ([], (Integer.to_xml v.load_balancer_port)))])
+           @
            [Some
-              (Query.Pair
-                 ("SSLCertificateId",
-                   (String.to_query v.s_s_l_certificate_id)));
-           Some
-             (Query.Pair
-                ("LoadBalancerPort", (Integer.to_query v.load_balancer_port)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+              (Ezxmlm.make_tag "SSLCertificateId"
+                 ([], (String.to_xml v.s_s_l_certificate_id)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3373,6 +3887,8 @@ module CreateLBCookieStickinessPolicyOutput =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3394,15 +3910,20 @@ module RegisterEndPointsInput =
             (Xml.required "Instances"
                (Util.option_bind (Xml.member "Instances" xml) Instances.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Instances.member", (Instances.to_query v.instances)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Instances" ([], (Instances.to_xml [x]))))
+              v.instances))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3436,16 +3957,20 @@ module DeleteLoadBalancerListenerInput =
                (Util.option_bind (Xml.member "LoadBalancerPorts" xml)
                   Ports.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LoadBalancerPorts.member",
-                   (Ports.to_query v.load_balancer_ports)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LoadBalancerPorts"
+                      ([], (Ports.to_xml [x])))) v.load_balancer_ports))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3474,12 +3999,16 @@ module RegisterEndPointsOutput =
             (Util.of_option []
                (Util.option_bind (Xml.member "Instances" xml) Instances.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Instances.member", (Instances.to_query v.instances)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Instances" ([], (Instances.to_xml [x]))))
+              v.instances))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3510,16 +4039,21 @@ module AddAvailabilityZonesInput =
                (Util.option_bind (Xml.member "AvailabilityZones" xml)
                   AvailabilityZones.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AvailabilityZones.member",
-                   (AvailabilityZones.to_query v.availability_zones)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AvailabilityZones"
+                      ([], (AvailabilityZones.to_xml [x]))))
+              v.availability_zones))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3551,14 +4085,17 @@ module DescribeLoadBalancerPolicyTypesOutput =
                (Util.option_bind (Xml.member "PolicyTypeDescriptions" xml)
                   PolicyTypeDescriptions.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("PolicyTypeDescriptions.member",
-                   (PolicyTypeDescriptions.to_query
-                      v.policy_type_descriptions)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "PolicyTypeDescriptions"
+                      ([], (PolicyTypeDescriptions.to_xml [x]))))
+              v.policy_type_descriptions))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3585,12 +4122,14 @@ module DeleteAccessPointInput =
                (Util.option_bind (Xml.member "LoadBalancerName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+              (Ezxmlm.make_tag "LoadBalancerName"
+                 ([], (String.to_xml v.load_balancer_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3621,16 +4160,20 @@ module DescribeAccessPointsOutput =
           next_marker =
             (Util.option_bind (Xml.member "NextMarker" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LoadBalancerDescriptions"
+                       ([], (LoadBalancerDescriptions.to_xml [x]))))
+               v.load_balancer_descriptions))
+           @
            [Util.option_map v.next_marker
-              (fun f -> Query.Pair ("NextMarker", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LoadBalancerDescriptions.member",
-                  (LoadBalancerDescriptions.to_query
-                     v.load_balancer_descriptions)))])
+              (fun f -> Ezxmlm.make_tag "NextMarker" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3654,6 +4197,8 @@ module AccessPointNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3675,14 +4220,19 @@ module DetachLoadBalancerFromSubnetsInput =
             (Xml.required "Subnets"
                (Util.option_bind (Xml.member "Subnets" xml) Subnets.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Subnets.member", (Subnets.to_query v.subnets)));
-           Some
-             (Query.Pair
-                ("LoadBalancerName", (String.to_query v.load_balancer_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LoadBalancerName"
+                  ([], (String.to_xml v.load_balancer_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Subnets" ([], (Subnets.to_xml [x]))))
+              v.subnets))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3703,6 +4253,8 @@ module InvalidConfigurationRequestException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3712,6 +4264,8 @@ module PolicyNotFoundException =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
