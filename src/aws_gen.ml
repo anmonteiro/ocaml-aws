@@ -144,6 +144,10 @@ let main input override errors_path outdir =
   let api_version   = Json.(member_exn "apiVersion"     meta |> to_string) in
   let protocol      = Json.(member_exn "protocol" meta |> to_string) in
   let is_ec2        = protocol = "ec2" in
+  let extra_libs = match protocol with
+    | "rest-json" | "json" -> ["yojson"]
+    | _ -> []
+  in
   let parsed_ops  = List.map Reading.op ops_json in
   let common_errors =
     let parse_common common =
@@ -207,7 +211,7 @@ let main input override errors_path outdir =
   log "## Wrote %d/%d ops modules..."
     (List.length ops) (List.length ops_json);
   Printing.write_all ~filename:(lib_dir </> "dune")
-    (Templates.dune ~lib_name:lib_name_dir ~service_name);
+   (Templates.dune ~lib_name:lib_name_dir ~extra_libs ~service_name);
   log "## Wrote dune file.";
   Printing.write_all ~filename:(lib_dir_test </> "dune")
     (Templates.dune_test ~lib_name:lib_name_dir);

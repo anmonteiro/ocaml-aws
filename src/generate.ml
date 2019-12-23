@@ -98,7 +98,7 @@ let types is_ec2 shapes =
           Syntax.tylet "t" (Syntax.ty0 "unit")
         else
           mkrecty (List.map (fun m ->
-            (m.Structure.field_name, (String.capitalize m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
+            (m.Structure.field_name, (String.capitalize_ascii m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
             members)
       | Shape.List (shp, _, _flatten) ->
         Syntax.tylet "t" (Syntax.ty1 "list" (shp ^ ".t"))
@@ -185,7 +185,7 @@ let types is_ec2 shapes =
         Syntax.(let_ "parse"
                   (fun_ "xml"
                      (ident "None")))
-      | Shape.List (shp, loc_name, _flatten) ->
+      | Shape.List (shp, loc_name, flattened) ->
         let item_name = match loc_name with
           | None -> "member"
           | Some nm -> nm in
@@ -230,7 +230,7 @@ let types is_ec2 shapes =
                            let location = if is_ec2 then String.capitalize_ascii location else location in
                            let q arg =
                              app1 "Query.Pair"
-                               (pair (str location) (app1 ((String.capitalize mem.Structure.shape) ^ ".to_query") arg)) in
+                               (pair (str location) (app1 ((String.capitalize_ascii mem.Structure.shape) ^ ".to_query") arg)) in
                            (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                             then app1 "Some" (q (ident ("v." ^ mem.Structure.field_name)))
                             else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -256,7 +256,7 @@ let types is_ec2 shapes =
                    (app1 "Util.list_filter_opt"
                       (list
                          (List.map (fun mem ->
-                              let location =
+                              let _location =
                                 match mem.Structure.loc_name with
                                 | Some name -> name
                                 | None      ->
@@ -267,7 +267,7 @@ let types is_ec2 shapes =
                               let q arg =
                                 (pair
                                    (str mem.Structure.field_name)
-                                   (app1 ((String.capitalize mem.Structure.shape) ^ ".to_json") arg)) in
+                                   (app1 ((String.capitalize_ascii mem.Structure.shape) ^ ".to_json") arg)) in
                               if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                               then app1 "Some" (q (ident ("v." ^ mem.Structure.field_name)))
                               else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -305,9 +305,9 @@ let types is_ec2 shapes =
                 record (List.map (fun mem ->
                     (mem.Structure.field_name,
                      (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
-                      then fun v -> app1 ((String.capitalize mem.Structure.shape) ^ ".of_json")
+                      then fun v -> app1 ((String.capitalize_ascii mem.Structure.shape) ^ ".of_json")
                           (app1 "Util.of_option_exn" v)
-                      else fun v -> app2 "Util.option_map" v (ident ((String.capitalize mem.Structure.shape) ^ ".of_json")))
+                      else fun v -> app2 "Util.option_map" v (ident ((String.capitalize_ascii mem.Structure.shape) ^ ".of_json")))
                        (app2 "Json.lookup" (ident "j") (str mem.Structure.field_name))))
                     s)
               | Shape.List (shp,_,_flatten) -> app2 "Json.to_list" (ident (shp ^ ".of_json")) (ident "j")
@@ -337,7 +337,7 @@ let types is_ec2 shapes =
                            in
                            let h arg =
                              app1 "Headers.Pair"
-                               (pair (str location) (app1 ((String.capitalize mem.Structure.shape) ^ ".to_headers") arg)) in
+                               (pair (str location) (app1 ((String.capitalize_ascii mem.Structure.shape) ^ ".to_headers") arg)) in
                            (if mem.Structure.required || is_list ~shapes ~shp:mem.Structure.shape
                             then app1 "Some" (h (ident ("v." ^ mem.Structure.field_name)))
                             else app2 "Util.option_map" (ident ("v." ^ mem.Structure.field_name))
@@ -346,7 +346,7 @@ let types is_ec2 shapes =
                 (app2 "Headers.to_headers_list" (ident (shp ^ ".to_headers")) (ident "v"))
               | Shape.Map ((shp,_),_) ->
                 (app2 "Headers.to_headers_hashtbl" (ident (shp ^ ".to_headers")) (ident "v"))
-              | Shape.Enum opts ->
+              | Shape.Enum _opts ->
                 (app1 "Headers.Value"
                    (app1 "Some"
                       (app1 "Util.of_option_exn"
@@ -371,7 +371,7 @@ let types is_ec2 shapes =
                            (app2 "Ezxmlm.make_tag" (str location)
                               (pair
                                  (list [])
-                                 (app1 ((String.capitalize mem.Structure.shape) ^ ".to_xml") arg))) in
+                                 (app1 ((String.capitalize_ascii mem.Structure.shape) ^ ".to_xml") arg))) in
                          app2 "@" acc
                          (if is_list ~shapes ~shp:mem.Structure.shape then
                             (app2 "List.map"
@@ -394,8 +394,8 @@ let types is_ec2 shapes =
                         (app2 "Ezxmlm.make_tag" (str "member")
                            (pair (list []) (app1 (shp ^ ".to_xml") (ident "x")))))
                      (ident "v"))
-              | Shape.Map ((shp,_),_) -> (list [])
-              | Shape.Enum opts ->
+              | Shape.Map ((_shp,_),_) -> (list [])
+              | Shape.Enum _opts ->
                 app1 "String.to_xml"
                   (app1 "Util.of_option_exn"
                      (app2 "Util.list_find"
@@ -403,7 +403,7 @@ let types is_ec2 shapes =
                         (ident "v"))))))
     in
     (* Force capitalize the module name, because some shapes may have uncapitalized names *)
-    Syntax.module_ (String.capitalize v.Shape.name) ([ty] @ extra @ [make; parse; to_query; to_headers; to_xml; to_json; of_json]) in
+    Syntax.module_ (String.capitalize_ascii v.Shape.name) ([ty] @ extra @ [make; parse; to_query; to_headers; to_xml; to_json; of_json]) in
   let modules = List.map build_module (toposort shapes) in
   let imports =
     [Syntax.open_ "Aws";
@@ -421,17 +421,19 @@ let op_to_uri shapes op =
         String.sub loc_name 0 ((String.length loc_name) - 1)
       else loc_name
     in
-    let shp = StringTable.find op.Operation.input_shape shapes in
-    match shp.Shape.content with
-    | Shape.Structure members ->
-      let found = List.find
+    match op.Operation.input_shape with
+    | Some input_shape ->
+      let shp = StringTable.find input_shape shapes in
+      begin match shp.Shape.content with
+      | Shape.Structure members ->
+        List.find
           (fun member ->
              match member.Structure.loc_name with
              | None -> false
              | Some x -> x = loc_name) members
-      in
-      found.Structure.field_name
-    | _ -> raise Not_found
+      | _ -> raise Not_found
+      end
+    | None -> assert false
   in
   let uri = op.Operation.http_uri in
   if ((String.contains uri '{') && (String.contains uri '}')) then
@@ -442,17 +444,30 @@ let op_to_uri shapes op =
                       let open Str in
                       match i with
                       | Text s ->
-                        if !is_shape then
-                          (Syntax.ident ("req." ^ op.Operation.input_shape ^ "." ^ (replace_shape s))) :: acc
-                        else (Syntax.str s) :: acc
+                        begin match op.Operation.input_shape with
+                        | Some input_shape when !is_shape ->
+                          let { Structure.field_name; shape; _ } = replace_shape s in
+                          let segment = (Syntax.ident ("req." ^ input_shape ^ "." ^ field_name))
+                          in
+                          let segment = if shape = "String"
+                            then segment
+                            else (Syntax.app1 ("Aws.BaseTypes." ^ shape ^ ".to_string") segment)
+                          in
+                          segment :: acc
+                        | _ ->
+                          (Syntax.str s) :: acc
+                        end
                       | Delim d -> is_shape := d = "{"; acc)
                    []
                  |> List.rev in
-    List.fold_left (Syntax.app2 "^") (Syntax.app2 "^" (List.hd tokens) (List.nth tokens 1)) (List.tl (List.tl tokens))
+    List.fold_left
+      (Syntax.app2 "^")
+      (Syntax.app2 "^" (List.hd tokens) (List.nth tokens 1))
+      (List.tl (List.tl tokens))
   else (Syntax.str uri)
 
 
-let op service version protocol _shapes op =
+let op service version protocol shapes op =
   let open Syntax in
   let mkty = function
     | None -> ty0 "unit"
@@ -467,16 +482,17 @@ let op service version protocol _shapes op =
     match protocol with
     | "json" | "rest-json" | "rest-xml" ->
       let payload =
-        if op.Operation.input_shape = "Aws.BaseTypes.Unit"
-        then (str "")
-        else
-          let shp = StringTable.find op.Operation.input_shape shapes in
+       match op.Operation.input_shape with
+       | None | Some "Aws.BaseTypes.Unit" ->
+        str ""
+       | Some input_shape ->
+          let shp = StringTable.find input_shape shapes in
           match shp.Shape.content with
           | Shape.Structure members ->
             begin match List.find_opt (fun member -> member.Structure.payload) members with
               | None -> (str "")
               | Some found ->
-                let field_access = (ident ("req." ^ op.Operation.input_shape ^ "." ^ found.Structure.field_name)) in
+                let field_access = (ident ("req." ^ input_shape ^ "." ^ found.Structure.field_name)) in
                 begin match found.Structure.shape with
                   | "Blob" | "String" ->
                     if found.Structure.required then field_access
@@ -526,30 +542,49 @@ let op service version protocol _shapes op =
       in
       letin "uri"
         (app2 "Uri.add_query_params"
-           (app1 "Uri.of_string" (op_to_uri shapes op))
-           (app1 "Util.drop_empty"
+           (app1 "Uri.of_string"
+            (app2 "^"
+              (app1 "Aws.Util.of_option_exn" (app2 "Endpoints.url_of" (ident "service") (ident "region")))
+              (op_to_uri shapes op)))
+           (match op.Operation.input_shape with
+            (* TODO: I seriously doubt this is correct for these protocols. *)
+            | None -> defaults
+            | Some input_shape ->
+              (app1 "Util.drop_empty"
               (app1 "Uri.query_of_encoded"
                  (app1 "Query.render"
-                    (app1 (op.Operation.input_shape ^ ".to_query") (ident "req"))))))
+                    (app1 (input_shape ^ ".to_query") (ident "req")))))))
         (tuple [variant op.Operation.http_meth;
                 ident "uri";
-                app1 "Headers.render" (app1 (op.Operation.input_shape ^ ".to_headers") (ident "req"));
+                app1 "Headers.render"
+                 (match op.Operation.input_shape with
+                  | None -> app1 "Headers.List" (list [])
+                  | Some input_shape ->
+                    (app1 (input_shape ^ ".to_headers") (ident "req")));
                 payload])
     | "query" | "ec2" ->
       letin "uri"
         (app2 "Uri.add_query_params"
-           (app1 "Uri.of_string" (op_to_uri shapes op))
-           (app2 "List.append"
-              (list [ pair (str "Action") (list [str op.Operation.name])
-                    ; pair (str "Version") (list [str version])
-                    ])
-              (app1 "Util.drop_empty"
-                 (app1 "Uri.query_of_encoded"
-                    (app1 "Query.render"
-                       (app1 (op.Operation.input_shape ^ ".to_query") (ident "req")))))))
+           (app1 "Uri.of_string"
+            (app2 "^"
+              (app1 "Aws.Util.of_option_exn" (app2 "Endpoints.url_of" (ident "service") (ident "region")))
+              (op_to_uri shapes op)))
+           (match op.Operation.input_shape with
+            | None -> defaults
+            | Some input_shape ->
+              (app2 "List.append"
+               defaults
+               (app1 "Util.drop_empty"
+                  (app1 "Uri.query_of_encoded"
+                     (app1 "Query.render"
+                        (app1 (input_shape ^ ".to_query") (ident "req"))))))))
         (tuple [variant op.Operation.http_meth;
                 ident "uri";
-                app1 "Headers.render" (app1 (op.Operation.input_shape ^ ".to_headers") (ident "req"));
+                app1 "Headers.render"
+                (match op.Operation.input_shape with
+                 | None -> app1 "Headers.List" (list [])
+                 | Some input_shape ->
+                   (app1 (input_shape ^ ".to_headers") (ident "req"))) ;
                 (str "")])
     | _ -> raise Not_found
   in
@@ -603,7 +638,7 @@ let op service version protocol _shapes op =
                    (record [("body", ident "body"); ("message", app2 "^"
                                                        (str "Error parsing xml: ")
                                                        (ident "msg"))]))))
-      | other -> raise Not_found
+      | _other -> raise Not_found
   in
     let op_error_parse =
     letin "errors" (app2 "@" (list (List.map (fun name -> ident ("Errors_internal." ^ (Util.to_variant_name name)))
@@ -630,7 +665,6 @@ let op service version protocol _shapes op =
    ],
    [ open_ "Types"
    ; open_ "Aws"
-   ; open_ "Aws.BaseTypes"
    ; tylet "input" (mkty op.Operation.input_shape)
    ; tylet "output" (mkty op.Operation.output_shape)
    ; tylet "error" (ty0 "Errors_internal.t")

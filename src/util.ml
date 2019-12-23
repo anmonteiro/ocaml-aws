@@ -130,22 +130,6 @@ let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t)
     ;("timestamp","DateTime")
     ;("blob","Blob")] in
 
-  (* TODO: revisit the assumption of output, since code below will try to replace it with None *)
-  let is_op_input_or_output shp =
-    let op_shapes = List.fold_left (fun acc {Operation.input_shape; output_shape} ->
-      (match output_shape with
-       | None -> input_shape :: acc
-       | Some x -> input_shape :: x :: acc))
-      [] ops in
-    List.mem shp op_shapes
-  in
-  let is_empty_struct shp =
-    try
-      match StringTable.find shp shapes with
-      | (_, _, Some (Shape.Structure [])) -> true
-      | _                                 -> false
-    with Not_found -> false
-  in
   let replace_shape default =
     try
       let _, shptyp, _ = StringTable.find default shapes in

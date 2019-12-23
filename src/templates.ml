@@ -55,15 +55,15 @@ depends: [
 ]
 |} service_name service_name
 
-let dune ~lib_name ~service_name =
+let dune ~lib_name ~extra_libs ~service_name =
   Printf.sprintf {|(library
  (name        aws_%s)
  (public_name aws_%s)
  (synopsis "aws-%s")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws %s))
 |}
- lib_name lib_name service_name
+ lib_name lib_name service_name (String.concat " " extra_libs)
 
 let dune_test ~lib_name =
   (* Necessary cause '%' is reserved string in 'sprintf' and I didn't know

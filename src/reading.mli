@@ -36,6 +36,3 @@ val shape : string * Yojson.Basic.t -> Structures.Shape.parsed
 val op : string * Yojson.Basic.t -> Structures.Operation.t
 
 val error : string -> Yojson.Basic.t -> Structures.Error.t
-val types : bool -> Shape.t StringTable.t -> Parsetree.structure
-val op : string -> string -> string -> Shape.t StringTable.t -> Operation.t -> Parsetree.signature * Parsetree.structure
-val errors : Error.t list -> Error.t list -> Parsetree.structure

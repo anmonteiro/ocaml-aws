@@ -54,11 +54,11 @@ let unreserve =
 let parse_member rq payload (mnm, mj) =
   { Structure.name = mnm
   ; shape          = Json.(member_exn "shape" mj |> to_string)
-  ; loc_name       = 
+  ; loc_name       =
     (match Json.member "locationName" mj with
     | `Null -> None
     | loc   -> Some (Json.to_string loc))
-  ; location = 
+  ; location =
     (match Json.member "location" mj with
     | `Null -> None
     | loc   -> Some (Json.to_string loc))
@@ -88,9 +88,6 @@ let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
     (nm, "structure", Some (Shape.Structure (List.map (parse_member required payload) member)))
   | `String "list" ->
     let member = Json.member_exn "member" j in
-    let flattened = match Json.member "flattened" j with
-      | `Bool true -> true
-      | _ -> false in
     let shape  = Json.member_exn "shape" member |> Json.to_string in
     let flattened = match Json.member_opt "flattened" j with
       | Some x -> Json.to_bool x

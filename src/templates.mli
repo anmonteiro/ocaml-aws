@@ -34,6 +34,7 @@
 (* Generate a dune file suitable for building main library *)
 val dune
   :  lib_name:string
+  -> extra_libs:string list
   -> service_name:string
   -> string
 

@@ -476,7 +476,7 @@ module Signing = struct
       (* TODO: after rebase, check if this is right. *)
       (* let host = Util.of_option_exn (Endpoints.endpoint_of service region) in *)
       (* let uri = Uri.of_string ((Endpoints.default_endpoint service region) ^ (Uri.path_and_query uri)) in *)
-      let uri = Uri.of_string ((Endpoints.endpoint_of service region) ^ (Uri.path_and_query uri)) in
+      let uri = Uri.of_string ((Util.of_option_exn (Endpoints.endpoint_of service region)) ^ (Uri.path_and_query uri)) in
       let host = Util.of_option_exn (Uri.host uri) in
       let params = encode_query (Uri.query uri) in
       let sign key msg = Hash.sha256 ~key msg in
@@ -492,11 +492,11 @@ module Signing = struct
       let canonical_headers =
         ("host", host) :: ("x-amz-date", amzdate) :: headers |>
         List.sort (fun (k1,_) (k2,_) -> compare k1 k2) |>
-        List.map (fun (k,v) -> (String.lowercase k) ^ ":" ^ v) |>
+        List.map (fun (k,v) -> (String.lowercase_ascii k) ^ ":" ^ v) |>
         String.concat "\n" |>
         (fun x -> x ^ "\n") in
       let signed_headers =
-        "host" :: "x-amz-date" :: (List.map (fun (k,_) -> (String.lowercase k)) headers) |>
+        "host" :: "x-amz-date" :: (List.map (fun (k,_) -> (String.lowercase_ascii k)) headers) |>
         List.sort compare |>
         String.concat ";" in
       let payload_hash = Hash.sha256_hex body in

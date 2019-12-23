@@ -3,8 +3,11 @@ module Structure = struct
     { name : string
     ; shape : string
     ; loc_name : string option
+    ; location : string option
     ; field_name : string
     ; required : bool
+    ; payload : bool
+    ; flattened : bool
     }
 
   type t = member list
