@@ -93,7 +93,11 @@ module Shape : sig
     | Enum of string list
     | Map of (string * string option) * (string * string option)
 
-  type t = { name : string; content : contents }
+  type t =
+   { name : string
+   ; content : contents
+     (* generate a recursive module; bool is if already generated both *)
+   ; mutable depends_on: t option * bool }
 
   (** We parse all shapes, but after inlining/filtering, the base
       types (Boolean, Double, et) no longer exist, so the bulk of the

@@ -66,9 +66,16 @@ let ty2 nm1 nm2 nm3 = Typ.constr (lid nm1) [ty0 nm2; ty0 nm3]
 let tyreclet nm fs =
   Str.type_ Recursive [Type.mk ~kind:(Ptype_record (List.map (fun (nm, ty) -> Type.field (strloc nm) ty) fs)) (strloc nm)]
 
+(* type nm = { fs.. }  (in .mli) *)
+let styreclet nm fs =
+  Sig.type_ Recursive [Type.mk ~kind:(Ptype_record (List.map (fun (nm, ty) -> Type.field (strloc nm) ty) fs)) (strloc nm)]
+
 (* type nm = unit *)
 let tyunit nm =
   Str.type_ Recursive [ Type.mk ~manifest:(ty0 "unit") (strloc nm) ]
+
+let styunit nm =
+  Sig.type_ Recursive [ Type.mk ~manifest:(ty0 "unit") (strloc nm) ]
 
 (* type nm = ty (in .ml) *)
 let tylet nm ty =
@@ -77,6 +84,13 @@ let tylet nm ty =
 (* type nm = | nm0 of ty0 | ... *)
 let tyvariantlet nm variants =
   Str.type_ Recursive
+    [Type.mk ~kind:(Ptype_variant
+                      (List.map (fun (cnm,args) -> Type.constructor ~args:(Pcstr_tuple args) (strloc cnm)) variants))
+       (strloc nm)]
+
+(* type nm = | nm0 of ty0 | ... (in .mli) *)
+let styvariantlet nm variants =
+  Sig.type_ Recursive
     [Type.mk ~kind:(Ptype_variant
                       (List.map (fun (cnm,args) -> Type.constructor ~args:(Pcstr_tuple args) (strloc cnm)) variants))
        (strloc nm)]
@@ -120,9 +134,29 @@ let fun3 arg1 arg2 arg3 body =
     (Exp.fun_ Nolabel None (Pat.var (strloc arg2))
        (Exp.fun_ Nolabel None (Pat.var (strloc arg3)) body))
 
+let arrowlab arg typ1 typ2 =
+  Typ.arrow (Labelled arg) typ1 typ2
+
+let arrowopt arg typ1 typ2 =
+  Typ.arrow (Optional arg) typ1 typ2
+
+let arrow typ1 typ2 =
+  Typ.arrow Nolabel typ1 typ2
+
+let val_ nm typ =
+  Sig.value (Val.mk (strloc nm) typ)
+
+let spair a b = Typ.tuple [a; b]
+let constr nm a = Typ.constr (lid nm)  [ a ]
+
+let tname nm = Typ.constr (lid nm)  [ ]
+
 (* fun () -> body *)
 let fununit body =
   Exp.fun_ Nolabel None (Pat.construct (lid "()") None) body
+
+let sfununit t =
+  arrow (tname "unit") (tname t)
 
 (* { fs .. } (as value) *)
 let record fs =
@@ -165,6 +199,12 @@ let variant1 v a = Exp.variant v (Some a)
 (* module nm = vs *)
 let module_ nm vs =
   Str.module_ (Mb.mk (strloc nm) (Mod.structure vs))
+
+let rec_module nmvs =
+  Str.rec_module
+    (List.map (fun (nm, vs, sigs) ->
+      Mb.mk (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
+    nmvs)
 
 (* include NM *)
 let include_ nm =
