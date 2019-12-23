@@ -166,6 +166,10 @@ let variant1 v a = Exp.variant v (Some a)
 let module_ nm vs =
   Str.module_ (Mb.mk (strloc nm) (Mod.structure vs))
 
+(* include NM *)
+let include_ nm =
+ Str.include_ (Incl.mk (Mod.ident (lid nm)))
+
 (* try body with _ -> with_ *)
 let try_ body with_ =
   Exp.try_ body [Exp.case (Pat.any ()) with_]

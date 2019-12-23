@@ -117,6 +117,18 @@ let rec mkdir_p ?(root="") dirs =
     end;
     mkdir_p ~root:dir ds
 
+let generate_types_module lib_dir (imports, modules) =
+  (* Arbitrary, but `ocamlopt` stack overflows on really large files *)
+  let len = List.length modules in
+  if (len > 1000) then begin
+   let types_1, types_2 = split_with_i (fun i _itm -> i <= len / 2) modules in
+    Printing.write_structure (lib_dir </> "types_1.ml") (imports @ types_1);
+    Printing.write_structure (lib_dir </> "types_2.ml") (imports @ [Syntax.open_ "Types_1"] @ types_2);
+    Printing.write_structure (lib_dir </> "types.ml") Syntax.[include_ "Types_1"; include_ "Types_2"];
+  end
+  else
+    Printing.write_structure (lib_dir </> "types.ml") (imports @ modules)
+
 let main input override errors_path outdir =
   log "## Generating...";
   let overrides =
@@ -197,7 +209,7 @@ let main input override errors_path outdir =
   let dir     = outdir </> lib_name_dir in
   let lib_dir = dir    </> "lib" in
   let lib_dir_test = dir </> "lib_test" in
-  Printing.write_structure (lib_dir </> "types.ml") (Generate.types is_ec2 shapes);
+  generate_types_module lib_dir (Generate.types is_ec2 shapes);
   log "## Wrote %d/%d shape modules..."
     (StringTable.cardinal shapes) (List.length shp_json);
   Printing.write_structure (lib_dir </> "errors_internal.ml") (Generate.errors errors common_errors);

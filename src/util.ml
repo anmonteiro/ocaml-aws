@@ -194,3 +194,28 @@ let option_map l ~f =
   match l with
   | None -> None
   | Some x -> Some (f ^ x)
+
+let rec split_with f xs =
+  match xs with
+  | [] ->
+    [], []
+  | y :: ys ->
+    if f y then
+      let zs, ts = split_with f ys in
+      y :: zs, ts
+    else
+      [], xs
+
+let split_with_i f xs =
+  let rec inner i f xs =
+    match xs with
+    | [] ->
+      [], []
+    | y :: ys ->
+      if f i y then
+        let zs, ts = inner (i + 1) f ys in
+        y :: zs, ts
+      else
+        [], xs
+  in
+  inner 0 f xs
