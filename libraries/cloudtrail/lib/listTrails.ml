@@ -1,7 +1,7 @@
 open Types
 open Aws
-type input = LookupEventsRequest.t
-type output = LookupEventsResponse.t
+type input = ListTrailsRequest.t
+type output = ListTrailsResponse.t
 type error = Errors_internal.t
 let service = "cloudtrail"
 let to_http service region req =
@@ -11,12 +11,12 @@ let to_http service region req =
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (Util.drop_empty
          (Uri.query_of_encoded
-            (Query.render (LookupEventsRequest.to_query req)))) in
-  (`POST, uri, (Headers.render (LookupEventsRequest.to_headers req)), "")
+            (Query.render (ListTrailsRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (ListTrailsRequest.to_headers req)), "")
 let of_http body =
   try
     let json = Yojson.Basic.from_string body in
-    `Ok (LookupEventsResponse.of_json json)
+    `Ok (ListTrailsResponse.of_json json)
   with
   | Yojson.Json_error msg ->
       `Error

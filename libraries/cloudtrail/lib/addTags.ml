@@ -1,7 +1,7 @@
 open Types
 open Aws
-type input = LookupEventsRequest.t
-type output = LookupEventsResponse.t
+type input = AddTagsRequest.t
+type output = unit
 type error = Errors_internal.t
 let service = "cloudtrail"
 let to_http service region req =
@@ -10,18 +10,9 @@ let to_http service region req =
       (Uri.of_string
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (Util.drop_empty
-         (Uri.query_of_encoded
-            (Query.render (LookupEventsRequest.to_query req)))) in
-  (`POST, uri, (Headers.render (LookupEventsRequest.to_headers req)), "")
-let of_http body =
-  try
-    let json = Yojson.Basic.from_string body in
-    `Ok (LookupEventsResponse.of_json json)
-  with
-  | Yojson.Json_error msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
+         (Uri.query_of_encoded (Query.render (AddTagsRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (AddTagsRequest.to_headers req)), "")
+let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
