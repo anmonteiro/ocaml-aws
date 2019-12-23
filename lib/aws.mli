@@ -101,8 +101,8 @@ module Request : sig
   (** HTTP headers. *)
   type headers = (string * string) list
 
-  (** A request is a method, a uri, and a list of headers. *)
-  type t = (meth * Uri.t * headers)
+  (** A request is a method, a uri, a list of headers and the body (payload). *)
+  type t = (meth * Uri.t * headers * string)
 
 end
 
@@ -190,6 +190,19 @@ module Query : sig
   val to_query_list : ('a -> t) -> 'a list -> t
 
   val to_query_hashtbl : ('a -> string) -> ('b -> t) -> ('a, 'b) Hashtbl.t -> t
+end
+
+module Headers : sig
+  type t =
+    | List of t list
+    | Pair of (string * t)
+    | Value of string option
+
+  val render : t -> Request.headers
+
+  val to_headers_list : ('a -> t) -> 'a list -> t
+
+  val to_headers_hashtbl : ('a -> t) -> (string, 'a) Hashtbl.t -> t
 end
 
 (** This module contains helpers used for XML parsing. It wraps Ezxmlm
@@ -313,6 +326,8 @@ module BaseTypes : sig
     val to_json : t -> Json.t
     val of_json : Json.t -> t
     val to_query : t -> Query.t
+    val to_headers : t -> Headers.t
+    val to_xml : t -> Ezxmlm.nodes
     val parse : Ezxmlm.nodes -> t option
     val to_string : t -> string
     val of_string : string -> t
