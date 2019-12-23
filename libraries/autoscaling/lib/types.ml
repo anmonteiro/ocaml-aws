@@ -2,6 +2,227 @@ open Aws
 open Aws.BaseTypes
 open CalendarLib
 type calendar = Calendar.t
+module MetricDimension =
+  struct
+    type t = {
+      name: String.t ;
+      value: String.t }
+    let make ~name  ~value  () = { name; value }
+    let parse xml =
+      Some
+        {
+          name =
+            (Xml.required "Name"
+               (Util.option_bind (Xml.member "Name" xml) String.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+           @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (String.to_json v.value));
+           Some ("name", (String.to_json v.name))])
+    let of_json j =
+      {
+        name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
+        value = (String.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
+  end
+module LaunchTemplateOverrides =
+  struct
+    type t =
+      {
+      instance_type: String.t option ;
+      weighted_capacity: String.t option }
+    let make ?instance_type  ?weighted_capacity  () =
+      { instance_type; weighted_capacity }
+    let parse xml =
+      Some
+        {
+          instance_type =
+            (Util.option_bind (Xml.member "InstanceType" xml) String.parse);
+          weighted_capacity =
+            (Util.option_bind (Xml.member "WeightedCapacity" xml)
+               String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.instance_type
+               (fun f ->
+                  Ezxmlm.make_tag "InstanceType" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.weighted_capacity
+              (fun f ->
+                 Ezxmlm.make_tag "WeightedCapacity" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.weighted_capacity
+              (fun f -> ("weighted_capacity", (String.to_json f)));
+           Util.option_map v.instance_type
+             (fun f -> ("instance_type", (String.to_json f)))])
+    let of_json j =
+      {
+        instance_type =
+          (Util.option_map (Json.lookup j "instance_type") String.of_json);
+        weighted_capacity =
+          (Util.option_map (Json.lookup j "weighted_capacity") String.of_json)
+      }
+  end
+module MetricDimensions =
+  struct
+    type t = MetricDimension.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map MetricDimension.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list MetricDimension.to_query v
+    let to_headers v = Headers.to_headers_list MetricDimension.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (MetricDimension.to_xml x)))
+        v
+    let to_json v = `List (List.map MetricDimension.to_json v)
+    let of_json j = Json.to_list MetricDimension.of_json j
+  end
+module MetricStatistic =
+  struct
+    type t =
+      | Average 
+      | Minimum 
+      | Maximum 
+      | SampleCount 
+      | Sum 
+    let str_to_t =
+      [("Sum", Sum);
+      ("SampleCount", SampleCount);
+      ("Maximum", Maximum);
+      ("Minimum", Minimum);
+      ("Average", Average)]
+    let t_to_str =
+      [(Sum, "Sum");
+      (SampleCount, "SampleCount");
+      (Maximum, "Maximum");
+      (Minimum, "Minimum");
+      (Average, "Average")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module MetricType =
+  struct
+    type t =
+      | ASGAverageCPUUtilization 
+      | ASGAverageNetworkIn 
+      | ASGAverageNetworkOut 
+      | ALBRequestCountPerTarget 
+    let str_to_t =
+      [("ALBRequestCountPerTarget", ALBRequestCountPerTarget);
+      ("ASGAverageNetworkOut", ASGAverageNetworkOut);
+      ("ASGAverageNetworkIn", ASGAverageNetworkIn);
+      ("ASGAverageCPUUtilization", ASGAverageCPUUtilization)]
+    let t_to_str =
+      [(ALBRequestCountPerTarget, "ALBRequestCountPerTarget");
+      (ASGAverageNetworkOut, "ASGAverageNetworkOut");
+      (ASGAverageNetworkIn, "ASGAverageNetworkIn");
+      (ASGAverageCPUUtilization, "ASGAverageCPUUtilization")]
+    let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
+    let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
+    let make v () = v
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_query v =
+      Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
+    let to_json v =
+      String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
+    let of_json j =
+      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module LaunchTemplateSpecification =
+  struct
+    type t =
+      {
+      launch_template_id: String.t option ;
+      launch_template_name: String.t option ;
+      version: String.t option }
+    let make ?launch_template_id  ?launch_template_name  ?version  () =
+      { launch_template_id; launch_template_name; version }
+    let parse xml =
+      Some
+        {
+          launch_template_id =
+            (Util.option_bind (Xml.member "LaunchTemplateId" xml)
+               String.parse);
+          launch_template_name =
+            (Util.option_bind (Xml.member "LaunchTemplateName" xml)
+               String.parse);
+          version =
+            (Util.option_bind (Xml.member "Version" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.launch_template_id
+                (fun f ->
+                   Ezxmlm.make_tag "LaunchTemplateId" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.launch_template_name
+               (fun f ->
+                  Ezxmlm.make_tag "LaunchTemplateName"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.version
+              (fun f -> Ezxmlm.make_tag "Version" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.version
+              (fun f -> ("version", (String.to_json f)));
+           Util.option_map v.launch_template_name
+             (fun f -> ("launch_template_name", (String.to_json f)));
+           Util.option_map v.launch_template_id
+             (fun f -> ("launch_template_id", (String.to_json f)))])
+    let of_json j =
+      {
+        launch_template_id =
+          (Util.option_map (Json.lookup j "launch_template_id")
+             String.of_json);
+        launch_template_name =
+          (Util.option_map (Json.lookup j "launch_template_name")
+             String.of_json);
+        version = (Util.option_map (Json.lookup j "version") String.of_json)
+      }
+  end
 module LifecycleState =
   struct
     type t =
@@ -54,10 +275,32 @@ module LifecycleState =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
       Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+  end
+module Overrides =
+  struct
+    type t = LaunchTemplateOverrides.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map LaunchTemplateOverrides.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list LaunchTemplateOverrides.to_query v
+    let to_headers v =
+      Headers.to_headers_list LaunchTemplateOverrides.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (LaunchTemplateOverrides.to_xml x)))
+        v
+    let to_json v = `List (List.map LaunchTemplateOverrides.to_json v)
+    let of_json j = Json.to_list LaunchTemplateOverrides.of_json j
   end
 module Ebs =
   struct
@@ -67,10 +310,18 @@ module Ebs =
       volume_size: Integer.t option ;
       volume_type: String.t option ;
       delete_on_termination: Boolean.t option ;
-      iops: Integer.t option }
+      iops: Integer.t option ;
+      encrypted: Boolean.t option }
     let make ?snapshot_id  ?volume_size  ?volume_type  ?delete_on_termination
-       ?iops  () =
-      { snapshot_id; volume_size; volume_type; delete_on_termination; iops }
+       ?iops  ?encrypted  () =
+      {
+        snapshot_id;
+        volume_size;
+        volume_type;
+        delete_on_termination;
+        iops;
+        encrypted
+      }
     let parse xml =
       Some
         {
@@ -83,26 +334,43 @@ module Ebs =
           delete_on_termination =
             (Util.option_bind (Xml.member "DeleteOnTermination" xml)
                Boolean.parse);
-          iops = (Util.option_bind (Xml.member "Iops" xml) Integer.parse)
+          iops = (Util.option_bind (Xml.member "Iops" xml) Integer.parse);
+          encrypted =
+            (Util.option_bind (Xml.member "Encrypted" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.iops
-              (fun f -> Query.Pair ("Iops", (Integer.to_query f)));
-           Util.option_map v.delete_on_termination
-             (fun f ->
-                Query.Pair ("DeleteOnTermination", (Boolean.to_query f)));
-           Util.option_map v.volume_type
-             (fun f -> Query.Pair ("VolumeType", (String.to_query f)));
-           Util.option_map v.volume_size
-             (fun f -> Query.Pair ("VolumeSize", (Integer.to_query f)));
-           Util.option_map v.snapshot_id
-             (fun f -> Query.Pair ("SnapshotId", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Util.option_map v.snapshot_id
+                   (fun f ->
+                      Ezxmlm.make_tag "SnapshotId" ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.volume_size
+                  (fun f ->
+                     Ezxmlm.make_tag "VolumeSize" ([], (Integer.to_xml f)))])
+              @
+              [Util.option_map v.volume_type
+                 (fun f ->
+                    Ezxmlm.make_tag "VolumeType" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.delete_on_termination
+                (fun f ->
+                   Ezxmlm.make_tag "DeleteOnTermination"
+                     ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.iops
+               (fun f -> Ezxmlm.make_tag "Iops" ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.encrypted
+              (fun f -> Ezxmlm.make_tag "Encrypted" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.iops (fun f -> ("iops", (Integer.to_json f)));
+           [Util.option_map v.encrypted
+              (fun f -> ("encrypted", (Boolean.to_json f)));
+           Util.option_map v.iops (fun f -> ("iops", (Integer.to_json f)));
            Util.option_map v.delete_on_termination
              (fun f -> ("delete_on_termination", (Boolean.to_json f)));
            Util.option_map v.volume_type
@@ -122,7 +390,9 @@ module Ebs =
         delete_on_termination =
           (Util.option_map (Json.lookup j "delete_on_termination")
              Boolean.of_json);
-        iops = (Util.option_map (Json.lookup j "iops") Integer.of_json)
+        iops = (Util.option_map (Json.lookup j "iops") Integer.of_json);
+        encrypted =
+          (Util.option_map (Json.lookup j "encrypted") Boolean.of_json)
       }
   end
 module Alarm =
@@ -139,13 +409,16 @@ module Alarm =
           alarm_a_r_n =
             (Util.option_bind (Xml.member "AlarmARN" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.alarm_name
+               (fun f -> Ezxmlm.make_tag "AlarmName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.alarm_a_r_n
-              (fun f -> Query.Pair ("AlarmARN", (String.to_query f)));
-           Util.option_map v.alarm_name
-             (fun f -> Query.Pair ("AlarmName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "AlarmARN" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -189,19 +462,24 @@ module StepAdjustment =
                (Util.option_bind (Xml.member "ScalingAdjustment" xml)
                   Integer.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.metric_interval_lower_bound
+                (fun f ->
+                   Ezxmlm.make_tag "MetricIntervalLowerBound"
+                     ([], (Double.to_xml f)))])
+            @
+            [Util.option_map v.metric_interval_upper_bound
+               (fun f ->
+                  Ezxmlm.make_tag "MetricIntervalUpperBound"
+                    ([], (Double.to_xml f)))])
+           @
            [Some
-              (Query.Pair
-                 ("ScalingAdjustment",
-                   (Integer.to_query v.scaling_adjustment)));
-           Util.option_map v.metric_interval_upper_bound
-             (fun f ->
-                Query.Pair ("MetricIntervalUpperBound", (Double.to_query f)));
-           Util.option_map v.metric_interval_lower_bound
-             (fun f ->
-                Query.Pair ("MetricIntervalLowerBound", (Double.to_query f)))])
+              (Ezxmlm.make_tag "ScalingAdjustment"
+                 ([], (Integer.to_xml v.scaling_adjustment)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -224,6 +502,131 @@ module StepAdjustment =
              (Util.of_option_exn (Json.lookup j "scaling_adjustment")))
       }
   end
+module CustomizedMetricSpecification =
+  struct
+    type t =
+      {
+      metric_name: String.t ;
+      namespace: String.t ;
+      dimensions: MetricDimensions.t ;
+      statistic: MetricStatistic.t ;
+      unit: String.t option }
+    let make ~metric_name  ~namespace  ?(dimensions= [])  ~statistic  ?unit 
+      () = { metric_name; namespace; dimensions; statistic; unit }
+    let parse xml =
+      Some
+        {
+          metric_name =
+            (Xml.required "MetricName"
+               (Util.option_bind (Xml.member "MetricName" xml) String.parse));
+          namespace =
+            (Xml.required "Namespace"
+               (Util.option_bind (Xml.member "Namespace" xml) String.parse));
+          dimensions =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Dimensions" xml)
+                  MetricDimensions.parse));
+          statistic =
+            (Xml.required "Statistic"
+               (Util.option_bind (Xml.member "Statistic" xml)
+                  MetricStatistic.parse));
+          unit = (Util.option_bind (Xml.member "Unit" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "MetricName"
+                     ([], (String.to_xml v.metric_name)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "Namespace"
+                    ([], (String.to_xml v.namespace)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "Dimensions"
+                        ([], (MetricDimensions.to_xml [x])))) v.dimensions))
+            @
+            [Some
+               (Ezxmlm.make_tag "Statistic"
+                  ([], (MetricStatistic.to_xml v.statistic)))])
+           @
+           [Util.option_map v.unit
+              (fun f -> Ezxmlm.make_tag "Unit" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.unit (fun f -> ("unit", (String.to_json f)));
+           Some ("statistic", (MetricStatistic.to_json v.statistic));
+           Some ("dimensions", (MetricDimensions.to_json v.dimensions));
+           Some ("namespace", (String.to_json v.namespace));
+           Some ("metric_name", (String.to_json v.metric_name))])
+    let of_json j =
+      {
+        metric_name =
+          (String.of_json (Util.of_option_exn (Json.lookup j "metric_name")));
+        namespace =
+          (String.of_json (Util.of_option_exn (Json.lookup j "namespace")));
+        dimensions =
+          (MetricDimensions.of_json
+             (Util.of_option_exn (Json.lookup j "dimensions")));
+        statistic =
+          (MetricStatistic.of_json
+             (Util.of_option_exn (Json.lookup j "statistic")));
+        unit = (Util.option_map (Json.lookup j "unit") String.of_json)
+      }
+  end
+module PredefinedMetricSpecification =
+  struct
+    type t =
+      {
+      predefined_metric_type: MetricType.t ;
+      resource_label: String.t option }
+    let make ~predefined_metric_type  ?resource_label  () =
+      { predefined_metric_type; resource_label }
+    let parse xml =
+      Some
+        {
+          predefined_metric_type =
+            (Xml.required "PredefinedMetricType"
+               (Util.option_bind (Xml.member "PredefinedMetricType" xml)
+                  MetricType.parse));
+          resource_label =
+            (Util.option_bind (Xml.member "ResourceLabel" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "PredefinedMetricType"
+                  ([], (MetricType.to_xml v.predefined_metric_type)))])
+           @
+           [Util.option_map v.resource_label
+              (fun f ->
+                 Ezxmlm.make_tag "ResourceLabel" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.resource_label
+              (fun f -> ("resource_label", (String.to_json f)));
+           Some
+             ("predefined_metric_type",
+               (MetricType.to_json v.predefined_metric_type))])
+    let of_json j =
+      {
+        predefined_metric_type =
+          (MetricType.of_json
+             (Util.of_option_exn (Json.lookup j "predefined_metric_type")));
+        resource_label =
+          (Util.option_map (Json.lookup j "resource_label") String.of_json)
+      }
+  end
 module EnabledMetric =
   struct
     type t = {
@@ -237,13 +640,16 @@ module EnabledMetric =
           granularity =
             (Util.option_bind (Xml.member "Granularity" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.metric
+               (fun f -> Ezxmlm.make_tag "Metric" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.granularity
-              (fun f -> Query.Pair ("Granularity", (String.to_query f)));
-           Util.option_map v.metric
-             (fun f -> Query.Pair ("Metric", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Granularity" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -262,18 +668,27 @@ module Instance =
     type t =
       {
       instance_id: String.t ;
+      instance_type: String.t option ;
       availability_zone: String.t ;
       lifecycle_state: LifecycleState.t ;
       health_status: String.t ;
-      launch_configuration_name: String.t option }
-    let make ~instance_id  ~availability_zone  ~lifecycle_state 
-      ~health_status  ?launch_configuration_name  () =
+      launch_configuration_name: String.t option ;
+      launch_template: LaunchTemplateSpecification.t option ;
+      protected_from_scale_in: Boolean.t ;
+      weighted_capacity: String.t option }
+    let make ~instance_id  ?instance_type  ~availability_zone 
+      ~lifecycle_state  ~health_status  ?launch_configuration_name 
+      ?launch_template  ~protected_from_scale_in  ?weighted_capacity  () =
       {
         instance_id;
+        instance_type;
         availability_zone;
         lifecycle_state;
         health_status;
-        launch_configuration_name
+        launch_configuration_name;
+        launch_template;
+        protected_from_scale_in;
+        weighted_capacity
       }
     let parse xml =
       Some
@@ -281,6 +696,8 @@ module Instance =
           instance_id =
             (Xml.required "InstanceId"
                (Util.option_bind (Xml.member "InstanceId" xml) String.parse));
+          instance_type =
+            (Util.option_bind (Xml.member "InstanceType" xml) String.parse);
           availability_zone =
             (Xml.required "AvailabilityZone"
                (Util.option_bind (Xml.member "AvailabilityZone" xml)
@@ -294,38 +711,87 @@ module Instance =
                (Util.option_bind (Xml.member "HealthStatus" xml) String.parse));
           launch_configuration_name =
             (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
+               String.parse);
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplateSpecification.parse);
+          protected_from_scale_in =
+            (Xml.required "ProtectedFromScaleIn"
+               (Util.option_bind (Xml.member "ProtectedFromScaleIn" xml)
+                  Boolean.parse));
+          weighted_capacity =
+            (Util.option_bind (Xml.member "WeightedCapacity" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.launch_configuration_name
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((([] @
+                   [Some
+                      (Ezxmlm.make_tag "InstanceId"
+                         ([], (String.to_xml v.instance_id)))])
+                  @
+                  [Util.option_map v.instance_type
+                     (fun f ->
+                        Ezxmlm.make_tag "InstanceType"
+                          ([], (String.to_xml f)))])
+                 @
+                 [Some
+                    (Ezxmlm.make_tag "AvailabilityZone"
+                       ([], (String.to_xml v.availability_zone)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "LifecycleState"
+                      ([], (LifecycleState.to_xml v.lifecycle_state)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "HealthStatus"
+                     ([], (String.to_xml v.health_status)))])
+              @
+              [Util.option_map v.launch_configuration_name
+                 (fun f ->
+                    Ezxmlm.make_tag "LaunchConfigurationName"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.launch_template
+                (fun f ->
+                   Ezxmlm.make_tag "LaunchTemplate"
+                     ([], (LaunchTemplateSpecification.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "ProtectedFromScaleIn"
+                  ([], (Boolean.to_xml v.protected_from_scale_in)))])
+           @
+           [Util.option_map v.weighted_capacity
               (fun f ->
-                 Query.Pair ("LaunchConfigurationName", (String.to_query f)));
-           Some
-             (Query.Pair ("HealthStatus", (String.to_query v.health_status)));
-           Some
-             (Query.Pair
-                ("LifecycleState",
-                  (LifecycleState.to_query v.lifecycle_state)));
-           Some
-             (Query.Pair
-                ("AvailabilityZone", (String.to_query v.availability_zone)));
-           Some (Query.Pair ("InstanceId", (String.to_query v.instance_id)))])
+                 Ezxmlm.make_tag "WeightedCapacity" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.launch_configuration_name
-              (fun f -> ("launch_configuration_name", (String.to_json f)));
+           [Util.option_map v.weighted_capacity
+              (fun f -> ("weighted_capacity", (String.to_json f)));
+           Some
+             ("protected_from_scale_in",
+               (Boolean.to_json v.protected_from_scale_in));
+           Util.option_map v.launch_template
+             (fun f ->
+                ("launch_template", (LaunchTemplateSpecification.to_json f)));
+           Util.option_map v.launch_configuration_name
+             (fun f -> ("launch_configuration_name", (String.to_json f)));
            Some ("health_status", (String.to_json v.health_status));
            Some
              ("lifecycle_state", (LifecycleState.to_json v.lifecycle_state));
            Some ("availability_zone", (String.to_json v.availability_zone));
+           Util.option_map v.instance_type
+             (fun f -> ("instance_type", (String.to_json f)));
            Some ("instance_id", (String.to_json v.instance_id))])
     let of_json j =
       {
         instance_id =
           (String.of_json (Util.of_option_exn (Json.lookup j "instance_id")));
+        instance_type =
+          (Util.option_map (Json.lookup j "instance_type") String.of_json);
         availability_zone =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "availability_zone")));
@@ -337,7 +803,180 @@ module Instance =
              (Util.of_option_exn (Json.lookup j "health_status")));
         launch_configuration_name =
           (Util.option_map (Json.lookup j "launch_configuration_name")
-             String.of_json)
+             String.of_json);
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplateSpecification.of_json);
+        protected_from_scale_in =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "protected_from_scale_in")));
+        weighted_capacity =
+          (Util.option_map (Json.lookup j "weighted_capacity") String.of_json)
+      }
+  end
+module InstancesDistribution =
+  struct
+    type t =
+      {
+      on_demand_allocation_strategy: String.t option ;
+      on_demand_base_capacity: Integer.t option ;
+      on_demand_percentage_above_base_capacity: Integer.t option ;
+      spot_allocation_strategy: String.t option ;
+      spot_instance_pools: Integer.t option ;
+      spot_max_price: String.t option }
+    let make ?on_demand_allocation_strategy  ?on_demand_base_capacity 
+      ?on_demand_percentage_above_base_capacity  ?spot_allocation_strategy 
+      ?spot_instance_pools  ?spot_max_price  () =
+      {
+        on_demand_allocation_strategy;
+        on_demand_base_capacity;
+        on_demand_percentage_above_base_capacity;
+        spot_allocation_strategy;
+        spot_instance_pools;
+        spot_max_price
+      }
+    let parse xml =
+      Some
+        {
+          on_demand_allocation_strategy =
+            (Util.option_bind (Xml.member "OnDemandAllocationStrategy" xml)
+               String.parse);
+          on_demand_base_capacity =
+            (Util.option_bind (Xml.member "OnDemandBaseCapacity" xml)
+               Integer.parse);
+          on_demand_percentage_above_base_capacity =
+            (Util.option_bind
+               (Xml.member "OnDemandPercentageAboveBaseCapacity" xml)
+               Integer.parse);
+          spot_allocation_strategy =
+            (Util.option_bind (Xml.member "SpotAllocationStrategy" xml)
+               String.parse);
+          spot_instance_pools =
+            (Util.option_bind (Xml.member "SpotInstancePools" xml)
+               Integer.parse);
+          spot_max_price =
+            (Util.option_bind (Xml.member "SpotMaxPrice" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Util.option_map v.on_demand_allocation_strategy
+                   (fun f ->
+                      Ezxmlm.make_tag "OnDemandAllocationStrategy"
+                        ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.on_demand_base_capacity
+                  (fun f ->
+                     Ezxmlm.make_tag "OnDemandBaseCapacity"
+                       ([], (Integer.to_xml f)))])
+              @
+              [Util.option_map v.on_demand_percentage_above_base_capacity
+                 (fun f ->
+                    Ezxmlm.make_tag "OnDemandPercentageAboveBaseCapacity"
+                      ([], (Integer.to_xml f)))])
+             @
+             [Util.option_map v.spot_allocation_strategy
+                (fun f ->
+                   Ezxmlm.make_tag "SpotAllocationStrategy"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.spot_instance_pools
+               (fun f ->
+                  Ezxmlm.make_tag "SpotInstancePools"
+                    ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.spot_max_price
+              (fun f ->
+                 Ezxmlm.make_tag "SpotMaxPrice" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.spot_max_price
+              (fun f -> ("spot_max_price", (String.to_json f)));
+           Util.option_map v.spot_instance_pools
+             (fun f -> ("spot_instance_pools", (Integer.to_json f)));
+           Util.option_map v.spot_allocation_strategy
+             (fun f -> ("spot_allocation_strategy", (String.to_json f)));
+           Util.option_map v.on_demand_percentage_above_base_capacity
+             (fun f ->
+                ("on_demand_percentage_above_base_capacity",
+                  (Integer.to_json f)));
+           Util.option_map v.on_demand_base_capacity
+             (fun f -> ("on_demand_base_capacity", (Integer.to_json f)));
+           Util.option_map v.on_demand_allocation_strategy
+             (fun f -> ("on_demand_allocation_strategy", (String.to_json f)))])
+    let of_json j =
+      {
+        on_demand_allocation_strategy =
+          (Util.option_map (Json.lookup j "on_demand_allocation_strategy")
+             String.of_json);
+        on_demand_base_capacity =
+          (Util.option_map (Json.lookup j "on_demand_base_capacity")
+             Integer.of_json);
+        on_demand_percentage_above_base_capacity =
+          (Util.option_map
+             (Json.lookup j "on_demand_percentage_above_base_capacity")
+             Integer.of_json);
+        spot_allocation_strategy =
+          (Util.option_map (Json.lookup j "spot_allocation_strategy")
+             String.of_json);
+        spot_instance_pools =
+          (Util.option_map (Json.lookup j "spot_instance_pools")
+             Integer.of_json);
+        spot_max_price =
+          (Util.option_map (Json.lookup j "spot_max_price") String.of_json)
+      }
+  end
+module LaunchTemplate =
+  struct
+    type t =
+      {
+      launch_template_specification: LaunchTemplateSpecification.t option ;
+      overrides: Overrides.t }
+    let make ?launch_template_specification  ?(overrides= [])  () =
+      { launch_template_specification; overrides }
+    let parse xml =
+      Some
+        {
+          launch_template_specification =
+            (Util.option_bind (Xml.member "LaunchTemplateSpecification" xml)
+               LaunchTemplateSpecification.parse);
+          overrides =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Overrides" xml) Overrides.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.launch_template_specification
+               (fun f ->
+                  Ezxmlm.make_tag "LaunchTemplateSpecification"
+                    ([], (LaunchTemplateSpecification.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Overrides" ([], (Overrides.to_xml [x]))))
+              v.overrides))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("overrides", (Overrides.to_json v.overrides));
+           Util.option_map v.launch_template_specification
+             (fun f ->
+                ("launch_template_specification",
+                  (LaunchTemplateSpecification.to_json f)))])
+    let of_json j =
+      {
+        launch_template_specification =
+          (Util.option_map (Json.lookup j "launch_template_specification")
+             LaunchTemplateSpecification.of_json);
+        overrides =
+          (Overrides.of_json (Util.of_option_exn (Json.lookup j "overrides")))
       }
   end
 module SuspendedProcess =
@@ -357,13 +996,18 @@ module SuspendedProcess =
             (Util.option_bind (Xml.member "SuspensionReason" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.process_name
+               (fun f ->
+                  Ezxmlm.make_tag "ProcessName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.suspension_reason
-              (fun f -> Query.Pair ("SuspensionReason", (String.to_query f)));
-           Util.option_map v.process_name
-             (fun f -> Query.Pair ("ProcessName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "SuspensionReason" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -410,18 +1054,24 @@ module TagDescription =
                (Util.option_bind (Xml.member "PropagateAtLaunch" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "ResourceId"
+                     ([], (String.to_xml v.resource_id)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "ResourceType"
+                    ([], (String.to_xml v.resource_type)))])
+             @ [Some (Ezxmlm.make_tag "Key" ([], (String.to_xml v.key)))])
+            @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+           @
            [Some
-              (Query.Pair
-                 ("PropagateAtLaunch",
-                   (Boolean.to_query v.propagate_at_launch)));
-           Some (Query.Pair ("Value", (String.to_query v.value)));
-           Some (Query.Pair ("Key", (String.to_query v.key)));
-           Some
-             (Query.Pair ("ResourceType", (String.to_query v.resource_type)));
-           Some (Query.Pair ("ResourceId", (String.to_query v.resource_id)))])
+              (Ezxmlm.make_tag "PropagateAtLaunch"
+                 ([], (Boolean.to_xml v.propagate_at_launch)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -468,16 +1118,24 @@ module BlockDeviceMapping =
           no_device =
             (Util.option_bind (Xml.member "NoDevice" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.virtual_name
+                 (fun f ->
+                    Ezxmlm.make_tag "VirtualName" ([], (String.to_xml f)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "DeviceName"
+                   ([], (String.to_xml v.device_name)))])
+            @
+            [Util.option_map v.ebs
+               (fun f -> Ezxmlm.make_tag "Ebs" ([], (Ebs.to_xml f)))])
+           @
            [Util.option_map v.no_device
-              (fun f -> Query.Pair ("NoDevice", (Boolean.to_query f)));
-           Util.option_map v.ebs
-             (fun f -> Query.Pair ("Ebs", (Ebs.to_query f)));
-           Some (Query.Pair ("DeviceName", (String.to_query v.device_name)));
-           Util.option_map v.virtual_name
-             (fun f -> Query.Pair ("VirtualName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "NoDevice" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -505,6 +1163,9 @@ module Values =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -515,6 +1176,9 @@ module Alarms =
     let parse xml =
       Util.option_all (List.map Alarm.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Alarm.to_query v
+    let to_headers v = Headers.to_headers_list Alarm.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Alarm.to_xml x))) v
     let to_json v = `List (List.map Alarm.to_json v)
     let of_json j = Json.to_list Alarm.of_json j
   end
@@ -526,12 +1190,101 @@ module StepAdjustments =
       Util.option_all
         (List.map StepAdjustment.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list StepAdjustment.to_query v
+    let to_headers v = Headers.to_headers_list StepAdjustment.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (StepAdjustment.to_xml x))) v
     let to_json v = `List (List.map StepAdjustment.to_json v)
     let of_json j = Json.to_list StepAdjustment.of_json j
+  end
+module TargetTrackingConfiguration =
+  struct
+    type t =
+      {
+      predefined_metric_specification: PredefinedMetricSpecification.t option ;
+      customized_metric_specification: CustomizedMetricSpecification.t option ;
+      target_value: Double.t ;
+      disable_scale_in: Boolean.t option }
+    let make ?predefined_metric_specification 
+      ?customized_metric_specification  ~target_value  ?disable_scale_in  ()
+      =
+      {
+        predefined_metric_specification;
+        customized_metric_specification;
+        target_value;
+        disable_scale_in
+      }
+    let parse xml =
+      Some
+        {
+          predefined_metric_specification =
+            (Util.option_bind
+               (Xml.member "PredefinedMetricSpecification" xml)
+               PredefinedMetricSpecification.parse);
+          customized_metric_specification =
+            (Util.option_bind
+               (Xml.member "CustomizedMetricSpecification" xml)
+               CustomizedMetricSpecification.parse);
+          target_value =
+            (Xml.required "TargetValue"
+               (Util.option_bind (Xml.member "TargetValue" xml) Double.parse));
+          disable_scale_in =
+            (Util.option_bind (Xml.member "DisableScaleIn" xml) Boolean.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.predefined_metric_specification
+                 (fun f ->
+                    Ezxmlm.make_tag "PredefinedMetricSpecification"
+                      ([], (PredefinedMetricSpecification.to_xml f)))])
+             @
+             [Util.option_map v.customized_metric_specification
+                (fun f ->
+                   Ezxmlm.make_tag "CustomizedMetricSpecification"
+                     ([], (CustomizedMetricSpecification.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TargetValue"
+                  ([], (Double.to_xml v.target_value)))])
+           @
+           [Util.option_map v.disable_scale_in
+              (fun f ->
+                 Ezxmlm.make_tag "DisableScaleIn" ([], (Boolean.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.disable_scale_in
+              (fun f -> ("disable_scale_in", (Boolean.to_json f)));
+           Some ("target_value", (Double.to_json v.target_value));
+           Util.option_map v.customized_metric_specification
+             (fun f ->
+                ("customized_metric_specification",
+                  (CustomizedMetricSpecification.to_json f)));
+           Util.option_map v.predefined_metric_specification
+             (fun f ->
+                ("predefined_metric_specification",
+                  (PredefinedMetricSpecification.to_json f)))])
+    let of_json j =
+      {
+        predefined_metric_specification =
+          (Util.option_map (Json.lookup j "predefined_metric_specification")
+             PredefinedMetricSpecification.of_json);
+        customized_metric_specification =
+          (Util.option_map (Json.lookup j "customized_metric_specification")
+             CustomizedMetricSpecification.of_json);
+        target_value =
+          (Double.of_json (Util.of_option_exn (Json.lookup j "target_value")));
+        disable_scale_in =
+          (Util.option_map (Json.lookup j "disable_scale_in") Boolean.of_json)
+      }
   end
 module ScalingActivityStatusCode =
   struct
     type t =
+      | PendingSpotBidPlacement 
       | WaitingForSpotInstanceRequestId 
       | WaitingForSpotInstanceId 
       | WaitingForInstanceId 
@@ -554,7 +1307,8 @@ module ScalingActivityStatusCode =
       ("PreInService", PreInService);
       ("WaitingForInstanceId", WaitingForInstanceId);
       ("WaitingForSpotInstanceId", WaitingForSpotInstanceId);
-      ("WaitingForSpotInstanceRequestId", WaitingForSpotInstanceRequestId)]
+      ("WaitingForSpotInstanceRequestId", WaitingForSpotInstanceRequestId);
+      ("PendingSpotBidPlacement", PendingSpotBidPlacement)]
     let t_to_str =
       [(Cancelled, "Cancelled");
       (Failed, "Failed");
@@ -566,7 +1320,8 @@ module ScalingActivityStatusCode =
       (PreInService, "PreInService");
       (WaitingForInstanceId, "WaitingForInstanceId");
       (WaitingForSpotInstanceId, "WaitingForSpotInstanceId");
-      (WaitingForSpotInstanceRequestId, "WaitingForSpotInstanceRequestId")]
+      (WaitingForSpotInstanceRequestId, "WaitingForSpotInstanceRequestId");
+      (PendingSpotBidPlacement, "PendingSpotBidPlacement")]
     let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
     let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
     let make v () = v
@@ -575,6 +1330,10 @@ module ScalingActivityStatusCode =
         (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_headers v =
+      Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
     let of_json j =
@@ -587,6 +1346,9 @@ module AvailabilityZones =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -598,6 +1360,10 @@ module EnabledMetrics =
       Util.option_all
         (List.map EnabledMetric.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list EnabledMetric.to_query v
+    let to_headers v = Headers.to_headers_list EnabledMetric.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (EnabledMetric.to_xml x))) v
     let to_json v = `List (List.map EnabledMetric.to_json v)
     let of_json j = Json.to_list EnabledMetric.of_json j
   end
@@ -608,6 +1374,10 @@ module Instances =
     let parse xml =
       Util.option_all (List.map Instance.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Instance.to_query v
+    let to_headers v = Headers.to_headers_list Instance.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Instance.to_xml x)))
+        v
     let to_json v = `List (List.map Instance.to_json v)
     let of_json j = Json.to_list Instance.of_json j
   end
@@ -618,8 +1388,62 @@ module LoadBalancerNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
+  end
+module MixedInstancesPolicy =
+  struct
+    type t =
+      {
+      launch_template: LaunchTemplate.t option ;
+      instances_distribution: InstancesDistribution.t option }
+    let make ?launch_template  ?instances_distribution  () =
+      { launch_template; instances_distribution }
+    let parse xml =
+      Some
+        {
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplate.parse);
+          instances_distribution =
+            (Util.option_bind (Xml.member "InstancesDistribution" xml)
+               InstancesDistribution.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.launch_template
+               (fun f ->
+                  Ezxmlm.make_tag "LaunchTemplate"
+                    ([], (LaunchTemplate.to_xml f)))])
+           @
+           [Util.option_map v.instances_distribution
+              (fun f ->
+                 Ezxmlm.make_tag "InstancesDistribution"
+                   ([], (InstancesDistribution.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.instances_distribution
+              (fun f ->
+                 ("instances_distribution",
+                   (InstancesDistribution.to_json f)));
+           Util.option_map v.launch_template
+             (fun f -> ("launch_template", (LaunchTemplate.to_json f)))])
+    let of_json j =
+      {
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplate.of_json);
+        instances_distribution =
+          (Util.option_map (Json.lookup j "instances_distribution")
+             InstancesDistribution.of_json)
+      }
   end
 module SuspendedProcesses =
   struct
@@ -629,6 +1453,11 @@ module SuspendedProcesses =
       Util.option_all
         (List.map SuspendedProcess.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list SuspendedProcess.to_query v
+    let to_headers v = Headers.to_headers_list SuspendedProcess.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (SuspendedProcess.to_xml x)))
+        v
     let to_json v = `List (List.map SuspendedProcess.to_json v)
     let of_json j = Json.to_list SuspendedProcess.of_json j
   end
@@ -640,8 +1469,25 @@ module TagDescriptionList =
       Util.option_all
         (List.map TagDescription.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list TagDescription.to_query v
+    let to_headers v = Headers.to_headers_list TagDescription.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (TagDescription.to_xml x))) v
     let to_json v = `List (List.map TagDescription.to_json v)
     let of_json j = Json.to_list TagDescription.of_json j
+  end
+module TargetGroupARNs =
+  struct
+    type t = String.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all (List.map String.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
+    let to_json v = `List (List.map String.to_json v)
+    let of_json j = Json.to_list String.of_json j
   end
 module TerminationPolicies =
   struct
@@ -650,6 +1496,9 @@ module TerminationPolicies =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -661,6 +1510,12 @@ module BlockDeviceMappings =
       Util.option_all
         (List.map BlockDeviceMapping.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list BlockDeviceMapping.to_query v
+    let to_headers v =
+      Headers.to_headers_list BlockDeviceMapping.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (BlockDeviceMapping.to_xml x))) v
     let to_json v = `List (List.map BlockDeviceMapping.to_json v)
     let of_json j = Json.to_list BlockDeviceMapping.of_json j
   end
@@ -671,6 +1526,9 @@ module ClassicLinkVPCSecurityGroups =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -685,11 +1543,13 @@ module InstanceMonitoring =
           enabled =
             (Util.option_bind (Xml.member "Enabled" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.enabled
-              (fun f -> Query.Pair ("Enabled", (Boolean.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Enabled" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -706,6 +1566,9 @@ module SecurityGroups =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -725,11 +1588,16 @@ module Filter =
             (Util.of_option []
                (Util.option_bind (Xml.member "Values" xml) Values.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Values.member", (Values.to_query v.values)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Values" ([], (Values.to_xml [x]))))
+              v.values))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -747,20 +1615,30 @@ module AutoScalingInstanceDetails =
     type t =
       {
       instance_id: String.t ;
+      instance_type: String.t option ;
       auto_scaling_group_name: String.t ;
       availability_zone: String.t ;
       lifecycle_state: String.t ;
       health_status: String.t ;
-      launch_configuration_name: String.t }
-    let make ~instance_id  ~auto_scaling_group_name  ~availability_zone 
-      ~lifecycle_state  ~health_status  ~launch_configuration_name  () =
+      launch_configuration_name: String.t option ;
+      launch_template: LaunchTemplateSpecification.t option ;
+      protected_from_scale_in: Boolean.t ;
+      weighted_capacity: String.t option }
+    let make ~instance_id  ?instance_type  ~auto_scaling_group_name 
+      ~availability_zone  ~lifecycle_state  ~health_status 
+      ?launch_configuration_name  ?launch_template  ~protected_from_scale_in 
+      ?weighted_capacity  () =
       {
         instance_id;
+        instance_type;
         auto_scaling_group_name;
         availability_zone;
         lifecycle_state;
         health_status;
-        launch_configuration_name
+        launch_configuration_name;
+        launch_template;
+        protected_from_scale_in;
+        weighted_capacity
       }
     let parse xml =
       Some
@@ -768,6 +1646,8 @@ module AutoScalingInstanceDetails =
           instance_id =
             (Xml.required "InstanceId"
                (Util.option_bind (Xml.member "InstanceId" xml) String.parse));
+          instance_type =
+            (Util.option_bind (Xml.member "InstanceType" xml) String.parse);
           auto_scaling_group_name =
             (Xml.required "AutoScalingGroupName"
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
@@ -784,47 +1664,94 @@ module AutoScalingInstanceDetails =
             (Xml.required "HealthStatus"
                (Util.option_bind (Xml.member "HealthStatus" xml) String.parse));
           launch_configuration_name =
-            (Xml.required "LaunchConfigurationName"
-               (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
-                  String.parse))
+            (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
+               String.parse);
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplateSpecification.parse);
+          protected_from_scale_in =
+            (Xml.required "ProtectedFromScaleIn"
+               (Util.option_bind (Xml.member "ProtectedFromScaleIn" xml)
+                  Boolean.parse));
+          weighted_capacity =
+            (Util.option_bind (Xml.member "WeightedCapacity" xml)
+               String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LaunchConfigurationName",
-                   (String.to_query v.launch_configuration_name)));
-           Some
-             (Query.Pair ("HealthStatus", (String.to_query v.health_status)));
-           Some
-             (Query.Pair
-                ("LifecycleState", (String.to_query v.lifecycle_state)));
-           Some
-             (Query.Pair
-                ("AvailabilityZone", (String.to_query v.availability_zone)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some (Query.Pair ("InstanceId", (String.to_query v.instance_id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((([] @
+                    [Some
+                       (Ezxmlm.make_tag "InstanceId"
+                          ([], (String.to_xml v.instance_id)))])
+                   @
+                   [Util.option_map v.instance_type
+                      (fun f ->
+                         Ezxmlm.make_tag "InstanceType"
+                           ([], (String.to_xml f)))])
+                  @
+                  [Some
+                     (Ezxmlm.make_tag "AutoScalingGroupName"
+                        ([], (String.to_xml v.auto_scaling_group_name)))])
+                 @
+                 [Some
+                    (Ezxmlm.make_tag "AvailabilityZone"
+                       ([], (String.to_xml v.availability_zone)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "LifecycleState"
+                      ([], (String.to_xml v.lifecycle_state)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "HealthStatus"
+                     ([], (String.to_xml v.health_status)))])
+              @
+              [Util.option_map v.launch_configuration_name
+                 (fun f ->
+                    Ezxmlm.make_tag "LaunchConfigurationName"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.launch_template
+                (fun f ->
+                   Ezxmlm.make_tag "LaunchTemplate"
+                     ([], (LaunchTemplateSpecification.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "ProtectedFromScaleIn"
+                  ([], (Boolean.to_xml v.protected_from_scale_in)))])
+           @
+           [Util.option_map v.weighted_capacity
+              (fun f ->
+                 Ezxmlm.make_tag "WeightedCapacity" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("launch_configuration_name",
-                (String.to_json v.launch_configuration_name));
+           [Util.option_map v.weighted_capacity
+              (fun f -> ("weighted_capacity", (String.to_json f)));
+           Some
+             ("protected_from_scale_in",
+               (Boolean.to_json v.protected_from_scale_in));
+           Util.option_map v.launch_template
+             (fun f ->
+                ("launch_template", (LaunchTemplateSpecification.to_json f)));
+           Util.option_map v.launch_configuration_name
+             (fun f -> ("launch_configuration_name", (String.to_json f)));
            Some ("health_status", (String.to_json v.health_status));
            Some ("lifecycle_state", (String.to_json v.lifecycle_state));
            Some ("availability_zone", (String.to_json v.availability_zone));
            Some
              ("auto_scaling_group_name",
                (String.to_json v.auto_scaling_group_name));
+           Util.option_map v.instance_type
+             (fun f -> ("instance_type", (String.to_json f)));
            Some ("instance_id", (String.to_json v.instance_id))])
     let of_json j =
       {
         instance_id =
           (String.of_json (Util.of_option_exn (Json.lookup j "instance_id")));
+        instance_type =
+          (Util.option_map (Json.lookup j "instance_type") String.of_json);
         auto_scaling_group_name =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
@@ -838,8 +1765,73 @@ module AutoScalingInstanceDetails =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "health_status")));
         launch_configuration_name =
+          (Util.option_map (Json.lookup j "launch_configuration_name")
+             String.of_json);
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplateSpecification.of_json);
+        protected_from_scale_in =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "protected_from_scale_in")));
+        weighted_capacity =
+          (Util.option_map (Json.lookup j "weighted_capacity") String.of_json)
+      }
+  end
+module FailedScheduledUpdateGroupActionRequest =
+  struct
+    type t =
+      {
+      scheduled_action_name: String.t ;
+      error_code: String.t option ;
+      error_message: String.t option }
+    let make ~scheduled_action_name  ?error_code  ?error_message  () =
+      { scheduled_action_name; error_code; error_message }
+    let parse xml =
+      Some
+        {
+          scheduled_action_name =
+            (Xml.required "ScheduledActionName"
+               (Util.option_bind (Xml.member "ScheduledActionName" xml)
+                  String.parse));
+          error_code =
+            (Util.option_bind (Xml.member "ErrorCode" xml) String.parse);
+          error_message =
+            (Util.option_bind (Xml.member "ErrorMessage" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "ScheduledActionName"
+                   ([], (String.to_xml v.scheduled_action_name)))])
+            @
+            [Util.option_map v.error_code
+               (fun f -> Ezxmlm.make_tag "ErrorCode" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.error_message
+              (fun f ->
+                 Ezxmlm.make_tag "ErrorMessage" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.error_message
+              (fun f -> ("error_message", (String.to_json f)));
+           Util.option_map v.error_code
+             (fun f -> ("error_code", (String.to_json f)));
+           Some
+             ("scheduled_action_name",
+               (String.to_json v.scheduled_action_name))])
+    let of_json j =
+      {
+        scheduled_action_name =
           (String.of_json
-             (Util.of_option_exn (Json.lookup j "launch_configuration_name")))
+             (Util.of_option_exn (Json.lookup j "scheduled_action_name")));
+        error_code =
+          (Util.option_map (Json.lookup j "error_code") String.of_json);
+        error_message =
+          (Util.option_map (Json.lookup j "error_message") String.of_json)
       }
   end
 module ScalingPolicy =
@@ -858,12 +1850,14 @@ module ScalingPolicy =
       step_adjustments: StepAdjustments.t ;
       metric_aggregation_type: String.t option ;
       estimated_instance_warmup: Integer.t option ;
-      alarms: Alarms.t }
+      alarms: Alarms.t ;
+      target_tracking_configuration: TargetTrackingConfiguration.t option }
     let make ?auto_scaling_group_name  ?policy_name  ?policy_a_r_n 
       ?policy_type  ?adjustment_type  ?min_adjustment_step 
       ?min_adjustment_magnitude  ?scaling_adjustment  ?cooldown 
       ?(step_adjustments= [])  ?metric_aggregation_type 
-      ?estimated_instance_warmup  ?(alarms= [])  () =
+      ?estimated_instance_warmup  ?(alarms= []) 
+      ?target_tracking_configuration  () =
       {
         auto_scaling_group_name;
         policy_name;
@@ -877,7 +1871,8 @@ module ScalingPolicy =
         step_adjustments;
         metric_aggregation_type;
         estimated_instance_warmup;
-        alarms
+        alarms;
+        target_tracking_configuration
       }
     let parse xml =
       Some
@@ -916,46 +1911,94 @@ module ScalingPolicy =
                Integer.parse);
           alarms =
             (Util.of_option []
-               (Util.option_bind (Xml.member "Alarms" xml) Alarms.parse))
+               (Util.option_bind (Xml.member "Alarms" xml) Alarms.parse));
+          target_tracking_configuration =
+            (Util.option_bind (Xml.member "TargetTrackingConfiguration" xml)
+               TargetTrackingConfiguration.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Alarms.member", (Alarms.to_query v.alarms)));
-           Util.option_map v.estimated_instance_warmup
-             (fun f ->
-                Query.Pair ("EstimatedInstanceWarmup", (Integer.to_query f)));
-           Util.option_map v.metric_aggregation_type
-             (fun f ->
-                Query.Pair ("MetricAggregationType", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("StepAdjustments.member",
-                  (StepAdjustments.to_query v.step_adjustments)));
-           Util.option_map v.cooldown
-             (fun f -> Query.Pair ("Cooldown", (Integer.to_query f)));
-           Util.option_map v.scaling_adjustment
-             (fun f -> Query.Pair ("ScalingAdjustment", (Integer.to_query f)));
-           Util.option_map v.min_adjustment_magnitude
-             (fun f ->
-                Query.Pair ("MinAdjustmentMagnitude", (Integer.to_query f)));
-           Util.option_map v.min_adjustment_step
-             (fun f -> Query.Pair ("MinAdjustmentStep", (Integer.to_query f)));
-           Util.option_map v.adjustment_type
-             (fun f -> Query.Pair ("AdjustmentType", (String.to_query f)));
-           Util.option_map v.policy_type
-             (fun f -> Query.Pair ("PolicyType", (String.to_query f)));
-           Util.option_map v.policy_a_r_n
-             (fun f -> Query.Pair ("PolicyARN", (String.to_query f)));
-           Util.option_map v.policy_name
-             (fun f -> Query.Pair ("PolicyName", (String.to_query f)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((((([] @
+                        [Util.option_map v.auto_scaling_group_name
+                           (fun f ->
+                              Ezxmlm.make_tag "AutoScalingGroupName"
+                                ([], (String.to_xml f)))])
+                       @
+                       [Util.option_map v.policy_name
+                          (fun f ->
+                             Ezxmlm.make_tag "PolicyName"
+                               ([], (String.to_xml f)))])
+                      @
+                      [Util.option_map v.policy_a_r_n
+                         (fun f ->
+                            Ezxmlm.make_tag "PolicyARN"
+                              ([], (String.to_xml f)))])
+                     @
+                     [Util.option_map v.policy_type
+                        (fun f ->
+                           Ezxmlm.make_tag "PolicyType"
+                             ([], (String.to_xml f)))])
+                    @
+                    [Util.option_map v.adjustment_type
+                       (fun f ->
+                          Ezxmlm.make_tag "AdjustmentType"
+                            ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.min_adjustment_step
+                      (fun f ->
+                         Ezxmlm.make_tag "MinAdjustmentStep"
+                           ([], (Integer.to_xml f)))])
+                  @
+                  [Util.option_map v.min_adjustment_magnitude
+                     (fun f ->
+                        Ezxmlm.make_tag "MinAdjustmentMagnitude"
+                          ([], (Integer.to_xml f)))])
+                 @
+                 [Util.option_map v.scaling_adjustment
+                    (fun f ->
+                       Ezxmlm.make_tag "ScalingAdjustment"
+                         ([], (Integer.to_xml f)))])
+                @
+                [Util.option_map v.cooldown
+                   (fun f ->
+                      Ezxmlm.make_tag "Cooldown" ([], (Integer.to_xml f)))])
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "StepAdjustments"
+                          ([], (StepAdjustments.to_xml [x]))))
+                  v.step_adjustments))
+              @
+              [Util.option_map v.metric_aggregation_type
+                 (fun f ->
+                    Ezxmlm.make_tag "MetricAggregationType"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.estimated_instance_warmup
+                (fun f ->
+                   Ezxmlm.make_tag "EstimatedInstanceWarmup"
+                     ([], (Integer.to_xml f)))])
+            @
+            (List.map
+               (fun x ->
+                  Some (Ezxmlm.make_tag "Alarms" ([], (Alarms.to_xml [x]))))
+               v.alarms))
+           @
+           [Util.option_map v.target_tracking_configuration
+              (fun f ->
+                 Ezxmlm.make_tag "TargetTrackingConfiguration"
+                   ([], (TargetTrackingConfiguration.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some ("alarms", (Alarms.to_json v.alarms));
+           [Util.option_map v.target_tracking_configuration
+              (fun f ->
+                 ("target_tracking_configuration",
+                   (TargetTrackingConfiguration.to_json f)));
+           Some ("alarms", (Alarms.to_json v.alarms));
            Util.option_map v.estimated_instance_warmup
              (fun f -> ("estimated_instance_warmup", (Integer.to_json f)));
            Util.option_map v.metric_aggregation_type
@@ -1015,7 +2058,133 @@ module ScalingPolicy =
           (Util.option_map (Json.lookup j "estimated_instance_warmup")
              Integer.of_json);
         alarms =
-          (Alarms.of_json (Util.of_option_exn (Json.lookup j "alarms")))
+          (Alarms.of_json (Util.of_option_exn (Json.lookup j "alarms")));
+        target_tracking_configuration =
+          (Util.option_map (Json.lookup j "target_tracking_configuration")
+             TargetTrackingConfiguration.of_json)
+      }
+  end
+module LifecycleHookSpecification =
+  struct
+    type t =
+      {
+      lifecycle_hook_name: String.t ;
+      lifecycle_transition: String.t ;
+      notification_metadata: String.t option ;
+      heartbeat_timeout: Integer.t option ;
+      default_result: String.t option ;
+      notification_target_a_r_n: String.t option ;
+      role_a_r_n: String.t option }
+    let make ~lifecycle_hook_name  ~lifecycle_transition 
+      ?notification_metadata  ?heartbeat_timeout  ?default_result 
+      ?notification_target_a_r_n  ?role_a_r_n  () =
+      {
+        lifecycle_hook_name;
+        lifecycle_transition;
+        notification_metadata;
+        heartbeat_timeout;
+        default_result;
+        notification_target_a_r_n;
+        role_a_r_n
+      }
+    let parse xml =
+      Some
+        {
+          lifecycle_hook_name =
+            (Xml.required "LifecycleHookName"
+               (Util.option_bind (Xml.member "LifecycleHookName" xml)
+                  String.parse));
+          lifecycle_transition =
+            (Xml.required "LifecycleTransition"
+               (Util.option_bind (Xml.member "LifecycleTransition" xml)
+                  String.parse));
+          notification_metadata =
+            (Util.option_bind (Xml.member "NotificationMetadata" xml)
+               String.parse);
+          heartbeat_timeout =
+            (Util.option_bind (Xml.member "HeartbeatTimeout" xml)
+               Integer.parse);
+          default_result =
+            (Util.option_bind (Xml.member "DefaultResult" xml) String.parse);
+          notification_target_a_r_n =
+            (Util.option_bind (Xml.member "NotificationTargetARN" xml)
+               String.parse);
+          role_a_r_n =
+            (Util.option_bind (Xml.member "RoleARN" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 [Some
+                    (Ezxmlm.make_tag "LifecycleHookName"
+                       ([], (String.to_xml v.lifecycle_hook_name)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "LifecycleTransition"
+                      ([], (String.to_xml v.lifecycle_transition)))])
+               @
+               [Util.option_map v.notification_metadata
+                  (fun f ->
+                     Ezxmlm.make_tag "NotificationMetadata"
+                       ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.heartbeat_timeout
+                 (fun f ->
+                    Ezxmlm.make_tag "HeartbeatTimeout"
+                      ([], (Integer.to_xml f)))])
+             @
+             [Util.option_map v.default_result
+                (fun f ->
+                   Ezxmlm.make_tag "DefaultResult" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.notification_target_a_r_n
+               (fun f ->
+                  Ezxmlm.make_tag "NotificationTargetARN"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.role_a_r_n
+              (fun f -> Ezxmlm.make_tag "RoleARN" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.role_a_r_n
+              (fun f -> ("role_a_r_n", (String.to_json f)));
+           Util.option_map v.notification_target_a_r_n
+             (fun f -> ("notification_target_a_r_n", (String.to_json f)));
+           Util.option_map v.default_result
+             (fun f -> ("default_result", (String.to_json f)));
+           Util.option_map v.heartbeat_timeout
+             (fun f -> ("heartbeat_timeout", (Integer.to_json f)));
+           Util.option_map v.notification_metadata
+             (fun f -> ("notification_metadata", (String.to_json f)));
+           Some
+             ("lifecycle_transition",
+               (String.to_json v.lifecycle_transition));
+           Some
+             ("lifecycle_hook_name", (String.to_json v.lifecycle_hook_name))])
+    let of_json j =
+      {
+        lifecycle_hook_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "lifecycle_hook_name")));
+        lifecycle_transition =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "lifecycle_transition")));
+        notification_metadata =
+          (Util.option_map (Json.lookup j "notification_metadata")
+             String.of_json);
+        heartbeat_timeout =
+          (Util.option_map (Json.lookup j "heartbeat_timeout")
+             Integer.of_json);
+        default_result =
+          (Util.option_map (Json.lookup j "default_result") String.of_json);
+        notification_target_a_r_n =
+          (Util.option_map (Json.lookup j "notification_target_a_r_n")
+             String.of_json);
+        role_a_r_n =
+          (Util.option_map (Json.lookup j "role_a_r_n") String.of_json)
       }
   end
 module Tag =
@@ -1049,18 +2218,24 @@ module Tag =
                (Util.option_bind (Xml.member "PropagateAtLaunch" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "ResourceId"
+                     ([], (String.to_xml v.resource_id)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "ResourceType"
+                    ([], (String.to_xml v.resource_type)))])
+             @ [Some (Ezxmlm.make_tag "Key" ([], (String.to_xml v.key)))])
+            @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+           @
            [Some
-              (Query.Pair
-                 ("PropagateAtLaunch",
-                   (Boolean.to_query v.propagate_at_launch)));
-           Some (Query.Pair ("Value", (String.to_query v.value)));
-           Some (Query.Pair ("Key", (String.to_query v.key)));
-           Some
-             (Query.Pair ("ResourceType", (String.to_query v.resource_type)));
-           Some (Query.Pair ("ResourceId", (String.to_query v.resource_id)))])
+              (Ezxmlm.make_tag "PropagateAtLaunch"
+                 ([], (Boolean.to_xml v.propagate_at_launch)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1141,31 +2316,51 @@ module LifecycleHook =
           default_result =
             (Util.option_bind (Xml.member "DefaultResult" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((([] @
+                   [Util.option_map v.lifecycle_hook_name
+                      (fun f ->
+                         Ezxmlm.make_tag "LifecycleHookName"
+                           ([], (String.to_xml f)))])
+                  @
+                  [Util.option_map v.auto_scaling_group_name
+                     (fun f ->
+                        Ezxmlm.make_tag "AutoScalingGroupName"
+                          ([], (String.to_xml f)))])
+                 @
+                 [Util.option_map v.lifecycle_transition
+                    (fun f ->
+                       Ezxmlm.make_tag "LifecycleTransition"
+                         ([], (String.to_xml f)))])
+                @
+                [Util.option_map v.notification_target_a_r_n
+                   (fun f ->
+                      Ezxmlm.make_tag "NotificationTargetARN"
+                        ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.role_a_r_n
+                  (fun f -> Ezxmlm.make_tag "RoleARN" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.notification_metadata
+                 (fun f ->
+                    Ezxmlm.make_tag "NotificationMetadata"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.heartbeat_timeout
+                (fun f ->
+                   Ezxmlm.make_tag "HeartbeatTimeout"
+                     ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.global_timeout
+               (fun f ->
+                  Ezxmlm.make_tag "GlobalTimeout" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.default_result
-              (fun f -> Query.Pair ("DefaultResult", (String.to_query f)));
-           Util.option_map v.global_timeout
-             (fun f -> Query.Pair ("GlobalTimeout", (Integer.to_query f)));
-           Util.option_map v.heartbeat_timeout
-             (fun f -> Query.Pair ("HeartbeatTimeout", (Integer.to_query f)));
-           Util.option_map v.notification_metadata
-             (fun f ->
-                Query.Pair ("NotificationMetadata", (String.to_query f)));
-           Util.option_map v.role_a_r_n
-             (fun f -> Query.Pair ("RoleARN", (String.to_query f)));
-           Util.option_map v.notification_target_a_r_n
-             (fun f ->
-                Query.Pair ("NotificationTargetARN", (String.to_query f)));
-           Util.option_map v.lifecycle_transition
-             (fun f ->
-                Query.Pair ("LifecycleTransition", (String.to_query f)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)));
-           Util.option_map v.lifecycle_hook_name
-             (fun f -> Query.Pair ("LifecycleHookName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DefaultResult" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1213,6 +2408,49 @@ module LifecycleHook =
           (Util.option_map (Json.lookup j "global_timeout") Integer.of_json);
         default_result =
           (Util.option_map (Json.lookup j "default_result") String.of_json)
+      }
+  end
+module LoadBalancerTargetGroupState =
+  struct
+    type t =
+      {
+      load_balancer_target_group_a_r_n: String.t option ;
+      state: String.t option }
+    let make ?load_balancer_target_group_a_r_n  ?state  () =
+      { load_balancer_target_group_a_r_n; state }
+    let parse xml =
+      Some
+        {
+          load_balancer_target_group_a_r_n =
+            (Util.option_bind (Xml.member "LoadBalancerTargetGroupARN" xml)
+               String.parse);
+          state = (Util.option_bind (Xml.member "State" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.load_balancer_target_group_a_r_n
+               (fun f ->
+                  Ezxmlm.make_tag "LoadBalancerTargetGroupARN"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.state
+              (fun f -> Ezxmlm.make_tag "State" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.state (fun f -> ("state", (String.to_json f)));
+           Util.option_map v.load_balancer_target_group_a_r_n
+             (fun f ->
+                ("load_balancer_target_group_a_r_n", (String.to_json f)))])
+    let of_json j =
+      {
+        load_balancer_target_group_a_r_n =
+          (Util.option_map (Json.lookup j "load_balancer_target_group_a_r_n")
+             String.of_json);
+        state = (Util.option_map (Json.lookup j "state") String.of_json)
       }
   end
 module Activity =
@@ -1275,30 +2513,47 @@ module Activity =
           details =
             (Util.option_bind (Xml.member "Details" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((([] @
+                    [Some
+                       (Ezxmlm.make_tag "ActivityId"
+                          ([], (String.to_xml v.activity_id)))])
+                   @
+                   [Some
+                      (Ezxmlm.make_tag "AutoScalingGroupName"
+                         ([], (String.to_xml v.auto_scaling_group_name)))])
+                  @
+                  [Util.option_map v.description
+                     (fun f ->
+                        Ezxmlm.make_tag "Description" ([], (String.to_xml f)))])
+                 @
+                 [Some
+                    (Ezxmlm.make_tag "Cause" ([], (String.to_xml v.cause)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "StartTime"
+                      ([], (DateTime.to_xml v.start_time)))])
+               @
+               [Util.option_map v.end_time
+                  (fun f ->
+                     Ezxmlm.make_tag "EndTime" ([], (DateTime.to_xml f)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "StatusCode"
+                    ([], (ScalingActivityStatusCode.to_xml v.status_code)))])
+             @
+             [Util.option_map v.status_message
+                (fun f ->
+                   Ezxmlm.make_tag "StatusMessage" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.progress
+               (fun f -> Ezxmlm.make_tag "Progress" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.details
-              (fun f -> Query.Pair ("Details", (String.to_query f)));
-           Util.option_map v.progress
-             (fun f -> Query.Pair ("Progress", (Integer.to_query f)));
-           Util.option_map v.status_message
-             (fun f -> Query.Pair ("StatusMessage", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("StatusCode",
-                  (ScalingActivityStatusCode.to_query v.status_code)));
-           Util.option_map v.end_time
-             (fun f -> Query.Pair ("EndTime", (DateTime.to_query f)));
-           Some (Query.Pair ("StartTime", (DateTime.to_query v.start_time)));
-           Some (Query.Pair ("Cause", (String.to_query v.cause)));
-           Util.option_map v.description
-             (fun f -> Query.Pair ("Description", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some (Query.Pair ("ActivityId", (String.to_query v.activity_id)))])
+              (fun f -> Ezxmlm.make_tag "Details" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1356,11 +2611,14 @@ module AdjustmentType =
           adjustment_type =
             (Util.option_bind (Xml.member "AdjustmentType" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.adjustment_type
-              (fun f -> Query.Pair ("AdjustmentType", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "AdjustmentType" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1379,12 +2637,15 @@ module AutoScalingGroup =
       auto_scaling_group_name: String.t ;
       auto_scaling_group_a_r_n: String.t option ;
       launch_configuration_name: String.t option ;
+      launch_template: LaunchTemplateSpecification.t option ;
+      mixed_instances_policy: MixedInstancesPolicy.t option ;
       min_size: Integer.t ;
       max_size: Integer.t ;
       desired_capacity: Integer.t ;
       default_cooldown: Integer.t ;
       availability_zones: AvailabilityZones.t ;
       load_balancer_names: LoadBalancerNames.t ;
+      target_group_a_r_ns: TargetGroupARNs.t ;
       health_check_type: String.t ;
       health_check_grace_period: Integer.t option ;
       instances: Instances.t ;
@@ -1395,24 +2656,32 @@ module AutoScalingGroup =
       enabled_metrics: EnabledMetrics.t ;
       status: String.t option ;
       tags: TagDescriptionList.t ;
-      termination_policies: TerminationPolicies.t }
+      termination_policies: TerminationPolicies.t ;
+      new_instances_protected_from_scale_in: Boolean.t option ;
+      service_linked_role_a_r_n: String.t option ;
+      max_instance_lifetime: Integer.t option }
     let make ~auto_scaling_group_name  ?auto_scaling_group_a_r_n 
-      ?launch_configuration_name  ~min_size  ~max_size  ~desired_capacity 
-      ~default_cooldown  ~availability_zones  ?(load_balancer_names= []) 
-      ~health_check_type  ?health_check_grace_period  ?(instances= []) 
+      ?launch_configuration_name  ?launch_template  ?mixed_instances_policy 
+      ~min_size  ~max_size  ~desired_capacity  ~default_cooldown 
+      ~availability_zones  ?(load_balancer_names= [])  ?(target_group_a_r_ns=
+      [])  ~health_check_type  ?health_check_grace_period  ?(instances= []) 
       ~created_time  ?(suspended_processes= [])  ?placement_group 
       ?v_p_c_zone_identifier  ?(enabled_metrics= [])  ?status  ?(tags= []) 
-      ?(termination_policies= [])  () =
+      ?(termination_policies= [])  ?new_instances_protected_from_scale_in 
+      ?service_linked_role_a_r_n  ?max_instance_lifetime  () =
       {
         auto_scaling_group_name;
         auto_scaling_group_a_r_n;
         launch_configuration_name;
+        launch_template;
+        mixed_instances_policy;
         min_size;
         max_size;
         desired_capacity;
         default_cooldown;
         availability_zones;
         load_balancer_names;
+        target_group_a_r_ns;
         health_check_type;
         health_check_grace_period;
         instances;
@@ -1423,7 +2692,10 @@ module AutoScalingGroup =
         enabled_metrics;
         status;
         tags;
-        termination_policies
+        termination_policies;
+        new_instances_protected_from_scale_in;
+        service_linked_role_a_r_n;
+        max_instance_lifetime
       }
     let parse xml =
       Some
@@ -1438,6 +2710,12 @@ module AutoScalingGroup =
           launch_configuration_name =
             (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
                String.parse);
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplateSpecification.parse);
+          mixed_instances_policy =
+            (Util.option_bind (Xml.member "MixedInstancesPolicy" xml)
+               MixedInstancesPolicy.parse);
           min_size =
             (Xml.required "MinSize"
                (Util.option_bind (Xml.member "MinSize" xml) Integer.parse));
@@ -1460,6 +2738,10 @@ module AutoScalingGroup =
             (Util.of_option []
                (Util.option_bind (Xml.member "LoadBalancerNames" xml)
                   LoadBalancerNames.parse));
+          target_group_a_r_ns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "TargetGroupARNs" xml)
+                  TargetGroupARNs.parse));
           health_check_type =
             (Xml.required "HealthCheckType"
                (Util.option_bind (Xml.member "HealthCheckType" xml)
@@ -1495,75 +2777,180 @@ module AutoScalingGroup =
           termination_policies =
             (Util.of_option []
                (Util.option_bind (Xml.member "TerminationPolicies" xml)
-                  TerminationPolicies.parse))
+                  TerminationPolicies.parse));
+          new_instances_protected_from_scale_in =
+            (Util.option_bind
+               (Xml.member "NewInstancesProtectedFromScaleIn" xml)
+               Boolean.parse);
+          service_linked_role_a_r_n =
+            (Util.option_bind (Xml.member "ServiceLinkedRoleARN" xml)
+               String.parse);
+          max_instance_lifetime =
+            (Util.option_bind (Xml.member "MaxInstanceLifetime" xml)
+               Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("TerminationPolicies.member",
-                   (TerminationPolicies.to_query v.termination_policies)));
-           Some
-             (Query.Pair
-                ("Tags.member", (TagDescriptionList.to_query v.tags)));
-           Util.option_map v.status
-             (fun f -> Query.Pair ("Status", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("EnabledMetrics.member",
-                  (EnabledMetrics.to_query v.enabled_metrics)));
-           Util.option_map v.v_p_c_zone_identifier
-             (fun f -> Query.Pair ("VPCZoneIdentifier", (String.to_query f)));
-           Util.option_map v.placement_group
-             (fun f -> Query.Pair ("PlacementGroup", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SuspendedProcesses.member",
-                  (SuspendedProcesses.to_query v.suspended_processes)));
-           Some
-             (Query.Pair ("CreatedTime", (DateTime.to_query v.created_time)));
-           Some
-             (Query.Pair
-                ("Instances.member", (Instances.to_query v.instances)));
-           Util.option_map v.health_check_grace_period
-             (fun f ->
-                Query.Pair ("HealthCheckGracePeriod", (Integer.to_query f)));
-           Some
-             (Query.Pair
-                ("HealthCheckType", (String.to_query v.health_check_type)));
-           Some
-             (Query.Pair
-                ("LoadBalancerNames.member",
-                  (LoadBalancerNames.to_query v.load_balancer_names)));
-           Some
-             (Query.Pair
-                ("AvailabilityZones.member",
-                  (AvailabilityZones.to_query v.availability_zones)));
-           Some
-             (Query.Pair
-                ("DefaultCooldown", (Integer.to_query v.default_cooldown)));
-           Some
-             (Query.Pair
-                ("DesiredCapacity", (Integer.to_query v.desired_capacity)));
-           Some (Query.Pair ("MaxSize", (Integer.to_query v.max_size)));
-           Some (Query.Pair ("MinSize", (Integer.to_query v.min_size)));
-           Util.option_map v.launch_configuration_name
-             (fun f ->
-                Query.Pair ("LaunchConfigurationName", (String.to_query f)));
-           Util.option_map v.auto_scaling_group_a_r_n
-             (fun f ->
-                Query.Pair ("AutoScalingGroupARN", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((((((((((((((((([] @
+                                    [Some
+                                       (Ezxmlm.make_tag
+                                          "AutoScalingGroupName"
+                                          ([],
+                                            (String.to_xml
+                                               v.auto_scaling_group_name)))])
+                                   @
+                                   [Util.option_map
+                                      v.auto_scaling_group_a_r_n
+                                      (fun f ->
+                                         Ezxmlm.make_tag
+                                           "AutoScalingGroupARN"
+                                           ([], (String.to_xml f)))])
+                                  @
+                                  [Util.option_map
+                                     v.launch_configuration_name
+                                     (fun f ->
+                                        Ezxmlm.make_tag
+                                          "LaunchConfigurationName"
+                                          ([], (String.to_xml f)))])
+                                 @
+                                 [Util.option_map v.launch_template
+                                    (fun f ->
+                                       Ezxmlm.make_tag "LaunchTemplate"
+                                         ([],
+                                           (LaunchTemplateSpecification.to_xml
+                                              f)))])
+                                @
+                                [Util.option_map v.mixed_instances_policy
+                                   (fun f ->
+                                      Ezxmlm.make_tag "MixedInstancesPolicy"
+                                        ([], (MixedInstancesPolicy.to_xml f)))])
+                               @
+                               [Some
+                                  (Ezxmlm.make_tag "MinSize"
+                                     ([], (Integer.to_xml v.min_size)))])
+                              @
+                              [Some
+                                 (Ezxmlm.make_tag "MaxSize"
+                                    ([], (Integer.to_xml v.max_size)))])
+                             @
+                             [Some
+                                (Ezxmlm.make_tag "DesiredCapacity"
+                                   ([], (Integer.to_xml v.desired_capacity)))])
+                            @
+                            [Some
+                               (Ezxmlm.make_tag "DefaultCooldown"
+                                  ([], (Integer.to_xml v.default_cooldown)))])
+                           @
+                           (List.map
+                              (fun x ->
+                                 Some
+                                   (Ezxmlm.make_tag "AvailabilityZones"
+                                      ([], (AvailabilityZones.to_xml [x]))))
+                              v.availability_zones))
+                          @
+                          (List.map
+                             (fun x ->
+                                Some
+                                  (Ezxmlm.make_tag "LoadBalancerNames"
+                                     ([], (LoadBalancerNames.to_xml [x]))))
+                             v.load_balancer_names))
+                         @
+                         (List.map
+                            (fun x ->
+                               Some
+                                 (Ezxmlm.make_tag "TargetGroupARNs"
+                                    ([], (TargetGroupARNs.to_xml [x]))))
+                            v.target_group_a_r_ns))
+                        @
+                        [Some
+                           (Ezxmlm.make_tag "HealthCheckType"
+                              ([], (String.to_xml v.health_check_type)))])
+                       @
+                       [Util.option_map v.health_check_grace_period
+                          (fun f ->
+                             Ezxmlm.make_tag "HealthCheckGracePeriod"
+                               ([], (Integer.to_xml f)))])
+                      @
+                      (List.map
+                         (fun x ->
+                            Some
+                              (Ezxmlm.make_tag "Instances"
+                                 ([], (Instances.to_xml [x])))) v.instances))
+                     @
+                     [Some
+                        (Ezxmlm.make_tag "CreatedTime"
+                           ([], (DateTime.to_xml v.created_time)))])
+                    @
+                    (List.map
+                       (fun x ->
+                          Some
+                            (Ezxmlm.make_tag "SuspendedProcesses"
+                               ([], (SuspendedProcesses.to_xml [x]))))
+                       v.suspended_processes))
+                   @
+                   [Util.option_map v.placement_group
+                      (fun f ->
+                         Ezxmlm.make_tag "PlacementGroup"
+                           ([], (String.to_xml f)))])
+                  @
+                  [Util.option_map v.v_p_c_zone_identifier
+                     (fun f ->
+                        Ezxmlm.make_tag "VPCZoneIdentifier"
+                          ([], (String.to_xml f)))])
+                 @
+                 (List.map
+                    (fun x ->
+                       Some
+                         (Ezxmlm.make_tag "EnabledMetrics"
+                            ([], (EnabledMetrics.to_xml [x]))))
+                    v.enabled_metrics))
+                @
+                [Util.option_map v.status
+                   (fun f -> Ezxmlm.make_tag "Status" ([], (String.to_xml f)))])
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "Tags"
+                          ([], (TagDescriptionList.to_xml [x])))) v.tags))
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "TerminationPolicies"
+                         ([], (TerminationPolicies.to_xml [x]))))
+                 v.termination_policies))
+             @
+             [Util.option_map v.new_instances_protected_from_scale_in
+                (fun f ->
+                   Ezxmlm.make_tag "NewInstancesProtectedFromScaleIn"
+                     ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.service_linked_role_a_r_n
+               (fun f ->
+                  Ezxmlm.make_tag "ServiceLinkedRoleARN"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_instance_lifetime
+              (fun f ->
+                 Ezxmlm.make_tag "MaxInstanceLifetime"
+                   ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("termination_policies",
-                (TerminationPolicies.to_json v.termination_policies));
+           [Util.option_map v.max_instance_lifetime
+              (fun f -> ("max_instance_lifetime", (Integer.to_json f)));
+           Util.option_map v.service_linked_role_a_r_n
+             (fun f -> ("service_linked_role_a_r_n", (String.to_json f)));
+           Util.option_map v.new_instances_protected_from_scale_in
+             (fun f ->
+                ("new_instances_protected_from_scale_in",
+                  (Boolean.to_json f)));
+           Some
+             ("termination_policies",
+               (TerminationPolicies.to_json v.termination_policies));
            Some ("tags", (TagDescriptionList.to_json v.tags));
            Util.option_map v.status (fun f -> ("status", (String.to_json f)));
            Some
@@ -1581,6 +2968,9 @@ module AutoScalingGroup =
              (fun f -> ("health_check_grace_period", (Integer.to_json f)));
            Some ("health_check_type", (String.to_json v.health_check_type));
            Some
+             ("target_group_a_r_ns",
+               (TargetGroupARNs.to_json v.target_group_a_r_ns));
+           Some
              ("load_balancer_names",
                (LoadBalancerNames.to_json v.load_balancer_names));
            Some
@@ -1590,6 +2980,12 @@ module AutoScalingGroup =
            Some ("desired_capacity", (Integer.to_json v.desired_capacity));
            Some ("max_size", (Integer.to_json v.max_size));
            Some ("min_size", (Integer.to_json v.min_size));
+           Util.option_map v.mixed_instances_policy
+             (fun f ->
+                ("mixed_instances_policy", (MixedInstancesPolicy.to_json f)));
+           Util.option_map v.launch_template
+             (fun f ->
+                ("launch_template", (LaunchTemplateSpecification.to_json f)));
            Util.option_map v.launch_configuration_name
              (fun f -> ("launch_configuration_name", (String.to_json f)));
            Util.option_map v.auto_scaling_group_a_r_n
@@ -1608,6 +3004,12 @@ module AutoScalingGroup =
         launch_configuration_name =
           (Util.option_map (Json.lookup j "launch_configuration_name")
              String.of_json);
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplateSpecification.of_json);
+        mixed_instances_policy =
+          (Util.option_map (Json.lookup j "mixed_instances_policy")
+             MixedInstancesPolicy.of_json);
         min_size =
           (Integer.of_json (Util.of_option_exn (Json.lookup j "min_size")));
         max_size =
@@ -1624,6 +3026,9 @@ module AutoScalingGroup =
         load_balancer_names =
           (LoadBalancerNames.of_json
              (Util.of_option_exn (Json.lookup j "load_balancer_names")));
+        target_group_a_r_ns =
+          (TargetGroupARNs.of_json
+             (Util.of_option_exn (Json.lookup j "target_group_a_r_ns")));
         health_check_type =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "health_check_type")));
@@ -1652,7 +3057,17 @@ module AutoScalingGroup =
              (Util.of_option_exn (Json.lookup j "tags")));
         termination_policies =
           (TerminationPolicies.of_json
-             (Util.of_option_exn (Json.lookup j "termination_policies")))
+             (Util.of_option_exn (Json.lookup j "termination_policies")));
+        new_instances_protected_from_scale_in =
+          (Util.option_map
+             (Json.lookup j "new_instances_protected_from_scale_in")
+             Boolean.of_json);
+        service_linked_role_a_r_n =
+          (Util.option_map (Json.lookup j "service_linked_role_a_r_n")
+             String.of_json);
+        max_instance_lifetime =
+          (Util.option_map (Json.lookup j "max_instance_lifetime")
+             Integer.of_json)
       }
   end
 module NotificationConfiguration =
@@ -1676,16 +3091,22 @@ module NotificationConfiguration =
             (Util.option_bind (Xml.member "NotificationType" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.auto_scaling_group_name
+                (fun f ->
+                   Ezxmlm.make_tag "AutoScalingGroupName"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.topic_a_r_n
+               (fun f -> Ezxmlm.make_tag "TopicARN" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.notification_type
-              (fun f -> Query.Pair ("NotificationType", (String.to_query f)));
-           Util.option_map v.topic_a_r_n
-             (fun f -> Query.Pair ("TopicARN", (String.to_query f)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "NotificationType" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1817,59 +3238,106 @@ module LaunchConfiguration =
             (Util.option_bind (Xml.member "PlacementTenancy" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((((((((((((([] @
+                             [Some
+                                (Ezxmlm.make_tag "LaunchConfigurationName"
+                                   ([],
+                                     (String.to_xml
+                                        v.launch_configuration_name)))])
+                            @
+                            [Util.option_map v.launch_configuration_a_r_n
+                               (fun f ->
+                                  Ezxmlm.make_tag "LaunchConfigurationARN"
+                                    ([], (String.to_xml f)))])
+                           @
+                           [Some
+                              (Ezxmlm.make_tag "ImageId"
+                                 ([], (String.to_xml v.image_id)))])
+                          @
+                          [Util.option_map v.key_name
+                             (fun f ->
+                                Ezxmlm.make_tag "KeyName"
+                                  ([], (String.to_xml f)))])
+                         @
+                         (List.map
+                            (fun x ->
+                               Some
+                                 (Ezxmlm.make_tag "SecurityGroups"
+                                    ([], (SecurityGroups.to_xml [x]))))
+                            v.security_groups))
+                        @
+                        [Util.option_map v.classic_link_v_p_c_id
+                           (fun f ->
+                              Ezxmlm.make_tag "ClassicLinkVPCId"
+                                ([], (String.to_xml f)))])
+                       @
+                       (List.map
+                          (fun x ->
+                             Some
+                               (Ezxmlm.make_tag
+                                  "ClassicLinkVPCSecurityGroups"
+                                  ([],
+                                    (ClassicLinkVPCSecurityGroups.to_xml [x]))))
+                          v.classic_link_v_p_c_security_groups))
+                      @
+                      [Util.option_map v.user_data
+                         (fun f ->
+                            Ezxmlm.make_tag "UserData"
+                              ([], (String.to_xml f)))])
+                     @
+                     [Some
+                        (Ezxmlm.make_tag "InstanceType"
+                           ([], (String.to_xml v.instance_type)))])
+                    @
+                    [Util.option_map v.kernel_id
+                       (fun f ->
+                          Ezxmlm.make_tag "KernelId" ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.ramdisk_id
+                      (fun f ->
+                         Ezxmlm.make_tag "RamdiskId" ([], (String.to_xml f)))])
+                  @
+                  (List.map
+                     (fun x ->
+                        Some
+                          (Ezxmlm.make_tag "BlockDeviceMappings"
+                             ([], (BlockDeviceMappings.to_xml [x]))))
+                     v.block_device_mappings))
+                 @
+                 [Util.option_map v.instance_monitoring
+                    (fun f ->
+                       Ezxmlm.make_tag "InstanceMonitoring"
+                         ([], (InstanceMonitoring.to_xml f)))])
+                @
+                [Util.option_map v.spot_price
+                   (fun f ->
+                      Ezxmlm.make_tag "SpotPrice" ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.iam_instance_profile
+                  (fun f ->
+                     Ezxmlm.make_tag "IamInstanceProfile"
+                       ([], (String.to_xml f)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "CreatedTime"
+                    ([], (DateTime.to_xml v.created_time)))])
+             @
+             [Util.option_map v.ebs_optimized
+                (fun f ->
+                   Ezxmlm.make_tag "EbsOptimized" ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.associate_public_ip_address
+               (fun f ->
+                  Ezxmlm.make_tag "AssociatePublicIpAddress"
+                    ([], (Boolean.to_xml f)))])
+           @
            [Util.option_map v.placement_tenancy
-              (fun f -> Query.Pair ("PlacementTenancy", (String.to_query f)));
-           Util.option_map v.associate_public_ip_address
-             (fun f ->
-                Query.Pair ("AssociatePublicIpAddress", (Boolean.to_query f)));
-           Util.option_map v.ebs_optimized
-             (fun f -> Query.Pair ("EbsOptimized", (Boolean.to_query f)));
-           Some
-             (Query.Pair ("CreatedTime", (DateTime.to_query v.created_time)));
-           Util.option_map v.iam_instance_profile
-             (fun f -> Query.Pair ("IamInstanceProfile", (String.to_query f)));
-           Util.option_map v.spot_price
-             (fun f -> Query.Pair ("SpotPrice", (String.to_query f)));
-           Util.option_map v.instance_monitoring
-             (fun f ->
-                Query.Pair
-                  ("InstanceMonitoring", (InstanceMonitoring.to_query f)));
-           Some
-             (Query.Pair
-                ("BlockDeviceMappings.member",
-                  (BlockDeviceMappings.to_query v.block_device_mappings)));
-           Util.option_map v.ramdisk_id
-             (fun f -> Query.Pair ("RamdiskId", (String.to_query f)));
-           Util.option_map v.kernel_id
-             (fun f -> Query.Pair ("KernelId", (String.to_query f)));
-           Some
-             (Query.Pair ("InstanceType", (String.to_query v.instance_type)));
-           Util.option_map v.user_data
-             (fun f -> Query.Pair ("UserData", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("ClassicLinkVPCSecurityGroups.member",
-                  (ClassicLinkVPCSecurityGroups.to_query
-                     v.classic_link_v_p_c_security_groups)));
-           Util.option_map v.classic_link_v_p_c_id
-             (fun f -> Query.Pair ("ClassicLinkVPCId", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SecurityGroups.member",
-                  (SecurityGroups.to_query v.security_groups)));
-           Util.option_map v.key_name
-             (fun f -> Query.Pair ("KeyName", (String.to_query f)));
-           Some (Query.Pair ("ImageId", (String.to_query v.image_id)));
-           Util.option_map v.launch_configuration_a_r_n
-             (fun f ->
-                Query.Pair ("LaunchConfigurationARN", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LaunchConfigurationName",
-                  (String.to_query v.launch_configuration_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "PlacementTenancy" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2023,31 +3491,51 @@ module ScheduledUpdateGroupAction =
             (Util.option_bind (Xml.member "DesiredCapacity" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((([] @
+                    [Util.option_map v.auto_scaling_group_name
+                       (fun f ->
+                          Ezxmlm.make_tag "AutoScalingGroupName"
+                            ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.scheduled_action_name
+                      (fun f ->
+                         Ezxmlm.make_tag "ScheduledActionName"
+                           ([], (String.to_xml f)))])
+                  @
+                  [Util.option_map v.scheduled_action_a_r_n
+                     (fun f ->
+                        Ezxmlm.make_tag "ScheduledActionARN"
+                          ([], (String.to_xml f)))])
+                 @
+                 [Util.option_map v.time
+                    (fun f ->
+                       Ezxmlm.make_tag "Time" ([], (DateTime.to_xml f)))])
+                @
+                [Util.option_map v.start_time
+                   (fun f ->
+                      Ezxmlm.make_tag "StartTime" ([], (DateTime.to_xml f)))])
+               @
+               [Util.option_map v.end_time
+                  (fun f ->
+                     Ezxmlm.make_tag "EndTime" ([], (DateTime.to_xml f)))])
+              @
+              [Util.option_map v.recurrence
+                 (fun f ->
+                    Ezxmlm.make_tag "Recurrence" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.min_size
+                (fun f -> Ezxmlm.make_tag "MinSize" ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.max_size
+               (fun f -> Ezxmlm.make_tag "MaxSize" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.desired_capacity
-              (fun f -> Query.Pair ("DesiredCapacity", (Integer.to_query f)));
-           Util.option_map v.max_size
-             (fun f -> Query.Pair ("MaxSize", (Integer.to_query f)));
-           Util.option_map v.min_size
-             (fun f -> Query.Pair ("MinSize", (Integer.to_query f)));
-           Util.option_map v.recurrence
-             (fun f -> Query.Pair ("Recurrence", (String.to_query f)));
-           Util.option_map v.end_time
-             (fun f -> Query.Pair ("EndTime", (DateTime.to_query f)));
-           Util.option_map v.start_time
-             (fun f -> Query.Pair ("StartTime", (DateTime.to_query f)));
-           Util.option_map v.time
-             (fun f -> Query.Pair ("Time", (DateTime.to_query f)));
-           Util.option_map v.scheduled_action_a_r_n
-             (fun f -> Query.Pair ("ScheduledActionARN", (String.to_query f)));
-           Util.option_map v.scheduled_action_name
-             (fun f ->
-                Query.Pair ("ScheduledActionName", (String.to_query f)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DesiredCapacity" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2096,6 +3584,116 @@ module ScheduledUpdateGroupAction =
           (Util.option_map (Json.lookup j "desired_capacity") Integer.of_json)
       }
   end
+module ScheduledUpdateGroupActionRequest =
+  struct
+    type t =
+      {
+      scheduled_action_name: String.t ;
+      start_time: DateTime.t option ;
+      end_time: DateTime.t option ;
+      recurrence: String.t option ;
+      min_size: Integer.t option ;
+      max_size: Integer.t option ;
+      desired_capacity: Integer.t option }
+    let make ~scheduled_action_name  ?start_time  ?end_time  ?recurrence 
+      ?min_size  ?max_size  ?desired_capacity  () =
+      {
+        scheduled_action_name;
+        start_time;
+        end_time;
+        recurrence;
+        min_size;
+        max_size;
+        desired_capacity
+      }
+    let parse xml =
+      Some
+        {
+          scheduled_action_name =
+            (Xml.required "ScheduledActionName"
+               (Util.option_bind (Xml.member "ScheduledActionName" xml)
+                  String.parse));
+          start_time =
+            (Util.option_bind (Xml.member "StartTime" xml) DateTime.parse);
+          end_time =
+            (Util.option_bind (Xml.member "EndTime" xml) DateTime.parse);
+          recurrence =
+            (Util.option_bind (Xml.member "Recurrence" xml) String.parse);
+          min_size =
+            (Util.option_bind (Xml.member "MinSize" xml) Integer.parse);
+          max_size =
+            (Util.option_bind (Xml.member "MaxSize" xml) Integer.parse);
+          desired_capacity =
+            (Util.option_bind (Xml.member "DesiredCapacity" xml)
+               Integer.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 [Some
+                    (Ezxmlm.make_tag "ScheduledActionName"
+                       ([], (String.to_xml v.scheduled_action_name)))])
+                @
+                [Util.option_map v.start_time
+                   (fun f ->
+                      Ezxmlm.make_tag "StartTime" ([], (DateTime.to_xml f)))])
+               @
+               [Util.option_map v.end_time
+                  (fun f ->
+                     Ezxmlm.make_tag "EndTime" ([], (DateTime.to_xml f)))])
+              @
+              [Util.option_map v.recurrence
+                 (fun f ->
+                    Ezxmlm.make_tag "Recurrence" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.min_size
+                (fun f -> Ezxmlm.make_tag "MinSize" ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.max_size
+               (fun f -> Ezxmlm.make_tag "MaxSize" ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.desired_capacity
+              (fun f ->
+                 Ezxmlm.make_tag "DesiredCapacity" ([], (Integer.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.desired_capacity
+              (fun f -> ("desired_capacity", (Integer.to_json f)));
+           Util.option_map v.max_size
+             (fun f -> ("max_size", (Integer.to_json f)));
+           Util.option_map v.min_size
+             (fun f -> ("min_size", (Integer.to_json f)));
+           Util.option_map v.recurrence
+             (fun f -> ("recurrence", (String.to_json f)));
+           Util.option_map v.end_time
+             (fun f -> ("end_time", (DateTime.to_json f)));
+           Util.option_map v.start_time
+             (fun f -> ("start_time", (DateTime.to_json f)));
+           Some
+             ("scheduled_action_name",
+               (String.to_json v.scheduled_action_name))])
+    let of_json j =
+      {
+        scheduled_action_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "scheduled_action_name")));
+        start_time =
+          (Util.option_map (Json.lookup j "start_time") DateTime.of_json);
+        end_time =
+          (Util.option_map (Json.lookup j "end_time") DateTime.of_json);
+        recurrence =
+          (Util.option_map (Json.lookup j "recurrence") String.of_json);
+        min_size =
+          (Util.option_map (Json.lookup j "min_size") Integer.of_json);
+        max_size =
+          (Util.option_map (Json.lookup j "max_size") Integer.of_json);
+        desired_capacity =
+          (Util.option_map (Json.lookup j "desired_capacity") Integer.of_json)
+      }
+  end
 module LoadBalancerState =
   struct
     type t = {
@@ -2110,13 +3708,17 @@ module LoadBalancerState =
                String.parse);
           state = (Util.option_bind (Xml.member "State" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.load_balancer_name
+               (fun f ->
+                  Ezxmlm.make_tag "LoadBalancerName" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.state
-              (fun f -> Query.Pair ("State", (String.to_query f)));
-           Util.option_map v.load_balancer_name
-             (fun f -> Query.Pair ("LoadBalancerName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "State" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2140,11 +3742,13 @@ module MetricCollectionType =
       Some
         { metric = (Util.option_bind (Xml.member "Metric" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.metric
-              (fun f -> Query.Pair ("Metric", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Metric" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2164,11 +3768,13 @@ module MetricGranularityType =
           granularity =
             (Util.option_bind (Xml.member "Granularity" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.granularity
-              (fun f -> Query.Pair ("Granularity", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Granularity" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2192,11 +3798,14 @@ module ProcessType =
             (Xml.required "ProcessName"
                (Util.option_bind (Xml.member "ProcessName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair ("ProcessName", (String.to_query v.process_name)))])
+              (Ezxmlm.make_tag "ProcessName"
+                 ([], (String.to_xml v.process_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2214,6 +3823,9 @@ module InstanceIds =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2224,6 +3836,9 @@ module Filters =
     let parse xml =
       Util.option_all (List.map Filter.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Filter.to_query v
+    let to_headers v = Headers.to_headers_list Filter.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Filter.to_xml x))) v
     let to_json v = `List (List.map Filter.to_json v)
     let of_json j = Json.to_list Filter.of_json j
   end
@@ -2234,6 +3849,9 @@ module ProcessNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2246,6 +3864,13 @@ module AutoScalingInstances =
         (List.map AutoScalingInstanceDetails.parse (Xml.members "member" xml))
     let to_query v =
       Query.to_query_list AutoScalingInstanceDetails.to_query v
+    let to_headers v =
+      Headers.to_headers_list AutoScalingInstanceDetails.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (AutoScalingInstanceDetails.to_xml x))) v
     let to_json v = `List (List.map AutoScalingInstanceDetails.to_json v)
     let of_json j = Json.to_list AutoScalingInstanceDetails.of_json j
   end
@@ -2256,8 +3881,34 @@ module AutoScalingNotificationTypes =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
+  end
+module FailedScheduledUpdateGroupActionRequests =
+  struct
+    type t = FailedScheduledUpdateGroupActionRequest.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map FailedScheduledUpdateGroupActionRequest.parse
+           (Xml.members "member" xml))
+    let to_query v =
+      Query.to_query_list FailedScheduledUpdateGroupActionRequest.to_query v
+    let to_headers v =
+      Headers.to_headers_list
+        FailedScheduledUpdateGroupActionRequest.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (FailedScheduledUpdateGroupActionRequest.to_xml x))) v
+    let to_json v =
+      `List (List.map FailedScheduledUpdateGroupActionRequest.to_json v)
+    let of_json j =
+      Json.to_list FailedScheduledUpdateGroupActionRequest.of_json j
   end
 module ScalingPolicies =
   struct
@@ -2267,8 +3918,31 @@ module ScalingPolicies =
       Util.option_all
         (List.map ScalingPolicy.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list ScalingPolicy.to_query v
+    let to_headers v = Headers.to_headers_list ScalingPolicy.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (ScalingPolicy.to_xml x))) v
     let to_json v = `List (List.map ScalingPolicy.to_json v)
     let of_json j = Json.to_list ScalingPolicy.of_json j
+  end
+module LifecycleHookSpecifications =
+  struct
+    type t = LifecycleHookSpecification.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map LifecycleHookSpecification.parse (Xml.members "member" xml))
+    let to_query v =
+      Query.to_query_list LifecycleHookSpecification.to_query v
+    let to_headers v =
+      Headers.to_headers_list LifecycleHookSpecification.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (LifecycleHookSpecification.to_xml x))) v
+    let to_json v = `List (List.map LifecycleHookSpecification.to_json v)
+    let of_json j = Json.to_list LifecycleHookSpecification.of_json j
   end
 module Tags =
   struct
@@ -2277,6 +3951,9 @@ module Tags =
     let parse xml =
       Util.option_all (List.map Tag.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Tag.to_query v
+    let to_headers v = Headers.to_headers_list Tag.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Tag.to_xml x))) v
     let to_json v = `List (List.map Tag.to_json v)
     let of_json j = Json.to_list Tag.of_json j
   end
@@ -2287,6 +3964,9 @@ module ActivityIds =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2298,8 +3978,32 @@ module LifecycleHooks =
       Util.option_all
         (List.map LifecycleHook.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list LifecycleHook.to_query v
+    let to_headers v = Headers.to_headers_list LifecycleHook.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (LifecycleHook.to_xml x))) v
     let to_json v = `List (List.map LifecycleHook.to_json v)
     let of_json j = Json.to_list LifecycleHook.of_json j
+  end
+module LoadBalancerTargetGroupStates =
+  struct
+    type t = LoadBalancerTargetGroupState.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map LoadBalancerTargetGroupState.parse
+           (Xml.members "member" xml))
+    let to_query v =
+      Query.to_query_list LoadBalancerTargetGroupState.to_query v
+    let to_headers v =
+      Headers.to_headers_list LoadBalancerTargetGroupState.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (LoadBalancerTargetGroupState.to_xml x))) v
+    let to_json v = `List (List.map LoadBalancerTargetGroupState.to_json v)
+    let of_json j = Json.to_list LoadBalancerTargetGroupState.of_json j
   end
 module Activities =
   struct
@@ -2308,6 +4012,10 @@ module Activities =
     let parse xml =
       Util.option_all (List.map Activity.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list Activity.to_query v
+    let to_headers v = Headers.to_headers_list Activity.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Activity.to_xml x)))
+        v
     let to_json v = `List (List.map Activity.to_json v)
     let of_json j = Json.to_list Activity.of_json j
   end
@@ -2318,6 +4026,9 @@ module LaunchConfigurationNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2329,6 +4040,10 @@ module AdjustmentTypes =
       Util.option_all
         (List.map AdjustmentType.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list AdjustmentType.to_query v
+    let to_headers v = Headers.to_headers_list AdjustmentType.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (AdjustmentType.to_xml x))) v
     let to_json v = `List (List.map AdjustmentType.to_json v)
     let of_json j = Json.to_list AdjustmentType.of_json j
   end
@@ -2340,8 +4055,26 @@ module AutoScalingGroups =
       Util.option_all
         (List.map AutoScalingGroup.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list AutoScalingGroup.to_query v
+    let to_headers v = Headers.to_headers_list AutoScalingGroup.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (AutoScalingGroup.to_xml x)))
+        v
     let to_json v = `List (List.map AutoScalingGroup.to_json v)
     let of_json j = Json.to_list AutoScalingGroup.of_json j
+  end
+module ScheduledActionNames =
+  struct
+    type t = String.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all (List.map String.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
+    let to_json v = `List (List.map String.to_json v)
+    let of_json j = Json.to_list String.of_json j
   end
 module Metrics =
   struct
@@ -2350,6 +4083,9 @@ module Metrics =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2360,6 +4096,9 @@ module PolicyNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2370,6 +4109,9 @@ module PolicyTypes =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2381,6 +4123,13 @@ module NotificationConfigurations =
       Util.option_all
         (List.map NotificationConfiguration.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list NotificationConfiguration.to_query v
+    let to_headers v =
+      Headers.to_headers_list NotificationConfiguration.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (NotificationConfiguration.to_xml x))) v
     let to_json v = `List (List.map NotificationConfiguration.to_json v)
     let of_json j = Json.to_list NotificationConfiguration.of_json j
   end
@@ -2391,6 +4140,9 @@ module AutoScalingGroupNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2402,6 +4154,12 @@ module LaunchConfigurations =
       Util.option_all
         (List.map LaunchConfiguration.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list LaunchConfiguration.to_query v
+    let to_headers v =
+      Headers.to_headers_list LaunchConfiguration.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (LaunchConfiguration.to_xml x))) v
     let to_json v = `List (List.map LaunchConfiguration.to_json v)
     let of_json j = Json.to_list LaunchConfiguration.of_json j
   end
@@ -2414,8 +4172,36 @@ module ScheduledUpdateGroupActions =
         (List.map ScheduledUpdateGroupAction.parse (Xml.members "member" xml))
     let to_query v =
       Query.to_query_list ScheduledUpdateGroupAction.to_query v
+    let to_headers v =
+      Headers.to_headers_list ScheduledUpdateGroupAction.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (ScheduledUpdateGroupAction.to_xml x))) v
     let to_json v = `List (List.map ScheduledUpdateGroupAction.to_json v)
     let of_json j = Json.to_list ScheduledUpdateGroupAction.of_json j
+  end
+module ScheduledUpdateGroupActionRequests =
+  struct
+    type t = ScheduledUpdateGroupActionRequest.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map ScheduledUpdateGroupActionRequest.parse
+           (Xml.members "member" xml))
+    let to_query v =
+      Query.to_query_list ScheduledUpdateGroupActionRequest.to_query v
+    let to_headers v =
+      Headers.to_headers_list ScheduledUpdateGroupActionRequest.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member"
+             ([], (ScheduledUpdateGroupActionRequest.to_xml x))) v
+    let to_json v =
+      `List (List.map ScheduledUpdateGroupActionRequest.to_json v)
+    let of_json j = Json.to_list ScheduledUpdateGroupActionRequest.of_json j
   end
 module LoadBalancerStates =
   struct
@@ -2425,6 +4211,11 @@ module LoadBalancerStates =
       Util.option_all
         (List.map LoadBalancerState.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list LoadBalancerState.to_query v
+    let to_headers v = Headers.to_headers_list LoadBalancerState.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (LoadBalancerState.to_xml x)))
+        v
     let to_json v = `List (List.map LoadBalancerState.to_json v)
     let of_json j = Json.to_list LoadBalancerState.of_json j
   end
@@ -2436,6 +4227,12 @@ module MetricCollectionTypes =
       Util.option_all
         (List.map MetricCollectionType.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list MetricCollectionType.to_query v
+    let to_headers v =
+      Headers.to_headers_list MetricCollectionType.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (MetricCollectionType.to_xml x))) v
     let to_json v = `List (List.map MetricCollectionType.to_json v)
     let of_json j = Json.to_list MetricCollectionType.of_json j
   end
@@ -2447,6 +4244,12 @@ module MetricGranularityTypes =
       Util.option_all
         (List.map MetricGranularityType.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list MetricGranularityType.to_query v
+    let to_headers v =
+      Headers.to_headers_list MetricGranularityType.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (MetricGranularityType.to_xml x))) v
     let to_json v = `List (List.map MetricGranularityType.to_json v)
     let of_json j = Json.to_list MetricGranularityType.of_json j
   end
@@ -2457,6 +4260,9 @@ module LifecycleHookNames =
     let parse xml =
       Util.option_all (List.map String.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -2467,18 +4273,12 @@ module Processes =
     let parse xml =
       Util.option_all (List.map ProcessType.parse (Xml.members "member" xml))
     let to_query v = Query.to_query_list ProcessType.to_query v
+    let to_headers v = Headers.to_headers_list ProcessType.to_headers v
+    let to_xml v =
+      List.map
+        (fun x -> Ezxmlm.make_tag "member" ([], (ProcessType.to_xml x))) v
     let to_json v = `List (List.map ProcessType.to_json v)
     let of_json j = Json.to_list ProcessType.of_json j
-  end
-module ScheduledActionNames =
-  struct
-    type t = String.t list
-    let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map String.parse (Xml.members "member" xml))
-    let to_query v = Query.to_query_list String.to_query v
-    let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
   end
 module ExitStandbyQuery =
   struct
@@ -2500,16 +4300,20 @@ module ExitStandbyQuery =
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "InstanceIds"
+                       ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+           @
            [Some
-              (Query.Pair
-                 ("AutoScalingGroupName",
-                   (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("InstanceIds.member", (InstanceIds.to_query v.instance_ids)))])
+              (Ezxmlm.make_tag "AutoScalingGroupName"
+                 ([], (String.to_xml v.auto_scaling_group_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2533,6 +4337,8 @@ module RecordLifecycleActionHeartbeatAnswer =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2547,11 +4353,13 @@ module ActivityType =
           activity =
             (Util.option_bind (Xml.member "Activity" xml) Activity.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.activity
-              (fun f -> Query.Pair ("Activity", (Activity.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Activity" ([], (Activity.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2581,15 +4389,18 @@ module DeleteAutoScalingGroupType =
           force_delete =
             (Util.option_bind (Xml.member "ForceDelete" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
            [Util.option_map v.force_delete
-              (fun f -> Query.Pair ("ForceDelete", (Boolean.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "ForceDelete" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2627,14 +4438,22 @@ module DescribeTagsType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "Filters" ([], (Filters.to_xml [x]))))
+                v.filters))
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some (Query.Pair ("Filters.member", (Filters.to_query v.filters)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2706,32 +4525,44 @@ module PutLifecycleHookType =
           default_result =
             (Util.option_bind (Xml.member "DefaultResult" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((([] @
+                  [Some
+                     (Ezxmlm.make_tag "LifecycleHookName"
+                        ([], (String.to_xml v.lifecycle_hook_name)))])
+                 @
+                 [Some
+                    (Ezxmlm.make_tag "AutoScalingGroupName"
+                       ([], (String.to_xml v.auto_scaling_group_name)))])
+                @
+                [Util.option_map v.lifecycle_transition
+                   (fun f ->
+                      Ezxmlm.make_tag "LifecycleTransition"
+                        ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.role_a_r_n
+                  (fun f -> Ezxmlm.make_tag "RoleARN" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.notification_target_a_r_n
+                 (fun f ->
+                    Ezxmlm.make_tag "NotificationTargetARN"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.notification_metadata
+                (fun f ->
+                   Ezxmlm.make_tag "NotificationMetadata"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.heartbeat_timeout
+               (fun f ->
+                  Ezxmlm.make_tag "HeartbeatTimeout" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.default_result
-              (fun f -> Query.Pair ("DefaultResult", (String.to_query f)));
-           Util.option_map v.heartbeat_timeout
-             (fun f -> Query.Pair ("HeartbeatTimeout", (Integer.to_query f)));
-           Util.option_map v.notification_metadata
-             (fun f ->
-                Query.Pair ("NotificationMetadata", (String.to_query f)));
-           Util.option_map v.notification_target_a_r_n
-             (fun f ->
-                Query.Pair ("NotificationTargetARN", (String.to_query f)));
-           Util.option_map v.role_a_r_n
-             (fun f -> Query.Pair ("RoleARN", (String.to_query f)));
-           Util.option_map v.lifecycle_transition
-             (fun f ->
-                Query.Pair ("LifecycleTransition", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("LifecycleHookName",
-                  (String.to_query v.lifecycle_hook_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DefaultResult" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2778,12 +4609,25 @@ module PutLifecycleHookType =
           (Util.option_map (Json.lookup j "default_result") String.of_json)
       }
   end
+module AttachLoadBalancerTargetGroupsResultType =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
 module PutLifecycleHookAnswer =
   struct
     type t = unit
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -2807,17 +4651,18 @@ module DeleteLifecycleHookType =
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "LifecycleHookName"
+                  ([], (String.to_xml v.lifecycle_hook_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("AutoScalingGroupName",
-                   (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("LifecycleHookName",
-                  (String.to_query v.lifecycle_hook_name)))])
+              (Ezxmlm.make_tag "AutoScalingGroupName"
+                 ([], (String.to_xml v.auto_scaling_group_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2867,20 +4712,24 @@ module DetachInstancesQuery =
                   (Xml.member "ShouldDecrementDesiredCapacity" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "InstanceIds"
+                        ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+            @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("ShouldDecrementDesiredCapacity",
-                   (Boolean.to_query v.should_decrement_desired_capacity)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("InstanceIds.member", (InstanceIds.to_query v.instance_ids)))])
+              (Ezxmlm.make_tag "ShouldDecrementDesiredCapacity"
+                 ([], (Boolean.to_xml v.should_decrement_desired_capacity)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2925,17 +4774,20 @@ module ScalingProcessQuery =
                (Util.option_bind (Xml.member "ScalingProcesses" xml)
                   ProcessNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("ScalingProcesses.member",
-                   (ProcessNames.to_query v.scaling_processes)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ScalingProcesses"
+                      ([], (ProcessNames.to_xml [x])))) v.scaling_processes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -2959,44 +4811,51 @@ module DetachLoadBalancersType =
   struct
     type t =
       {
-      auto_scaling_group_name: String.t option ;
+      auto_scaling_group_name: String.t ;
       load_balancer_names: LoadBalancerNames.t }
-    let make ?auto_scaling_group_name  ?(load_balancer_names= [])  () =
+    let make ~auto_scaling_group_name  ~load_balancer_names  () =
       { auto_scaling_group_name; load_balancer_names }
     let parse xml =
       Some
         {
           auto_scaling_group_name =
-            (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
-               String.parse);
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
           load_balancer_names =
-            (Util.of_option []
+            (Xml.required "LoadBalancerNames"
                (Util.option_bind (Xml.member "LoadBalancerNames" xml)
                   LoadBalancerNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LoadBalancerNames.member",
-                   (LoadBalancerNames.to_query v.load_balancer_names)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LoadBalancerNames"
+                      ([], (LoadBalancerNames.to_xml [x]))))
+              v.load_balancer_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Some
               ("load_balancer_names",
                 (LoadBalancerNames.to_json v.load_balancer_names));
-           Util.option_map v.auto_scaling_group_name
-             (fun f -> ("auto_scaling_group_name", (String.to_json f)))])
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
     let of_json j =
       {
         auto_scaling_group_name =
-          (Util.option_map (Json.lookup j "auto_scaling_group_name")
-             String.of_json);
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
         load_balancer_names =
           (LoadBalancerNames.of_json
              (Util.of_option_exn (Json.lookup j "load_balancer_names")))
@@ -3013,11 +4872,13 @@ module ResourceInUseFault =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3025,6 +4886,60 @@ module ResourceInUseFault =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module AttachLoadBalancerTargetGroupsType =
+  struct
+    type t =
+      {
+      auto_scaling_group_name: String.t ;
+      target_group_a_r_ns: TargetGroupARNs.t }
+    let make ~auto_scaling_group_name  ~target_group_a_r_ns  () =
+      { auto_scaling_group_name; target_group_a_r_ns }
+    let parse xml =
+      Some
+        {
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          target_group_a_r_ns =
+            (Xml.required "TargetGroupARNs"
+               (Util.option_bind (Xml.member "TargetGroupARNs" xml)
+                  TargetGroupARNs.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "TargetGroupARNs"
+                      ([], (TargetGroupARNs.to_xml [x]))))
+              v.target_group_a_r_ns))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("target_group_a_r_ns",
+                (TargetGroupARNs.to_json v.target_group_a_r_ns));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
+    let of_json j =
+      {
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        target_group_a_r_ns =
+          (TargetGroupARNs.of_json
+             (Util.of_option_exn (Json.lookup j "target_group_a_r_ns")))
       }
   end
 module DescribeLoadBalancersRequest =
@@ -3048,17 +4963,20 @@ module DescribeLoadBalancersRequest =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3084,48 +5002,77 @@ module AttachLoadBalancersType =
   struct
     type t =
       {
-      auto_scaling_group_name: String.t option ;
+      auto_scaling_group_name: String.t ;
       load_balancer_names: LoadBalancerNames.t }
-    let make ?auto_scaling_group_name  ?(load_balancer_names= [])  () =
+    let make ~auto_scaling_group_name  ~load_balancer_names  () =
       { auto_scaling_group_name; load_balancer_names }
     let parse xml =
       Some
         {
           auto_scaling_group_name =
-            (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
-               String.parse);
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
           load_balancer_names =
-            (Util.of_option []
+            (Xml.required "LoadBalancerNames"
                (Util.option_bind (Xml.member "LoadBalancerNames" xml)
                   LoadBalancerNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LoadBalancerNames.member",
-                   (LoadBalancerNames.to_query v.load_balancer_names)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LoadBalancerNames"
+                      ([], (LoadBalancerNames.to_xml [x]))))
+              v.load_balancer_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Some
               ("load_balancer_names",
                 (LoadBalancerNames.to_json v.load_balancer_names));
-           Util.option_map v.auto_scaling_group_name
-             (fun f -> ("auto_scaling_group_name", (String.to_json f)))])
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
     let of_json j =
       {
         auto_scaling_group_name =
-          (Util.option_map (Json.lookup j "auto_scaling_group_name")
-             String.of_json);
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
         load_balancer_names =
           (LoadBalancerNames.of_json
              (Util.of_option_exn (Json.lookup j "load_balancer_names")))
       }
+  end
+module SetInstanceProtectionAnswer =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
+  end
+module DetachLoadBalancerTargetGroupsResultType =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
   end
 module RecordLifecycleActionHeartbeatType =
   struct
@@ -3133,10 +5080,15 @@ module RecordLifecycleActionHeartbeatType =
       {
       lifecycle_hook_name: String.t ;
       auto_scaling_group_name: String.t ;
-      lifecycle_action_token: String.t }
+      lifecycle_action_token: String.t option ;
+      instance_id: String.t option }
     let make ~lifecycle_hook_name  ~auto_scaling_group_name 
-      ~lifecycle_action_token  () =
-      { lifecycle_hook_name; auto_scaling_group_name; lifecycle_action_token
+      ?lifecycle_action_token  ?instance_id  () =
+      {
+        lifecycle_hook_name;
+        auto_scaling_group_name;
+        lifecycle_action_token;
+        instance_id
       }
     let parse xml =
       Some
@@ -3150,31 +5102,38 @@ module RecordLifecycleActionHeartbeatType =
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
                   String.parse));
           lifecycle_action_token =
-            (Xml.required "LifecycleActionToken"
-               (Util.option_bind (Xml.member "LifecycleActionToken" xml)
-                  String.parse))
+            (Util.option_bind (Xml.member "LifecycleActionToken" xml)
+               String.parse);
+          instance_id =
+            (Util.option_bind (Xml.member "InstanceId" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LifecycleActionToken",
-                   (String.to_query v.lifecycle_action_token)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("LifecycleHookName",
-                  (String.to_query v.lifecycle_hook_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "LifecycleHookName"
+                    ([], (String.to_xml v.lifecycle_hook_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            [Util.option_map v.lifecycle_action_token
+               (fun f ->
+                  Ezxmlm.make_tag "LifecycleActionToken"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.instance_id
+              (fun f -> Ezxmlm.make_tag "InstanceId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("lifecycle_action_token",
-                (String.to_json v.lifecycle_action_token));
+           [Util.option_map v.instance_id
+              (fun f -> ("instance_id", (String.to_json f)));
+           Util.option_map v.lifecycle_action_token
+             (fun f -> ("lifecycle_action_token", (String.to_json f)));
            Some
              ("auto_scaling_group_name",
                (String.to_json v.auto_scaling_group_name));
@@ -3189,8 +5148,10 @@ module RecordLifecycleActionHeartbeatType =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
         lifecycle_action_token =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "lifecycle_action_token")))
+          (Util.option_map (Json.lookup j "lifecycle_action_token")
+             String.of_json);
+        instance_id =
+          (Util.option_map (Json.lookup j "instance_id") String.of_json)
       }
   end
 module AutoScalingInstancesType =
@@ -3211,15 +5172,20 @@ module AutoScalingInstancesType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "AutoScalingInstances"
+                       ([], (AutoScalingInstances.to_xml [x]))))
+               v.auto_scaling_instances))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingInstances.member",
-                  (AutoScalingInstances.to_query v.auto_scaling_instances)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3261,19 +5227,25 @@ module PutNotificationConfigurationType =
                (Util.option_bind (Xml.member "NotificationTypes" xml)
                   AutoScalingNotificationTypes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("NotificationTypes.member",
-                   (AutoScalingNotificationTypes.to_query
-                      v.notification_types)));
-           Some (Query.Pair ("TopicARN", (String.to_query v.topic_a_r_n)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "TopicARN"
+                  ([], (String.to_xml v.topic_a_r_n)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "NotificationTypes"
+                      ([], (AutoScalingNotificationTypes.to_xml [x]))))
+              v.notification_types))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3296,6 +5268,50 @@ module PutNotificationConfigurationType =
              (Util.of_option_exn (Json.lookup j "notification_types")))
       }
   end
+module BatchPutScheduledUpdateGroupActionAnswer =
+  struct
+    type t =
+      {
+      failed_scheduled_update_group_actions:
+        FailedScheduledUpdateGroupActionRequests.t }
+    let make ?(failed_scheduled_update_group_actions= [])  () =
+      { failed_scheduled_update_group_actions }
+    let parse xml =
+      Some
+        {
+          failed_scheduled_update_group_actions =
+            (Util.of_option []
+               (Util.option_bind
+                  (Xml.member "FailedScheduledUpdateGroupActions" xml)
+                  FailedScheduledUpdateGroupActionRequests.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "FailedScheduledUpdateGroupActions"
+                      ([],
+                        (FailedScheduledUpdateGroupActionRequests.to_xml [x]))))
+              v.failed_scheduled_update_group_actions))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("failed_scheduled_update_group_actions",
+                (FailedScheduledUpdateGroupActionRequests.to_json
+                   v.failed_scheduled_update_group_actions))])
+    let of_json j =
+      {
+        failed_scheduled_update_group_actions =
+          (FailedScheduledUpdateGroupActionRequests.of_json
+             (Util.of_option_exn
+                (Json.lookup j "failed_scheduled_update_group_actions")))
+      }
+  end
 module PoliciesType =
   struct
     type t =
@@ -3314,15 +5330,20 @@ module PoliciesType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "ScalingPolicies"
+                       ([], (ScalingPolicies.to_xml [x]))))
+               v.scaling_policies))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("ScalingPolicies.member",
-                  (ScalingPolicies.to_query v.scaling_policies)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3346,6 +5367,8 @@ module UpdateAutoScalingGroupType =
       {
       auto_scaling_group_name: String.t ;
       launch_configuration_name: String.t option ;
+      launch_template: LaunchTemplateSpecification.t option ;
+      mixed_instances_policy: MixedInstancesPolicy.t option ;
       min_size: Integer.t option ;
       max_size: Integer.t option ;
       desired_capacity: Integer.t option ;
@@ -3355,14 +5378,22 @@ module UpdateAutoScalingGroupType =
       health_check_grace_period: Integer.t option ;
       placement_group: String.t option ;
       v_p_c_zone_identifier: String.t option ;
-      termination_policies: TerminationPolicies.t }
-    let make ~auto_scaling_group_name  ?launch_configuration_name  ?min_size 
-      ?max_size  ?desired_capacity  ?default_cooldown  ?(availability_zones=
-      [])  ?health_check_type  ?health_check_grace_period  ?placement_group 
-      ?v_p_c_zone_identifier  ?(termination_policies= [])  () =
+      termination_policies: TerminationPolicies.t ;
+      new_instances_protected_from_scale_in: Boolean.t option ;
+      service_linked_role_a_r_n: String.t option ;
+      max_instance_lifetime: Integer.t option }
+    let make ~auto_scaling_group_name  ?launch_configuration_name 
+      ?launch_template  ?mixed_instances_policy  ?min_size  ?max_size 
+      ?desired_capacity  ?default_cooldown  ?(availability_zones= []) 
+      ?health_check_type  ?health_check_grace_period  ?placement_group 
+      ?v_p_c_zone_identifier  ?(termination_policies= []) 
+      ?new_instances_protected_from_scale_in  ?service_linked_role_a_r_n 
+      ?max_instance_lifetime  () =
       {
         auto_scaling_group_name;
         launch_configuration_name;
+        launch_template;
+        mixed_instances_policy;
         min_size;
         max_size;
         desired_capacity;
@@ -3372,7 +5403,10 @@ module UpdateAutoScalingGroupType =
         health_check_grace_period;
         placement_group;
         v_p_c_zone_identifier;
-        termination_policies
+        termination_policies;
+        new_instances_protected_from_scale_in;
+        service_linked_role_a_r_n;
+        max_instance_lifetime
       }
     let parse xml =
       Some
@@ -3384,6 +5418,12 @@ module UpdateAutoScalingGroupType =
           launch_configuration_name =
             (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
                String.parse);
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplateSpecification.parse);
+          mixed_instances_policy =
+            (Util.option_bind (Xml.member "MixedInstancesPolicy" xml)
+               MixedInstancesPolicy.parse);
           min_size =
             (Util.option_bind (Xml.member "MinSize" xml) Integer.parse);
           max_size =
@@ -3411,49 +5451,125 @@ module UpdateAutoScalingGroupType =
           termination_policies =
             (Util.of_option []
                (Util.option_bind (Xml.member "TerminationPolicies" xml)
-                  TerminationPolicies.parse))
+                  TerminationPolicies.parse));
+          new_instances_protected_from_scale_in =
+            (Util.option_bind
+               (Xml.member "NewInstancesProtectedFromScaleIn" xml)
+               Boolean.parse);
+          service_linked_role_a_r_n =
+            (Util.option_bind (Xml.member "ServiceLinkedRoleARN" xml)
+               String.parse);
+          max_instance_lifetime =
+            (Util.option_bind (Xml.member "MaxInstanceLifetime" xml)
+               Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("TerminationPolicies.member",
-                   (TerminationPolicies.to_query v.termination_policies)));
-           Util.option_map v.v_p_c_zone_identifier
-             (fun f -> Query.Pair ("VPCZoneIdentifier", (String.to_query f)));
-           Util.option_map v.placement_group
-             (fun f -> Query.Pair ("PlacementGroup", (String.to_query f)));
-           Util.option_map v.health_check_grace_period
-             (fun f ->
-                Query.Pair ("HealthCheckGracePeriod", (Integer.to_query f)));
-           Util.option_map v.health_check_type
-             (fun f -> Query.Pair ("HealthCheckType", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AvailabilityZones.member",
-                  (AvailabilityZones.to_query v.availability_zones)));
-           Util.option_map v.default_cooldown
-             (fun f -> Query.Pair ("DefaultCooldown", (Integer.to_query f)));
-           Util.option_map v.desired_capacity
-             (fun f -> Query.Pair ("DesiredCapacity", (Integer.to_query f)));
-           Util.option_map v.max_size
-             (fun f -> Query.Pair ("MaxSize", (Integer.to_query f)));
-           Util.option_map v.min_size
-             (fun f -> Query.Pair ("MinSize", (Integer.to_query f)));
-           Util.option_map v.launch_configuration_name
-             (fun f ->
-                Query.Pair ("LaunchConfigurationName", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((((((((((([] @
+                           [Some
+                              (Ezxmlm.make_tag "AutoScalingGroupName"
+                                 ([],
+                                   (String.to_xml v.auto_scaling_group_name)))])
+                          @
+                          [Util.option_map v.launch_configuration_name
+                             (fun f ->
+                                Ezxmlm.make_tag "LaunchConfigurationName"
+                                  ([], (String.to_xml f)))])
+                         @
+                         [Util.option_map v.launch_template
+                            (fun f ->
+                               Ezxmlm.make_tag "LaunchTemplate"
+                                 ([], (LaunchTemplateSpecification.to_xml f)))])
+                        @
+                        [Util.option_map v.mixed_instances_policy
+                           (fun f ->
+                              Ezxmlm.make_tag "MixedInstancesPolicy"
+                                ([], (MixedInstancesPolicy.to_xml f)))])
+                       @
+                       [Util.option_map v.min_size
+                          (fun f ->
+                             Ezxmlm.make_tag "MinSize"
+                               ([], (Integer.to_xml f)))])
+                      @
+                      [Util.option_map v.max_size
+                         (fun f ->
+                            Ezxmlm.make_tag "MaxSize"
+                              ([], (Integer.to_xml f)))])
+                     @
+                     [Util.option_map v.desired_capacity
+                        (fun f ->
+                           Ezxmlm.make_tag "DesiredCapacity"
+                             ([], (Integer.to_xml f)))])
+                    @
+                    [Util.option_map v.default_cooldown
+                       (fun f ->
+                          Ezxmlm.make_tag "DefaultCooldown"
+                            ([], (Integer.to_xml f)))])
+                   @
+                   (List.map
+                      (fun x ->
+                         Some
+                           (Ezxmlm.make_tag "AvailabilityZones"
+                              ([], (AvailabilityZones.to_xml [x]))))
+                      v.availability_zones))
+                  @
+                  [Util.option_map v.health_check_type
+                     (fun f ->
+                        Ezxmlm.make_tag "HealthCheckType"
+                          ([], (String.to_xml f)))])
+                 @
+                 [Util.option_map v.health_check_grace_period
+                    (fun f ->
+                       Ezxmlm.make_tag "HealthCheckGracePeriod"
+                         ([], (Integer.to_xml f)))])
+                @
+                [Util.option_map v.placement_group
+                   (fun f ->
+                      Ezxmlm.make_tag "PlacementGroup"
+                        ([], (String.to_xml f)))])
+               @
+               [Util.option_map v.v_p_c_zone_identifier
+                  (fun f ->
+                     Ezxmlm.make_tag "VPCZoneIdentifier"
+                       ([], (String.to_xml f)))])
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "TerminationPolicies"
+                         ([], (TerminationPolicies.to_xml [x]))))
+                 v.termination_policies))
+             @
+             [Util.option_map v.new_instances_protected_from_scale_in
+                (fun f ->
+                   Ezxmlm.make_tag "NewInstancesProtectedFromScaleIn"
+                     ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.service_linked_role_a_r_n
+               (fun f ->
+                  Ezxmlm.make_tag "ServiceLinkedRoleARN"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_instance_lifetime
+              (fun f ->
+                 Ezxmlm.make_tag "MaxInstanceLifetime"
+                   ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("termination_policies",
-                (TerminationPolicies.to_json v.termination_policies));
+           [Util.option_map v.max_instance_lifetime
+              (fun f -> ("max_instance_lifetime", (Integer.to_json f)));
+           Util.option_map v.service_linked_role_a_r_n
+             (fun f -> ("service_linked_role_a_r_n", (String.to_json f)));
+           Util.option_map v.new_instances_protected_from_scale_in
+             (fun f ->
+                ("new_instances_protected_from_scale_in",
+                  (Boolean.to_json f)));
+           Some
+             ("termination_policies",
+               (TerminationPolicies.to_json v.termination_policies));
            Util.option_map v.v_p_c_zone_identifier
              (fun f -> ("v_p_c_zone_identifier", (String.to_json f)));
            Util.option_map v.placement_group
@@ -3473,6 +5589,12 @@ module UpdateAutoScalingGroupType =
              (fun f -> ("max_size", (Integer.to_json f)));
            Util.option_map v.min_size
              (fun f -> ("min_size", (Integer.to_json f)));
+           Util.option_map v.mixed_instances_policy
+             (fun f ->
+                ("mixed_instances_policy", (MixedInstancesPolicy.to_json f)));
+           Util.option_map v.launch_template
+             (fun f ->
+                ("launch_template", (LaunchTemplateSpecification.to_json f)));
            Util.option_map v.launch_configuration_name
              (fun f -> ("launch_configuration_name", (String.to_json f)));
            Some
@@ -3486,6 +5608,12 @@ module UpdateAutoScalingGroupType =
         launch_configuration_name =
           (Util.option_map (Json.lookup j "launch_configuration_name")
              String.of_json);
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplateSpecification.of_json);
+        mixed_instances_policy =
+          (Util.option_map (Json.lookup j "mixed_instances_policy")
+             MixedInstancesPolicy.of_json);
         min_size =
           (Util.option_map (Json.lookup j "min_size") Integer.of_json);
         max_size =
@@ -3509,7 +5637,17 @@ module UpdateAutoScalingGroupType =
              String.of_json);
         termination_policies =
           (TerminationPolicies.of_json
-             (Util.of_option_exn (Json.lookup j "termination_policies")))
+             (Util.of_option_exn (Json.lookup j "termination_policies")));
+        new_instances_protected_from_scale_in =
+          (Util.option_map
+             (Json.lookup j "new_instances_protected_from_scale_in")
+             Boolean.of_json);
+        service_linked_role_a_r_n =
+          (Util.option_map (Json.lookup j "service_linked_role_a_r_n")
+             String.of_json);
+        max_instance_lifetime =
+          (Util.option_map (Json.lookup j "max_instance_lifetime")
+             Integer.of_json)
       }
   end
 module CreateAutoScalingGroupType =
@@ -3518,6 +5656,8 @@ module CreateAutoScalingGroupType =
       {
       auto_scaling_group_name: String.t ;
       launch_configuration_name: String.t option ;
+      launch_template: LaunchTemplateSpecification.t option ;
+      mixed_instances_policy: MixedInstancesPolicy.t option ;
       instance_id: String.t option ;
       min_size: Integer.t ;
       max_size: Integer.t ;
@@ -3525,20 +5665,31 @@ module CreateAutoScalingGroupType =
       default_cooldown: Integer.t option ;
       availability_zones: AvailabilityZones.t ;
       load_balancer_names: LoadBalancerNames.t ;
+      target_group_a_r_ns: TargetGroupARNs.t ;
       health_check_type: String.t option ;
       health_check_grace_period: Integer.t option ;
       placement_group: String.t option ;
       v_p_c_zone_identifier: String.t option ;
       termination_policies: TerminationPolicies.t ;
-      tags: Tags.t }
+      new_instances_protected_from_scale_in: Boolean.t option ;
+      lifecycle_hook_specification_list: LifecycleHookSpecifications.t ;
+      tags: Tags.t ;
+      service_linked_role_a_r_n: String.t option ;
+      max_instance_lifetime: Integer.t option }
     let make ~auto_scaling_group_name  ?launch_configuration_name 
-      ?instance_id  ~min_size  ~max_size  ?desired_capacity 
-      ?default_cooldown  ?(availability_zones= [])  ?(load_balancer_names=
-      [])  ?health_check_type  ?health_check_grace_period  ?placement_group 
-      ?v_p_c_zone_identifier  ?(termination_policies= [])  ?(tags= [])  () =
+      ?launch_template  ?mixed_instances_policy  ?instance_id  ~min_size 
+      ~max_size  ?desired_capacity  ?default_cooldown  ?(availability_zones=
+      [])  ?(load_balancer_names= [])  ?(target_group_a_r_ns= []) 
+      ?health_check_type  ?health_check_grace_period  ?placement_group 
+      ?v_p_c_zone_identifier  ?(termination_policies= []) 
+      ?new_instances_protected_from_scale_in 
+      ?(lifecycle_hook_specification_list= [])  ?(tags= []) 
+      ?service_linked_role_a_r_n  ?max_instance_lifetime  () =
       {
         auto_scaling_group_name;
         launch_configuration_name;
+        launch_template;
+        mixed_instances_policy;
         instance_id;
         min_size;
         max_size;
@@ -3546,12 +5697,17 @@ module CreateAutoScalingGroupType =
         default_cooldown;
         availability_zones;
         load_balancer_names;
+        target_group_a_r_ns;
         health_check_type;
         health_check_grace_period;
         placement_group;
         v_p_c_zone_identifier;
         termination_policies;
-        tags
+        new_instances_protected_from_scale_in;
+        lifecycle_hook_specification_list;
+        tags;
+        service_linked_role_a_r_n;
+        max_instance_lifetime
       }
     let parse xml =
       Some
@@ -3563,6 +5719,12 @@ module CreateAutoScalingGroupType =
           launch_configuration_name =
             (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
                String.parse);
+          launch_template =
+            (Util.option_bind (Xml.member "LaunchTemplate" xml)
+               LaunchTemplateSpecification.parse);
+          mixed_instances_policy =
+            (Util.option_bind (Xml.member "MixedInstancesPolicy" xml)
+               MixedInstancesPolicy.parse);
           instance_id =
             (Util.option_bind (Xml.member "InstanceId" xml) String.parse);
           min_size =
@@ -3585,6 +5747,10 @@ module CreateAutoScalingGroupType =
             (Util.of_option []
                (Util.option_bind (Xml.member "LoadBalancerNames" xml)
                   LoadBalancerNames.parse));
+          target_group_a_r_ns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "TargetGroupARNs" xml)
+                  TargetGroupARNs.parse));
           health_check_type =
             (Util.option_bind (Xml.member "HealthCheckType" xml) String.parse);
           health_check_grace_period =
@@ -3599,54 +5765,166 @@ module CreateAutoScalingGroupType =
             (Util.of_option []
                (Util.option_bind (Xml.member "TerminationPolicies" xml)
                   TerminationPolicies.parse));
+          new_instances_protected_from_scale_in =
+            (Util.option_bind
+               (Xml.member "NewInstancesProtectedFromScaleIn" xml)
+               Boolean.parse);
+          lifecycle_hook_specification_list =
+            (Util.of_option []
+               (Util.option_bind
+                  (Xml.member "LifecycleHookSpecificationList" xml)
+                  LifecycleHookSpecifications.parse));
           tags =
             (Util.of_option []
-               (Util.option_bind (Xml.member "Tags" xml) Tags.parse))
+               (Util.option_bind (Xml.member "Tags" xml) Tags.parse));
+          service_linked_role_a_r_n =
+            (Util.option_bind (Xml.member "ServiceLinkedRoleARN" xml)
+               String.parse);
+          max_instance_lifetime =
+            (Util.option_bind (Xml.member "MaxInstanceLifetime" xml)
+               Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (Tags.to_query v.tags)));
-           Some
-             (Query.Pair
-                ("TerminationPolicies.member",
-                  (TerminationPolicies.to_query v.termination_policies)));
-           Util.option_map v.v_p_c_zone_identifier
-             (fun f -> Query.Pair ("VPCZoneIdentifier", (String.to_query f)));
-           Util.option_map v.placement_group
-             (fun f -> Query.Pair ("PlacementGroup", (String.to_query f)));
-           Util.option_map v.health_check_grace_period
-             (fun f ->
-                Query.Pair ("HealthCheckGracePeriod", (Integer.to_query f)));
-           Util.option_map v.health_check_type
-             (fun f -> Query.Pair ("HealthCheckType", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LoadBalancerNames.member",
-                  (LoadBalancerNames.to_query v.load_balancer_names)));
-           Some
-             (Query.Pair
-                ("AvailabilityZones.member",
-                  (AvailabilityZones.to_query v.availability_zones)));
-           Util.option_map v.default_cooldown
-             (fun f -> Query.Pair ("DefaultCooldown", (Integer.to_query f)));
-           Util.option_map v.desired_capacity
-             (fun f -> Query.Pair ("DesiredCapacity", (Integer.to_query f)));
-           Some (Query.Pair ("MaxSize", (Integer.to_query v.max_size)));
-           Some (Query.Pair ("MinSize", (Integer.to_query v.min_size)));
-           Util.option_map v.instance_id
-             (fun f -> Query.Pair ("InstanceId", (String.to_query f)));
-           Util.option_map v.launch_configuration_name
-             (fun f ->
-                Query.Pair ("LaunchConfigurationName", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((((((((((((([] @
+                                [Some
+                                   (Ezxmlm.make_tag "AutoScalingGroupName"
+                                      ([],
+                                        (String.to_xml
+                                           v.auto_scaling_group_name)))])
+                               @
+                               [Util.option_map v.launch_configuration_name
+                                  (fun f ->
+                                     Ezxmlm.make_tag
+                                       "LaunchConfigurationName"
+                                       ([], (String.to_xml f)))])
+                              @
+                              [Util.option_map v.launch_template
+                                 (fun f ->
+                                    Ezxmlm.make_tag "LaunchTemplate"
+                                      ([],
+                                        (LaunchTemplateSpecification.to_xml f)))])
+                             @
+                             [Util.option_map v.mixed_instances_policy
+                                (fun f ->
+                                   Ezxmlm.make_tag "MixedInstancesPolicy"
+                                     ([], (MixedInstancesPolicy.to_xml f)))])
+                            @
+                            [Util.option_map v.instance_id
+                               (fun f ->
+                                  Ezxmlm.make_tag "InstanceId"
+                                    ([], (String.to_xml f)))])
+                           @
+                           [Some
+                              (Ezxmlm.make_tag "MinSize"
+                                 ([], (Integer.to_xml v.min_size)))])
+                          @
+                          [Some
+                             (Ezxmlm.make_tag "MaxSize"
+                                ([], (Integer.to_xml v.max_size)))])
+                         @
+                         [Util.option_map v.desired_capacity
+                            (fun f ->
+                               Ezxmlm.make_tag "DesiredCapacity"
+                                 ([], (Integer.to_xml f)))])
+                        @
+                        [Util.option_map v.default_cooldown
+                           (fun f ->
+                              Ezxmlm.make_tag "DefaultCooldown"
+                                ([], (Integer.to_xml f)))])
+                       @
+                       (List.map
+                          (fun x ->
+                             Some
+                               (Ezxmlm.make_tag "AvailabilityZones"
+                                  ([], (AvailabilityZones.to_xml [x]))))
+                          v.availability_zones))
+                      @
+                      (List.map
+                         (fun x ->
+                            Some
+                              (Ezxmlm.make_tag "LoadBalancerNames"
+                                 ([], (LoadBalancerNames.to_xml [x]))))
+                         v.load_balancer_names))
+                     @
+                     (List.map
+                        (fun x ->
+                           Some
+                             (Ezxmlm.make_tag "TargetGroupARNs"
+                                ([], (TargetGroupARNs.to_xml [x]))))
+                        v.target_group_a_r_ns))
+                    @
+                    [Util.option_map v.health_check_type
+                       (fun f ->
+                          Ezxmlm.make_tag "HealthCheckType"
+                            ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.health_check_grace_period
+                      (fun f ->
+                         Ezxmlm.make_tag "HealthCheckGracePeriod"
+                           ([], (Integer.to_xml f)))])
+                  @
+                  [Util.option_map v.placement_group
+                     (fun f ->
+                        Ezxmlm.make_tag "PlacementGroup"
+                          ([], (String.to_xml f)))])
+                 @
+                 [Util.option_map v.v_p_c_zone_identifier
+                    (fun f ->
+                       Ezxmlm.make_tag "VPCZoneIdentifier"
+                         ([], (String.to_xml f)))])
+                @
+                (List.map
+                   (fun x ->
+                      Some
+                        (Ezxmlm.make_tag "TerminationPolicies"
+                           ([], (TerminationPolicies.to_xml [x]))))
+                   v.termination_policies))
+               @
+               [Util.option_map v.new_instances_protected_from_scale_in
+                  (fun f ->
+                     Ezxmlm.make_tag "NewInstancesProtectedFromScaleIn"
+                       ([], (Boolean.to_xml f)))])
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "LifecycleHookSpecificationList"
+                         ([], (LifecycleHookSpecifications.to_xml [x]))))
+                 v.lifecycle_hook_specification_list))
+             @
+             (List.map
+                (fun x ->
+                   Some (Ezxmlm.make_tag "Tags" ([], (Tags.to_xml [x]))))
+                v.tags))
+            @
+            [Util.option_map v.service_linked_role_a_r_n
+               (fun f ->
+                  Ezxmlm.make_tag "ServiceLinkedRoleARN"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_instance_lifetime
+              (fun f ->
+                 Ezxmlm.make_tag "MaxInstanceLifetime"
+                   ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some ("tags", (Tags.to_json v.tags));
+           [Util.option_map v.max_instance_lifetime
+              (fun f -> ("max_instance_lifetime", (Integer.to_json f)));
+           Util.option_map v.service_linked_role_a_r_n
+             (fun f -> ("service_linked_role_a_r_n", (String.to_json f)));
+           Some ("tags", (Tags.to_json v.tags));
+           Some
+             ("lifecycle_hook_specification_list",
+               (LifecycleHookSpecifications.to_json
+                  v.lifecycle_hook_specification_list));
+           Util.option_map v.new_instances_protected_from_scale_in
+             (fun f ->
+                ("new_instances_protected_from_scale_in",
+                  (Boolean.to_json f)));
            Some
              ("termination_policies",
                (TerminationPolicies.to_json v.termination_policies));
@@ -3658,6 +5936,9 @@ module CreateAutoScalingGroupType =
              (fun f -> ("health_check_grace_period", (Integer.to_json f)));
            Util.option_map v.health_check_type
              (fun f -> ("health_check_type", (String.to_json f)));
+           Some
+             ("target_group_a_r_ns",
+               (TargetGroupARNs.to_json v.target_group_a_r_ns));
            Some
              ("load_balancer_names",
                (LoadBalancerNames.to_json v.load_balancer_names));
@@ -3672,6 +5953,12 @@ module CreateAutoScalingGroupType =
            Some ("min_size", (Integer.to_json v.min_size));
            Util.option_map v.instance_id
              (fun f -> ("instance_id", (String.to_json f)));
+           Util.option_map v.mixed_instances_policy
+             (fun f ->
+                ("mixed_instances_policy", (MixedInstancesPolicy.to_json f)));
+           Util.option_map v.launch_template
+             (fun f ->
+                ("launch_template", (LaunchTemplateSpecification.to_json f)));
            Util.option_map v.launch_configuration_name
              (fun f -> ("launch_configuration_name", (String.to_json f)));
            Some
@@ -3685,6 +5972,12 @@ module CreateAutoScalingGroupType =
         launch_configuration_name =
           (Util.option_map (Json.lookup j "launch_configuration_name")
              String.of_json);
+        launch_template =
+          (Util.option_map (Json.lookup j "launch_template")
+             LaunchTemplateSpecification.of_json);
+        mixed_instances_policy =
+          (Util.option_map (Json.lookup j "mixed_instances_policy")
+             MixedInstancesPolicy.of_json);
         instance_id =
           (Util.option_map (Json.lookup j "instance_id") String.of_json);
         min_size =
@@ -3701,6 +5994,9 @@ module CreateAutoScalingGroupType =
         load_balancer_names =
           (LoadBalancerNames.of_json
              (Util.of_option_exn (Json.lookup j "load_balancer_names")));
+        target_group_a_r_ns =
+          (TargetGroupARNs.of_json
+             (Util.of_option_exn (Json.lookup j "target_group_a_r_ns")));
         health_check_type =
           (Util.option_map (Json.lookup j "health_check_type") String.of_json);
         health_check_grace_period =
@@ -3714,7 +6010,21 @@ module CreateAutoScalingGroupType =
         termination_policies =
           (TerminationPolicies.of_json
              (Util.of_option_exn (Json.lookup j "termination_policies")));
-        tags = (Tags.of_json (Util.of_option_exn (Json.lookup j "tags")))
+        new_instances_protected_from_scale_in =
+          (Util.option_map
+             (Json.lookup j "new_instances_protected_from_scale_in")
+             Boolean.of_json);
+        lifecycle_hook_specification_list =
+          (LifecycleHookSpecifications.of_json
+             (Util.of_option_exn
+                (Json.lookup j "lifecycle_hook_specification_list")));
+        tags = (Tags.of_json (Util.of_option_exn (Json.lookup j "tags")));
+        service_linked_role_a_r_n =
+          (Util.option_map (Json.lookup j "service_linked_role_a_r_n")
+             String.of_json);
+        max_instance_lifetime =
+          (Util.option_map (Json.lookup j "max_instance_lifetime")
+             Integer.of_json)
       }
   end
 module TagsType =
@@ -3733,14 +6043,19 @@ module TagsType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "Tags"
+                       ([], (TagDescriptionList.to_xml [x])))) v.tags))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("Tags.member", (TagDescriptionList.to_query v.tags)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3762,6 +6077,8 @@ module AttachLoadBalancersResultType =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -3791,19 +6108,28 @@ module DescribeScalingActivitiesType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "ActivityIds"
+                         ([], (ActivityIds.to_xml [x])))) v.activity_ids))
+             @
+             [Util.option_map v.auto_scaling_group_name
+                (fun f ->
+                   Ezxmlm.make_tag "AutoScalingGroupName"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.max_records
+               (fun f ->
+                  Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Util.option_map v.max_records
-             (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("ActivityIds.member", (ActivityIds.to_query v.activity_ids)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3832,44 +6158,48 @@ module DeleteScheduledActionType =
   struct
     type t =
       {
-      auto_scaling_group_name: String.t option ;
+      auto_scaling_group_name: String.t ;
       scheduled_action_name: String.t }
-    let make ?auto_scaling_group_name  ~scheduled_action_name  () =
+    let make ~auto_scaling_group_name  ~scheduled_action_name  () =
       { auto_scaling_group_name; scheduled_action_name }
     let parse xml =
       Some
         {
           auto_scaling_group_name =
-            (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
-               String.parse);
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
           scheduled_action_name =
             (Xml.required "ScheduledActionName"
                (Util.option_bind (Xml.member "ScheduledActionName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("ScheduledActionName",
-                   (String.to_query v.scheduled_action_name)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (Ezxmlm.make_tag "ScheduledActionName"
+                 ([], (String.to_xml v.scheduled_action_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Some
               ("scheduled_action_name",
                 (String.to_json v.scheduled_action_name));
-           Util.option_map v.auto_scaling_group_name
-             (fun f -> ("auto_scaling_group_name", (String.to_json f)))])
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
     let of_json j =
       {
         auto_scaling_group_name =
-          (Util.option_map (Json.lookup j "auto_scaling_group_name")
-             String.of_json);
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
         scheduled_action_name =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "scheduled_action_name")))
@@ -3888,13 +6218,16 @@ module DescribeLifecycleHooksAnswer =
                (Util.option_bind (Xml.member "LifecycleHooks" xml)
                   LifecycleHooks.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LifecycleHooks.member",
-                   (LifecycleHooks.to_query v.lifecycle_hooks)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LifecycleHooks"
+                      ([], (LifecycleHooks.to_xml [x])))) v.lifecycle_hooks))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3930,18 +6263,22 @@ module SetDesiredCapacityType =
           honor_cooldown =
             (Util.option_bind (Xml.member "HonorCooldown" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "DesiredCapacity"
+                  ([], (Integer.to_xml v.desired_capacity)))])
+           @
            [Util.option_map v.honor_cooldown
-              (fun f -> Query.Pair ("HonorCooldown", (Boolean.to_query f)));
-           Some
-             (Query.Pair
-                ("DesiredCapacity", (Integer.to_query v.desired_capacity)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "HonorCooldown" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -3963,6 +6300,57 @@ module SetDesiredCapacityType =
           (Util.option_map (Json.lookup j "honor_cooldown") Boolean.of_json)
       }
   end
+module DescribeLoadBalancerTargetGroupsResponse =
+  struct
+    type t =
+      {
+      load_balancer_target_groups: LoadBalancerTargetGroupStates.t ;
+      next_token: String.t option }
+    let make ?(load_balancer_target_groups= [])  ?next_token  () =
+      { load_balancer_target_groups; next_token }
+    let parse xml =
+      Some
+        {
+          load_balancer_target_groups =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "LoadBalancerTargetGroups" xml)
+                  LoadBalancerTargetGroupStates.parse));
+          next_token =
+            (Util.option_bind (Xml.member "NextToken" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LoadBalancerTargetGroups"
+                       ([], (LoadBalancerTargetGroupStates.to_xml [x]))))
+               v.load_balancer_target_groups))
+           @
+           [Util.option_map v.next_token
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.next_token
+              (fun f -> ("next_token", (String.to_json f)));
+           Some
+             ("load_balancer_target_groups",
+               (LoadBalancerTargetGroupStates.to_json
+                  v.load_balancer_target_groups))])
+    let of_json j =
+      {
+        load_balancer_target_groups =
+          (LoadBalancerTargetGroupStates.of_json
+             (Util.of_option_exn
+                (Json.lookup j "load_balancer_target_groups")));
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json)
+      }
+  end
 module DetachInstancesAnswer =
   struct
     type t = {
@@ -3976,12 +6364,16 @@ module DetachInstancesAnswer =
                (Util.option_bind (Xml.member "Activities" xml)
                   Activities.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Activities.member", (Activities.to_query v.activities)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Activities"
+                      ([], (Activities.to_xml [x])))) v.activities))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4014,18 +6406,23 @@ module LaunchConfigurationNamesType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "LaunchConfigurationNames"
+                        ([], (LaunchConfigurationNames.to_xml [x]))))
+                v.launch_configuration_names))
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LaunchConfigurationNames.member",
-                  (LaunchConfigurationNames.to_query
-                     v.launch_configuration_names)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4053,6 +6450,8 @@ module DetachLoadBalancersResultType =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -4067,11 +6466,13 @@ module LimitExceededFault =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4094,14 +6495,17 @@ module DescribeLifecycleHookTypesAnswer =
                (Util.option_bind (Xml.member "LifecycleHookTypes" xml)
                   AutoScalingNotificationTypes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LifecycleHookTypes.member",
-                   (AutoScalingNotificationTypes.to_query
-                      v.lifecycle_hook_types)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LifecycleHookTypes"
+                      ([], (AutoScalingNotificationTypes.to_xml [x]))))
+              v.lifecycle_hook_types))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4217,57 +6621,104 @@ module CreateLaunchConfigurationType =
             (Util.option_bind (Xml.member "PlacementTenancy" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((((((((([] @
+                            [Some
+                               (Ezxmlm.make_tag "LaunchConfigurationName"
+                                  ([],
+                                    (String.to_xml
+                                       v.launch_configuration_name)))])
+                           @
+                           [Util.option_map v.image_id
+                              (fun f ->
+                                 Ezxmlm.make_tag "ImageId"
+                                   ([], (String.to_xml f)))])
+                          @
+                          [Util.option_map v.key_name
+                             (fun f ->
+                                Ezxmlm.make_tag "KeyName"
+                                  ([], (String.to_xml f)))])
+                         @
+                         (List.map
+                            (fun x ->
+                               Some
+                                 (Ezxmlm.make_tag "SecurityGroups"
+                                    ([], (SecurityGroups.to_xml [x]))))
+                            v.security_groups))
+                        @
+                        [Util.option_map v.classic_link_v_p_c_id
+                           (fun f ->
+                              Ezxmlm.make_tag "ClassicLinkVPCId"
+                                ([], (String.to_xml f)))])
+                       @
+                       (List.map
+                          (fun x ->
+                             Some
+                               (Ezxmlm.make_tag
+                                  "ClassicLinkVPCSecurityGroups"
+                                  ([],
+                                    (ClassicLinkVPCSecurityGroups.to_xml [x]))))
+                          v.classic_link_v_p_c_security_groups))
+                      @
+                      [Util.option_map v.user_data
+                         (fun f ->
+                            Ezxmlm.make_tag "UserData"
+                              ([], (String.to_xml f)))])
+                     @
+                     [Util.option_map v.instance_id
+                        (fun f ->
+                           Ezxmlm.make_tag "InstanceId"
+                             ([], (String.to_xml f)))])
+                    @
+                    [Util.option_map v.instance_type
+                       (fun f ->
+                          Ezxmlm.make_tag "InstanceType"
+                            ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.kernel_id
+                      (fun f ->
+                         Ezxmlm.make_tag "KernelId" ([], (String.to_xml f)))])
+                  @
+                  [Util.option_map v.ramdisk_id
+                     (fun f ->
+                        Ezxmlm.make_tag "RamdiskId" ([], (String.to_xml f)))])
+                 @
+                 (List.map
+                    (fun x ->
+                       Some
+                         (Ezxmlm.make_tag "BlockDeviceMappings"
+                            ([], (BlockDeviceMappings.to_xml [x]))))
+                    v.block_device_mappings))
+                @
+                [Util.option_map v.instance_monitoring
+                   (fun f ->
+                      Ezxmlm.make_tag "InstanceMonitoring"
+                        ([], (InstanceMonitoring.to_xml f)))])
+               @
+               [Util.option_map v.spot_price
+                  (fun f ->
+                     Ezxmlm.make_tag "SpotPrice" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.iam_instance_profile
+                 (fun f ->
+                    Ezxmlm.make_tag "IamInstanceProfile"
+                      ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.ebs_optimized
+                (fun f ->
+                   Ezxmlm.make_tag "EbsOptimized" ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.associate_public_ip_address
+               (fun f ->
+                  Ezxmlm.make_tag "AssociatePublicIpAddress"
+                    ([], (Boolean.to_xml f)))])
+           @
            [Util.option_map v.placement_tenancy
-              (fun f -> Query.Pair ("PlacementTenancy", (String.to_query f)));
-           Util.option_map v.associate_public_ip_address
-             (fun f ->
-                Query.Pair ("AssociatePublicIpAddress", (Boolean.to_query f)));
-           Util.option_map v.ebs_optimized
-             (fun f -> Query.Pair ("EbsOptimized", (Boolean.to_query f)));
-           Util.option_map v.iam_instance_profile
-             (fun f -> Query.Pair ("IamInstanceProfile", (String.to_query f)));
-           Util.option_map v.spot_price
-             (fun f -> Query.Pair ("SpotPrice", (String.to_query f)));
-           Util.option_map v.instance_monitoring
-             (fun f ->
-                Query.Pair
-                  ("InstanceMonitoring", (InstanceMonitoring.to_query f)));
-           Some
-             (Query.Pair
-                ("BlockDeviceMappings.member",
-                  (BlockDeviceMappings.to_query v.block_device_mappings)));
-           Util.option_map v.ramdisk_id
-             (fun f -> Query.Pair ("RamdiskId", (String.to_query f)));
-           Util.option_map v.kernel_id
-             (fun f -> Query.Pair ("KernelId", (String.to_query f)));
-           Util.option_map v.instance_type
-             (fun f -> Query.Pair ("InstanceType", (String.to_query f)));
-           Util.option_map v.instance_id
-             (fun f -> Query.Pair ("InstanceId", (String.to_query f)));
-           Util.option_map v.user_data
-             (fun f -> Query.Pair ("UserData", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("ClassicLinkVPCSecurityGroups.member",
-                  (ClassicLinkVPCSecurityGroups.to_query
-                     v.classic_link_v_p_c_security_groups)));
-           Util.option_map v.classic_link_v_p_c_id
-             (fun f -> Query.Pair ("ClassicLinkVPCId", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SecurityGroups.member",
-                  (SecurityGroups.to_query v.security_groups)));
-           Util.option_map v.key_name
-             (fun f -> Query.Pair ("KeyName", (String.to_query f)));
-           Util.option_map v.image_id
-             (fun f -> Query.Pair ("ImageId", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LaunchConfigurationName",
-                  (String.to_query v.launch_configuration_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "PlacementTenancy" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4414,31 +6865,44 @@ module PutScheduledUpdateGroupActionType =
             (Util.option_bind (Xml.member "DesiredCapacity" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((((([] @
+                   [Some
+                      (Ezxmlm.make_tag "AutoScalingGroupName"
+                         ([], (String.to_xml v.auto_scaling_group_name)))])
+                  @
+                  [Some
+                     (Ezxmlm.make_tag "ScheduledActionName"
+                        ([], (String.to_xml v.scheduled_action_name)))])
+                 @
+                 [Util.option_map v.time
+                    (fun f ->
+                       Ezxmlm.make_tag "Time" ([], (DateTime.to_xml f)))])
+                @
+                [Util.option_map v.start_time
+                   (fun f ->
+                      Ezxmlm.make_tag "StartTime" ([], (DateTime.to_xml f)))])
+               @
+               [Util.option_map v.end_time
+                  (fun f ->
+                     Ezxmlm.make_tag "EndTime" ([], (DateTime.to_xml f)))])
+              @
+              [Util.option_map v.recurrence
+                 (fun f ->
+                    Ezxmlm.make_tag "Recurrence" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.min_size
+                (fun f -> Ezxmlm.make_tag "MinSize" ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.max_size
+               (fun f -> Ezxmlm.make_tag "MaxSize" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.desired_capacity
-              (fun f -> Query.Pair ("DesiredCapacity", (Integer.to_query f)));
-           Util.option_map v.max_size
-             (fun f -> Query.Pair ("MaxSize", (Integer.to_query f)));
-           Util.option_map v.min_size
-             (fun f -> Query.Pair ("MinSize", (Integer.to_query f)));
-           Util.option_map v.recurrence
-             (fun f -> Query.Pair ("Recurrence", (String.to_query f)));
-           Util.option_map v.end_time
-             (fun f -> Query.Pair ("EndTime", (DateTime.to_query f)));
-           Util.option_map v.start_time
-             (fun f -> Query.Pair ("StartTime", (DateTime.to_query f)));
-           Util.option_map v.time
-             (fun f -> Query.Pair ("Time", (DateTime.to_query f)));
-           Some
-             (Query.Pair
-                ("ScheduledActionName",
-                  (String.to_query v.scheduled_action_name)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DesiredCapacity" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4495,11 +6959,13 @@ module AlreadyExistsFault =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4527,14 +6993,17 @@ module DeleteNotificationConfigurationType =
             (Xml.required "TopicARN"
                (Util.option_bind (Xml.member "TopicARN" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("TopicARN", (String.to_query v.topic_a_r_n)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "TopicARN" ([], (String.to_xml v.topic_a_r_n)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4551,17 +7020,76 @@ module DeleteNotificationConfigurationType =
           (String.of_json (Util.of_option_exn (Json.lookup j "topic_a_r_n")))
       }
   end
+module DetachLoadBalancerTargetGroupsType =
+  struct
+    type t =
+      {
+      auto_scaling_group_name: String.t ;
+      target_group_a_r_ns: TargetGroupARNs.t }
+    let make ~auto_scaling_group_name  ~target_group_a_r_ns  () =
+      { auto_scaling_group_name; target_group_a_r_ns }
+    let parse xml =
+      Some
+        {
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          target_group_a_r_ns =
+            (Xml.required "TargetGroupARNs"
+               (Util.option_bind (Xml.member "TargetGroupARNs" xml)
+                  TargetGroupARNs.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "TargetGroupARNs"
+                      ([], (TargetGroupARNs.to_xml [x]))))
+              v.target_group_a_r_ns))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("target_group_a_r_ns",
+                (TargetGroupARNs.to_json v.target_group_a_r_ns));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
+    let of_json j =
+      {
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        target_group_a_r_ns =
+          (TargetGroupARNs.of_json
+             (Util.of_option_exn (Json.lookup j "target_group_a_r_ns")))
+      }
+  end
 module DescribeAccountLimitsAnswer =
   struct
     type t =
       {
       max_number_of_auto_scaling_groups: Integer.t option ;
-      max_number_of_launch_configurations: Integer.t option }
+      max_number_of_launch_configurations: Integer.t option ;
+      number_of_auto_scaling_groups: Integer.t option ;
+      number_of_launch_configurations: Integer.t option }
     let make ?max_number_of_auto_scaling_groups 
-      ?max_number_of_launch_configurations  () =
+      ?max_number_of_launch_configurations  ?number_of_auto_scaling_groups 
+      ?number_of_launch_configurations  () =
       {
         max_number_of_auto_scaling_groups;
-        max_number_of_launch_configurations
+        max_number_of_launch_configurations;
+        number_of_auto_scaling_groups;
+        number_of_launch_configurations
       }
     let parse xml =
       Some
@@ -4572,25 +7100,49 @@ module DescribeAccountLimitsAnswer =
           max_number_of_launch_configurations =
             (Util.option_bind
                (Xml.member "MaxNumberOfLaunchConfigurations" xml)
+               Integer.parse);
+          number_of_auto_scaling_groups =
+            (Util.option_bind (Xml.member "NumberOfAutoScalingGroups" xml)
+               Integer.parse);
+          number_of_launch_configurations =
+            (Util.option_bind (Xml.member "NumberOfLaunchConfigurations" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.max_number_of_launch_configurations
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.max_number_of_auto_scaling_groups
+                 (fun f ->
+                    Ezxmlm.make_tag "MaxNumberOfAutoScalingGroups"
+                      ([], (Integer.to_xml f)))])
+             @
+             [Util.option_map v.max_number_of_launch_configurations
+                (fun f ->
+                   Ezxmlm.make_tag "MaxNumberOfLaunchConfigurations"
+                     ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.number_of_auto_scaling_groups
+               (fun f ->
+                  Ezxmlm.make_tag "NumberOfAutoScalingGroups"
+                    ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.number_of_launch_configurations
               (fun f ->
-                 Query.Pair
-                   ("MaxNumberOfLaunchConfigurations", (Integer.to_query f)));
-           Util.option_map v.max_number_of_auto_scaling_groups
-             (fun f ->
-                Query.Pair
-                  ("MaxNumberOfAutoScalingGroups", (Integer.to_query f)))])
+                 Ezxmlm.make_tag "NumberOfLaunchConfigurations"
+                   ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.max_number_of_launch_configurations
+           [Util.option_map v.number_of_launch_configurations
               (fun f ->
-                 ("max_number_of_launch_configurations", (Integer.to_json f)));
+                 ("number_of_launch_configurations", (Integer.to_json f)));
+           Util.option_map v.number_of_auto_scaling_groups
+             (fun f -> ("number_of_auto_scaling_groups", (Integer.to_json f)));
+           Util.option_map v.max_number_of_launch_configurations
+             (fun f ->
+                ("max_number_of_launch_configurations", (Integer.to_json f)));
            Util.option_map v.max_number_of_auto_scaling_groups
              (fun f ->
                 ("max_number_of_auto_scaling_groups", (Integer.to_json f)))])
@@ -4603,7 +7155,40 @@ module DescribeAccountLimitsAnswer =
         max_number_of_launch_configurations =
           (Util.option_map
              (Json.lookup j "max_number_of_launch_configurations")
+             Integer.of_json);
+        number_of_auto_scaling_groups =
+          (Util.option_map (Json.lookup j "number_of_auto_scaling_groups")
+             Integer.of_json);
+        number_of_launch_configurations =
+          (Util.option_map (Json.lookup j "number_of_launch_configurations")
              Integer.of_json)
+      }
+  end
+module ServiceLinkedRoleFailure =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
 module DeleteTagsType =
@@ -4618,10 +7203,14 @@ module DeleteTagsType =
             (Xml.required "Tags"
                (Util.option_bind (Xml.member "Tags" xml) Tags.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (Tags.to_query v.tags)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x -> Some (Ezxmlm.make_tag "Tags" ([], (Tags.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("tags", (Tags.to_json v.tags))])
     let of_json j =
@@ -4641,13 +7230,17 @@ module DescribeTerminationPolicyTypesAnswer =
                (Util.option_bind (Xml.member "TerminationPolicyTypes" xml)
                   TerminationPolicies.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("TerminationPolicyTypes.member",
-                   (TerminationPolicies.to_query v.termination_policy_types)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "TerminationPolicyTypes"
+                      ([], (TerminationPolicies.to_xml [x]))))
+              v.termination_policy_types))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4674,13 +7267,16 @@ module DescribeAdjustmentTypesAnswer =
                (Util.option_bind (Xml.member "AdjustmentTypes" xml)
                   AdjustmentTypes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AdjustmentTypes.member",
-                   (AdjustmentTypes.to_query v.adjustment_types)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AdjustmentTypes"
+                      ([], (AdjustmentTypes.to_xml [x])))) v.adjustment_types))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4712,15 +7308,20 @@ module AutoScalingGroupsType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "AutoScalingGroups"
+                       ([], (AutoScalingGroups.to_xml [x]))))
+               v.auto_scaling_groups))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroups.member",
-                  (AutoScalingGroups.to_query v.auto_scaling_groups)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4772,19 +7373,31 @@ module ExecutePolicyType =
           breach_threshold =
             (Util.option_bind (Xml.member "BreachThreshold" xml) Double.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Util.option_map v.auto_scaling_group_name
+                  (fun f ->
+                     Ezxmlm.make_tag "AutoScalingGroupName"
+                       ([], (String.to_xml f)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "PolicyName"
+                    ([], (String.to_xml v.policy_name)))])
+             @
+             [Util.option_map v.honor_cooldown
+                (fun f ->
+                   Ezxmlm.make_tag "HonorCooldown" ([], (Boolean.to_xml f)))])
+            @
+            [Util.option_map v.metric_value
+               (fun f ->
+                  Ezxmlm.make_tag "MetricValue" ([], (Double.to_xml f)))])
+           @
            [Util.option_map v.breach_threshold
-              (fun f -> Query.Pair ("BreachThreshold", (Double.to_query f)));
-           Util.option_map v.metric_value
-             (fun f -> Query.Pair ("MetricValue", (Double.to_query f)));
-           Util.option_map v.honor_cooldown
-             (fun f -> Query.Pair ("HonorCooldown", (Boolean.to_query f)));
-           Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "BreachThreshold" ([], (Double.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4834,16 +7447,23 @@ module SetInstanceHealthQuery =
             (Util.option_bind (Xml.member "ShouldRespectGracePeriod" xml)
                Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "InstanceId"
+                   ([], (String.to_xml v.instance_id)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "HealthStatus"
+                  ([], (String.to_xml v.health_status)))])
+           @
            [Util.option_map v.should_respect_grace_period
               (fun f ->
-                 Query.Pair
-                   ("ShouldRespectGracePeriod", (Boolean.to_query f)));
-           Some
-             (Query.Pair ("HealthStatus", (String.to_query v.health_status)));
-           Some (Query.Pair ("InstanceId", (String.to_query v.instance_id)))])
+                 Ezxmlm.make_tag "ShouldRespectGracePeriod"
+                   ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -4870,18 +7490,20 @@ module PutScalingPolicyType =
       auto_scaling_group_name: String.t ;
       policy_name: String.t ;
       policy_type: String.t option ;
-      adjustment_type: String.t ;
+      adjustment_type: String.t option ;
       min_adjustment_step: Integer.t option ;
       min_adjustment_magnitude: Integer.t option ;
       scaling_adjustment: Integer.t option ;
       cooldown: Integer.t option ;
       metric_aggregation_type: String.t option ;
       step_adjustments: StepAdjustments.t ;
-      estimated_instance_warmup: Integer.t option }
+      estimated_instance_warmup: Integer.t option ;
+      target_tracking_configuration: TargetTrackingConfiguration.t option }
     let make ~auto_scaling_group_name  ~policy_name  ?policy_type 
-      ~adjustment_type  ?min_adjustment_step  ?min_adjustment_magnitude 
+      ?adjustment_type  ?min_adjustment_step  ?min_adjustment_magnitude 
       ?scaling_adjustment  ?cooldown  ?metric_aggregation_type 
-      ?(step_adjustments= [])  ?estimated_instance_warmup  () =
+      ?(step_adjustments= [])  ?estimated_instance_warmup 
+      ?target_tracking_configuration  () =
       {
         auto_scaling_group_name;
         policy_name;
@@ -4893,7 +7515,8 @@ module PutScalingPolicyType =
         cooldown;
         metric_aggregation_type;
         step_adjustments;
-        estimated_instance_warmup
+        estimated_instance_warmup;
+        target_tracking_configuration
       }
     let parse xml =
       Some
@@ -4908,9 +7531,7 @@ module PutScalingPolicyType =
           policy_type =
             (Util.option_bind (Xml.member "PolicyType" xml) String.parse);
           adjustment_type =
-            (Xml.required "AdjustmentType"
-               (Util.option_bind (Xml.member "AdjustmentType" xml)
-                  String.parse));
+            (Util.option_bind (Xml.member "AdjustmentType" xml) String.parse);
           min_adjustment_step =
             (Util.option_bind (Xml.member "MinAdjustmentStep" xml)
                Integer.parse);
@@ -4931,45 +7552,83 @@ module PutScalingPolicyType =
                   StepAdjustments.parse));
           estimated_instance_warmup =
             (Util.option_bind (Xml.member "EstimatedInstanceWarmup" xml)
-               Integer.parse)
+               Integer.parse);
+          target_tracking_configuration =
+            (Util.option_bind (Xml.member "TargetTrackingConfiguration" xml)
+               TargetTrackingConfiguration.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.estimated_instance_warmup
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((((([] @
+                      [Some
+                         (Ezxmlm.make_tag "AutoScalingGroupName"
+                            ([], (String.to_xml v.auto_scaling_group_name)))])
+                     @
+                     [Some
+                        (Ezxmlm.make_tag "PolicyName"
+                           ([], (String.to_xml v.policy_name)))])
+                    @
+                    [Util.option_map v.policy_type
+                       (fun f ->
+                          Ezxmlm.make_tag "PolicyType"
+                            ([], (String.to_xml f)))])
+                   @
+                   [Util.option_map v.adjustment_type
+                      (fun f ->
+                         Ezxmlm.make_tag "AdjustmentType"
+                           ([], (String.to_xml f)))])
+                  @
+                  [Util.option_map v.min_adjustment_step
+                     (fun f ->
+                        Ezxmlm.make_tag "MinAdjustmentStep"
+                          ([], (Integer.to_xml f)))])
+                 @
+                 [Util.option_map v.min_adjustment_magnitude
+                    (fun f ->
+                       Ezxmlm.make_tag "MinAdjustmentMagnitude"
+                         ([], (Integer.to_xml f)))])
+                @
+                [Util.option_map v.scaling_adjustment
+                   (fun f ->
+                      Ezxmlm.make_tag "ScalingAdjustment"
+                        ([], (Integer.to_xml f)))])
+               @
+               [Util.option_map v.cooldown
+                  (fun f ->
+                     Ezxmlm.make_tag "Cooldown" ([], (Integer.to_xml f)))])
+              @
+              [Util.option_map v.metric_aggregation_type
+                 (fun f ->
+                    Ezxmlm.make_tag "MetricAggregationType"
+                      ([], (String.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "StepAdjustments"
+                        ([], (StepAdjustments.to_xml [x]))))
+                v.step_adjustments))
+            @
+            [Util.option_map v.estimated_instance_warmup
+               (fun f ->
+                  Ezxmlm.make_tag "EstimatedInstanceWarmup"
+                    ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.target_tracking_configuration
               (fun f ->
-                 Query.Pair ("EstimatedInstanceWarmup", (Integer.to_query f)));
-           Some
-             (Query.Pair
-                ("StepAdjustments.member",
-                  (StepAdjustments.to_query v.step_adjustments)));
-           Util.option_map v.metric_aggregation_type
-             (fun f ->
-                Query.Pair ("MetricAggregationType", (String.to_query f)));
-           Util.option_map v.cooldown
-             (fun f -> Query.Pair ("Cooldown", (Integer.to_query f)));
-           Util.option_map v.scaling_adjustment
-             (fun f -> Query.Pair ("ScalingAdjustment", (Integer.to_query f)));
-           Util.option_map v.min_adjustment_magnitude
-             (fun f ->
-                Query.Pair ("MinAdjustmentMagnitude", (Integer.to_query f)));
-           Util.option_map v.min_adjustment_step
-             (fun f -> Query.Pair ("MinAdjustmentStep", (Integer.to_query f)));
-           Some
-             (Query.Pair
-                ("AdjustmentType", (String.to_query v.adjustment_type)));
-           Util.option_map v.policy_type
-             (fun f -> Query.Pair ("PolicyType", (String.to_query f)));
-           Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+                 Ezxmlm.make_tag "TargetTrackingConfiguration"
+                   ([], (TargetTrackingConfiguration.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.estimated_instance_warmup
-              (fun f -> ("estimated_instance_warmup", (Integer.to_json f)));
+           [Util.option_map v.target_tracking_configuration
+              (fun f ->
+                 ("target_tracking_configuration",
+                   (TargetTrackingConfiguration.to_json f)));
+           Util.option_map v.estimated_instance_warmup
+             (fun f -> ("estimated_instance_warmup", (Integer.to_json f)));
            Some
              ("step_adjustments",
                (StepAdjustments.to_json v.step_adjustments));
@@ -4983,7 +7642,8 @@ module PutScalingPolicyType =
              (fun f -> ("min_adjustment_magnitude", (Integer.to_json f)));
            Util.option_map v.min_adjustment_step
              (fun f -> ("min_adjustment_step", (Integer.to_json f)));
-           Some ("adjustment_type", (String.to_json v.adjustment_type));
+           Util.option_map v.adjustment_type
+             (fun f -> ("adjustment_type", (String.to_json f)));
            Util.option_map v.policy_type
              (fun f -> ("policy_type", (String.to_json f)));
            Some ("policy_name", (String.to_json v.policy_name));
@@ -5000,8 +7660,7 @@ module PutScalingPolicyType =
         policy_type =
           (Util.option_map (Json.lookup j "policy_type") String.of_json);
         adjustment_type =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "adjustment_type")));
+          (Util.option_map (Json.lookup j "adjustment_type") String.of_json);
         min_adjustment_step =
           (Util.option_map (Json.lookup j "min_adjustment_step")
              Integer.of_json);
@@ -5021,7 +7680,64 @@ module PutScalingPolicyType =
              (Util.of_option_exn (Json.lookup j "step_adjustments")));
         estimated_instance_warmup =
           (Util.option_map (Json.lookup j "estimated_instance_warmup")
-             Integer.of_json)
+             Integer.of_json);
+        target_tracking_configuration =
+          (Util.option_map (Json.lookup j "target_tracking_configuration")
+             TargetTrackingConfiguration.of_json)
+      }
+  end
+module BatchDeleteScheduledActionType =
+  struct
+    type t =
+      {
+      auto_scaling_group_name: String.t ;
+      scheduled_action_names: ScheduledActionNames.t }
+    let make ~auto_scaling_group_name  ~scheduled_action_names  () =
+      { auto_scaling_group_name; scheduled_action_names }
+    let parse xml =
+      Some
+        {
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          scheduled_action_names =
+            (Xml.required "ScheduledActionNames"
+               (Util.option_bind (Xml.member "ScheduledActionNames" xml)
+                  ScheduledActionNames.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ScheduledActionNames"
+                      ([], (ScheduledActionNames.to_xml [x]))))
+              v.scheduled_action_names))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("scheduled_action_names",
+                (ScheduledActionNames.to_json v.scheduled_action_names));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
+    let of_json j =
+      {
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        scheduled_action_names =
+          (ScheduledActionNames.of_json
+             (Util.of_option_exn (Json.lookup j "scheduled_action_names")))
       }
   end
 module EnableMetricsCollectionQuery =
@@ -5047,16 +7763,23 @@ module EnableMetricsCollectionQuery =
             (Xml.required "Granularity"
                (Util.option_bind (Xml.member "Granularity" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            (List.map
+               (fun x ->
+                  Some (Ezxmlm.make_tag "Metrics" ([], (Metrics.to_xml [x]))))
+               v.metrics))
+           @
            [Some
-              (Query.Pair ("Granularity", (String.to_query v.granularity)));
-           Some (Query.Pair ("Metrics.member", (Metrics.to_query v.metrics)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+              (Ezxmlm.make_tag "Granularity"
+                 ([], (String.to_xml v.granularity)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5074,6 +7797,62 @@ module EnableMetricsCollectionQuery =
           (Metrics.of_json (Util.of_option_exn (Json.lookup j "metrics")));
         granularity =
           (String.of_json (Util.of_option_exn (Json.lookup j "granularity")))
+      }
+  end
+module DescribeLoadBalancerTargetGroupsRequest =
+  struct
+    type t =
+      {
+      auto_scaling_group_name: String.t ;
+      next_token: String.t option ;
+      max_records: Integer.t option }
+    let make ~auto_scaling_group_name  ?next_token  ?max_records  () =
+      { auto_scaling_group_name; next_token; max_records }
+    let parse xml =
+      Some
+        {
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          next_token =
+            (Util.option_bind (Xml.member "NextToken" xml) String.parse);
+          max_records =
+            (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "AutoScalingGroupName"
+                   ([], (String.to_xml v.auto_scaling_group_name)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.max_records
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.max_records
+              (fun f -> ("max_records", (Integer.to_json f)));
+           Util.option_map v.next_token
+             (fun f -> ("next_token", (String.to_json f)));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
+    let of_json j =
+      {
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        next_token =
+          (Util.option_map (Json.lookup j "next_token") String.of_json);
+        max_records =
+          (Util.option_map (Json.lookup j "max_records") Integer.of_json)
       }
   end
 module DescribePoliciesType =
@@ -5113,22 +7892,33 @@ module DescribePoliciesType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Util.option_map v.auto_scaling_group_name
+                  (fun f ->
+                     Ezxmlm.make_tag "AutoScalingGroupName"
+                       ([], (String.to_xml f)))])
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "PolicyNames"
+                         ([], (PolicyNames.to_xml [x])))) v.policy_names))
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "PolicyTypes"
+                        ([], (PolicyTypes.to_xml [x])))) v.policy_types))
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("PolicyTypes.member", (PolicyTypes.to_query v.policy_types)));
-           Some
-             (Query.Pair
-                ("PolicyNames.member", (PolicyNames.to_query v.policy_names)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5177,16 +7967,20 @@ module AttachInstancesQuery =
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "InstanceIds"
+                       ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+           @
            [Some
-              (Query.Pair
-                 ("AutoScalingGroupName",
-                   (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("InstanceIds.member", (InstanceIds.to_query v.instance_ids)))])
+              (Ezxmlm.make_tag "AutoScalingGroupName"
+                 ([], (String.to_xml v.auto_scaling_group_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5223,16 +8017,20 @@ module DescribeNotificationConfigurationsAnswer =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "NotificationConfigurations"
+                       ([], (NotificationConfigurations.to_xml [x]))))
+               v.notification_configurations))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("NotificationConfigurations.member",
-                  (NotificationConfigurations.to_query
-                     v.notification_configurations)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5272,14 +8070,18 @@ module TerminateInstanceInAutoScalingGroupType =
                   (Xml.member "ShouldDecrementDesiredCapacity" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "InstanceId"
+                  ([], (String.to_xml v.instance_id)))])
+           @
            [Some
-              (Query.Pair
-                 ("ShouldDecrementDesiredCapacity",
-                   (Boolean.to_query v.should_decrement_desired_capacity)));
-           Some (Query.Pair ("InstanceId", (String.to_query v.instance_id)))])
+              (Ezxmlm.make_tag "ShouldDecrementDesiredCapacity"
+                 ([], (Boolean.to_xml v.should_decrement_desired_capacity)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5309,10 +8111,14 @@ module CreateOrUpdateTagsType =
             (Xml.required "Tags"
                (Util.option_bind (Xml.member "Tags" xml) Tags.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Tags.member", (Tags.to_query v.tags)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x -> Some (Ezxmlm.make_tag "Tags" ([], (Tags.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc (Util.list_filter_opt [Some ("tags", (Tags.to_json v.tags))])
     let of_json j =
@@ -5329,11 +8135,13 @@ module InvalidNextToken =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5349,6 +8157,8 @@ module DeleteLifecycleHookAnswer =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -5373,17 +8183,23 @@ module AutoScalingGroupNamesType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "AutoScalingGroupNames"
+                        ([], (AutoScalingGroupNames.to_xml [x]))))
+                v.auto_scaling_group_names))
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupNames.member",
-                  (AutoScalingGroupNames.to_query v.auto_scaling_group_names)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5418,13 +8234,14 @@ module LaunchConfigurationNameType =
                (Util.option_bind (Xml.member "LaunchConfigurationName" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("LaunchConfigurationName",
-                   (String.to_query v.launch_configuration_name)))])
+              (Ezxmlm.make_tag "LaunchConfigurationName"
+                 ([], (String.to_xml v.launch_configuration_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5459,17 +8276,23 @@ module DescribeNotificationConfigurationsType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "AutoScalingGroupNames"
+                        ([], (AutoScalingGroupNames.to_xml [x]))))
+                v.auto_scaling_group_names))
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupNames.member",
-                  (AutoScalingGroupNames.to_query v.auto_scaling_group_names)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5509,15 +8332,20 @@ module LaunchConfigurationsType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LaunchConfigurations"
+                       ([], (LaunchConfigurations.to_xml [x]))))
+               v.launch_configurations))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LaunchConfigurations.member",
-                  (LaunchConfigurations.to_query v.launch_configurations)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5548,12 +8376,16 @@ module ExitStandbyAnswer =
                (Util.option_bind (Xml.member "Activities" xml)
                   Activities.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Activities.member", (Activities.to_query v.activities)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Activities"
+                      ([], (Activities.to_xml [x])))) v.activities))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5584,16 +8416,20 @@ module ScheduledActionsType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "ScheduledUpdateGroupActions"
+                       ([], (ScheduledUpdateGroupActions.to_xml [x]))))
+               v.scheduled_update_group_actions))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("ScheduledUpdateGroupActions.member",
-                  (ScheduledUpdateGroupActions.to_query
-                     v.scheduled_update_group_actions)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5629,14 +8465,17 @@ module DescribeAutoScalingNotificationTypesAnswer =
                   (Xml.member "AutoScalingNotificationTypes" xml)
                   AutoScalingNotificationTypes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("AutoScalingNotificationTypes.member",
-                   (AutoScalingNotificationTypes.to_query
-                      v.auto_scaling_notification_types)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "AutoScalingNotificationTypes"
+                      ([], (AutoScalingNotificationTypes.to_xml [x]))))
+              v.auto_scaling_notification_types))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5650,6 +8489,104 @@ module DescribeAutoScalingNotificationTypesAnswer =
           (AutoScalingNotificationTypes.of_json
              (Util.of_option_exn
                 (Json.lookup j "auto_scaling_notification_types")))
+      }
+  end
+module BatchDeleteScheduledActionAnswer =
+  struct
+    type t =
+      {
+      failed_scheduled_actions: FailedScheduledUpdateGroupActionRequests.t }
+    let make ?(failed_scheduled_actions= [])  () =
+      { failed_scheduled_actions }
+    let parse xml =
+      Some
+        {
+          failed_scheduled_actions =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "FailedScheduledActions" xml)
+                  FailedScheduledUpdateGroupActionRequests.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "FailedScheduledActions"
+                      ([],
+                        (FailedScheduledUpdateGroupActionRequests.to_xml [x]))))
+              v.failed_scheduled_actions))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("failed_scheduled_actions",
+                (FailedScheduledUpdateGroupActionRequests.to_json
+                   v.failed_scheduled_actions))])
+    let of_json j =
+      {
+        failed_scheduled_actions =
+          (FailedScheduledUpdateGroupActionRequests.of_json
+             (Util.of_option_exn (Json.lookup j "failed_scheduled_actions")))
+      }
+  end
+module BatchPutScheduledUpdateGroupActionType =
+  struct
+    type t =
+      {
+      auto_scaling_group_name: String.t ;
+      scheduled_update_group_actions: ScheduledUpdateGroupActionRequests.t }
+    let make ~auto_scaling_group_name  ~scheduled_update_group_actions  () =
+      { auto_scaling_group_name; scheduled_update_group_actions }
+    let parse xml =
+      Some
+        {
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          scheduled_update_group_actions =
+            (Xml.required "ScheduledUpdateGroupActions"
+               (Util.option_bind
+                  (Xml.member "ScheduledUpdateGroupActions" xml)
+                  ScheduledUpdateGroupActionRequests.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "ScheduledUpdateGroupActions"
+                      ([], (ScheduledUpdateGroupActionRequests.to_xml [x]))))
+              v.scheduled_update_group_actions))
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("scheduled_update_group_actions",
+                (ScheduledUpdateGroupActionRequests.to_json
+                   v.scheduled_update_group_actions));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name))])
+    let of_json j =
+      {
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        scheduled_update_group_actions =
+          (ScheduledUpdateGroupActionRequests.of_json
+             (Util.of_option_exn
+                (Json.lookup j "scheduled_update_group_actions")))
       }
   end
 module DescribeLoadBalancersResponse =
@@ -5670,15 +8607,20 @@ module DescribeLoadBalancersResponse =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "LoadBalancers"
+                       ([], (LoadBalancerStates.to_xml [x]))))
+               v.load_balancers))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("LoadBalancers.member",
-                  (LoadBalancerStates.to_query v.load_balancers)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5712,14 +8654,19 @@ module ActivitiesType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "Activities"
+                       ([], (Activities.to_xml [x])))) v.activities))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("Activities.member", (Activities.to_query v.activities)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5741,6 +8688,8 @@ module CompleteLifecycleActionAnswer =
     let make () = ()
     let parse xml = Some ()
     let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
     let to_json v = `Assoc (Util.list_filter_opt [])
     let of_json j = ()
   end
@@ -5755,11 +8704,13 @@ module ScalingActivityInProgressFault =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5787,13 +8738,19 @@ module DeletePolicyType =
             (Xml.required "PolicyName"
                (Util.option_bind (Xml.member "PolicyName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("PolicyName", (String.to_query v.policy_name)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.auto_scaling_group_name
+               (fun f ->
+                  Ezxmlm.make_tag "AutoScalingGroupName"
+                    ([], (String.to_xml f)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "PolicyName"
+                 ([], (String.to_xml v.policy_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5812,28 +8769,42 @@ module DeletePolicyType =
 module PolicyARNType =
   struct
     type t = {
-      policy_a_r_n: String.t option }
-    let make ?policy_a_r_n  () = { policy_a_r_n }
+      policy_a_r_n: String.t option ;
+      alarms: Alarms.t }
+    let make ?policy_a_r_n  ?(alarms= [])  () = { policy_a_r_n; alarms }
     let parse xml =
       Some
         {
           policy_a_r_n =
-            (Util.option_bind (Xml.member "PolicyARN" xml) String.parse)
+            (Util.option_bind (Xml.member "PolicyARN" xml) String.parse);
+          alarms =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Alarms" xml) Alarms.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.policy_a_r_n
-              (fun f -> Query.Pair ("PolicyARN", (String.to_query f)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.policy_a_r_n
+               (fun f -> Ezxmlm.make_tag "PolicyARN" ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Alarms" ([], (Alarms.to_xml [x]))))
+              v.alarms))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.policy_a_r_n
-              (fun f -> ("policy_a_r_n", (String.to_json f)))])
+           [Some ("alarms", (Alarms.to_json v.alarms));
+           Util.option_map v.policy_a_r_n
+             (fun f -> ("policy_a_r_n", (String.to_json f)))])
     let of_json j =
       {
         policy_a_r_n =
-          (Util.option_map (Json.lookup j "policy_a_r_n") String.of_json)
+          (Util.option_map (Json.lookup j "policy_a_r_n") String.of_json);
+        alarms =
+          (Alarms.of_json (Util.of_option_exn (Json.lookup j "alarms")))
       }
   end
 module DescribeMetricCollectionTypesAnswer =
@@ -5856,17 +8827,23 @@ module DescribeMetricCollectionTypesAnswer =
                (Util.option_bind (Xml.member "Granularities" xml)
                   MetricGranularityTypes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Granularities.member",
-                   (MetricGranularityTypes.to_query v.granularities)));
-           Some
-             (Query.Pair
-                ("Metrics.member",
-                  (MetricCollectionTypes.to_query v.metrics)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "Metrics"
+                       ([], (MetricCollectionTypes.to_xml [x])))) v.metrics))
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Granularities"
+                      ([], (MetricGranularityTypes.to_xml [x]))))
+              v.granularities))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5897,12 +8874,16 @@ module EnterStandbyAnswer =
                (Util.option_bind (Xml.member "Activities" xml)
                   Activities.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Activities.member", (Activities.to_query v.activities)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Activities"
+                      ([], (Activities.to_xml [x])))) v.activities))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5934,17 +8915,21 @@ module DescribeLifecycleHooksType =
                (Util.option_bind (Xml.member "LifecycleHookNames" xml)
                   LifecycleHookNames.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LifecycleHookNames.member",
-                   (LifecycleHookNames.to_query v.lifecycle_hook_names)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "LifecycleHookNames"
+                      ([], (LifecycleHookNames.to_xml [x]))))
+              v.lifecycle_hook_names))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -5982,15 +8967,19 @@ module DisableMetricsCollectionQuery =
             (Util.of_option []
                (Util.option_bind (Xml.member "Metrics" xml) Metrics.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair ("Metrics.member", (Metrics.to_query v.metrics)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Metrics" ([], (Metrics.to_xml [x]))))
+              v.metrics))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6028,16 +9017,23 @@ module DescribeAutoScalingInstancesType =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "InstanceIds"
+                        ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+            @
+            [Util.option_map v.max_records
+               (fun f ->
+                  Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Util.option_map v.max_records
-             (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Some
-             (Query.Pair
-                ("InstanceIds.member", (InstanceIds.to_query v.instance_ids)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6069,12 +9065,16 @@ module ProcessesType =
             (Util.of_option []
                (Util.option_bind (Xml.member "Processes" xml) Processes.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Processes.member", (Processes.to_query v.processes)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Processes" ([], (Processes.to_xml [x]))))
+              v.processes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6091,15 +9091,17 @@ module CompleteLifecycleActionType =
       {
       lifecycle_hook_name: String.t ;
       auto_scaling_group_name: String.t ;
-      lifecycle_action_token: String.t ;
-      lifecycle_action_result: String.t }
+      lifecycle_action_token: String.t option ;
+      lifecycle_action_result: String.t ;
+      instance_id: String.t option }
     let make ~lifecycle_hook_name  ~auto_scaling_group_name 
-      ~lifecycle_action_token  ~lifecycle_action_result  () =
+      ?lifecycle_action_token  ~lifecycle_action_result  ?instance_id  () =
       {
         lifecycle_hook_name;
         auto_scaling_group_name;
         lifecycle_action_token;
-        lifecycle_action_result
+        lifecycle_action_result;
+        instance_id
       }
     let parse xml =
       Some
@@ -6113,42 +9115,49 @@ module CompleteLifecycleActionType =
                (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
                   String.parse));
           lifecycle_action_token =
-            (Xml.required "LifecycleActionToken"
-               (Util.option_bind (Xml.member "LifecycleActionToken" xml)
-                  String.parse));
+            (Util.option_bind (Xml.member "LifecycleActionToken" xml)
+               String.parse);
           lifecycle_action_result =
             (Xml.required "LifecycleActionResult"
                (Util.option_bind (Xml.member "LifecycleActionResult" xml)
-                  String.parse))
+                  String.parse));
+          instance_id =
+            (Util.option_bind (Xml.member "InstanceId" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("LifecycleActionResult",
-                   (String.to_query v.lifecycle_action_result)));
-           Some
-             (Query.Pair
-                ("LifecycleActionToken",
-                  (String.to_query v.lifecycle_action_token)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("LifecycleHookName",
-                  (String.to_query v.lifecycle_hook_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "LifecycleHookName"
+                     ([], (String.to_xml v.lifecycle_hook_name)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "AutoScalingGroupName"
+                    ([], (String.to_xml v.auto_scaling_group_name)))])
+             @
+             [Util.option_map v.lifecycle_action_token
+                (fun f ->
+                   Ezxmlm.make_tag "LifecycleActionToken"
+                     ([], (String.to_xml f)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "LifecycleActionResult"
+                  ([], (String.to_xml v.lifecycle_action_result)))])
+           @
+           [Util.option_map v.instance_id
+              (fun f -> Ezxmlm.make_tag "InstanceId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some
-              ("lifecycle_action_result",
-                (String.to_json v.lifecycle_action_result));
+           [Util.option_map v.instance_id
+              (fun f -> ("instance_id", (String.to_json f)));
            Some
-             ("lifecycle_action_token",
-               (String.to_json v.lifecycle_action_token));
+             ("lifecycle_action_result",
+               (String.to_json v.lifecycle_action_result));
+           Util.option_map v.lifecycle_action_token
+             (fun f -> ("lifecycle_action_token", (String.to_json f)));
            Some
              ("auto_scaling_group_name",
                (String.to_json v.auto_scaling_group_name));
@@ -6163,11 +9172,13 @@ module CompleteLifecycleActionType =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
         lifecycle_action_token =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "lifecycle_action_token")));
+          (Util.option_map (Json.lookup j "lifecycle_action_token")
+             String.of_json);
         lifecycle_action_result =
           (String.of_json
-             (Util.of_option_exn (Json.lookup j "lifecycle_action_result")))
+             (Util.of_option_exn (Json.lookup j "lifecycle_action_result")));
+        instance_id =
+          (Util.option_map (Json.lookup j "instance_id") String.of_json)
       }
   end
 module EnterStandbyQuery =
@@ -6201,20 +9212,24 @@ module EnterStandbyQuery =
                   (Xml.member "ShouldDecrementDesiredCapacity" xml)
                   Boolean.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "InstanceIds"
+                        ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+            @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
            [Some
-              (Query.Pair
-                 ("ShouldDecrementDesiredCapacity",
-                   (Boolean.to_query v.should_decrement_desired_capacity)));
-           Some
-             (Query.Pair
-                ("AutoScalingGroupName",
-                  (String.to_query v.auto_scaling_group_name)));
-           Some
-             (Query.Pair
-                ("InstanceIds.member", (InstanceIds.to_query v.instance_ids)))])
+              (Ezxmlm.make_tag "ShouldDecrementDesiredCapacity"
+                 ([], (Boolean.to_xml v.should_decrement_desired_capacity)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6278,24 +9293,35 @@ module DescribeScheduledActionsType =
           max_records =
             (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Util.option_map v.auto_scaling_group_name
+                   (fun f ->
+                      Ezxmlm.make_tag "AutoScalingGroupName"
+                        ([], (String.to_xml f)))])
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "ScheduledActionNames"
+                          ([], (ScheduledActionNames.to_xml [x]))))
+                  v.scheduled_action_names))
+              @
+              [Util.option_map v.start_time
+                 (fun f ->
+                    Ezxmlm.make_tag "StartTime" ([], (DateTime.to_xml f)))])
+             @
+             [Util.option_map v.end_time
+                (fun f -> Ezxmlm.make_tag "EndTime" ([], (DateTime.to_xml f)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.max_records
-              (fun f -> Query.Pair ("MaxRecords", (Integer.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Util.option_map v.end_time
-             (fun f -> Query.Pair ("EndTime", (DateTime.to_query f)));
-           Util.option_map v.start_time
-             (fun f -> Query.Pair ("StartTime", (DateTime.to_query f)));
-           Some
-             (Query.Pair
-                ("ScheduledActionNames.member",
-                  (ScheduledActionNames.to_query v.scheduled_action_names)));
-           Util.option_map v.auto_scaling_group_name
-             (fun f ->
-                Query.Pair ("AutoScalingGroupName", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6341,11 +9367,13 @@ module ResourceContentionFault =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -6353,5 +9381,72 @@ module ResourceContentionFault =
               (fun f -> ("message", (String.to_json f)))])
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module SetInstanceProtectionQuery =
+  struct
+    type t =
+      {
+      instance_ids: InstanceIds.t ;
+      auto_scaling_group_name: String.t ;
+      protected_from_scale_in: Boolean.t }
+    let make ~instance_ids  ~auto_scaling_group_name 
+      ~protected_from_scale_in  () =
+      { instance_ids; auto_scaling_group_name; protected_from_scale_in }
+    let parse xml =
+      Some
+        {
+          instance_ids =
+            (Xml.required "InstanceIds"
+               (Util.option_bind (Xml.member "InstanceIds" xml)
+                  InstanceIds.parse));
+          auto_scaling_group_name =
+            (Xml.required "AutoScalingGroupName"
+               (Util.option_bind (Xml.member "AutoScalingGroupName" xml)
+                  String.parse));
+          protected_from_scale_in =
+            (Xml.required "ProtectedFromScaleIn"
+               (Util.option_bind (Xml.member "ProtectedFromScaleIn" xml)
+                  Boolean.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "InstanceIds"
+                        ([], (InstanceIds.to_xml [x])))) v.instance_ids))
+            @
+            [Some
+               (Ezxmlm.make_tag "AutoScalingGroupName"
+                  ([], (String.to_xml v.auto_scaling_group_name)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "ProtectedFromScaleIn"
+                 ([], (Boolean.to_xml v.protected_from_scale_in)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some
+              ("protected_from_scale_in",
+                (Boolean.to_json v.protected_from_scale_in));
+           Some
+             ("auto_scaling_group_name",
+               (String.to_json v.auto_scaling_group_name));
+           Some ("instance_ids", (InstanceIds.to_json v.instance_ids))])
+    let of_json j =
+      {
+        instance_ids =
+          (InstanceIds.of_json
+             (Util.of_option_exn (Json.lookup j "instance_ids")));
+        auto_scaling_group_name =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "auto_scaling_group_name")));
+        protected_from_scale_in =
+          (Boolean.of_json
+             (Util.of_option_exn (Json.lookup j "protected_from_scale_in")))
       }
   end

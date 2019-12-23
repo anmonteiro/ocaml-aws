@@ -25,6 +25,7 @@ type t =
   | ResourceContention 
   | ResourceInUse 
   | ScalingActivityInProgress 
+  | ServiceLinkedRoleFailure 
   | ServiceUnavailable 
   | Throttling 
   | UnauthorizedOperation 
@@ -87,6 +88,7 @@ let to_http_code e =
   | ResourceContention -> Some 500
   | ResourceInUse -> Some 400
   | ScalingActivityInProgress -> Some 400
+  | ServiceLinkedRoleFailure -> Some 500
   | ServiceUnavailable -> Some 503
   | Throttling -> Some 400
   | UnauthorizedOperation -> None
@@ -122,6 +124,7 @@ let to_string e =
   | ResourceContention -> "ResourceContention"
   | ResourceInUse -> "ResourceInUse"
   | ScalingActivityInProgress -> "ScalingActivityInProgress"
+  | ServiceLinkedRoleFailure -> "ServiceLinkedRoleFailure"
   | ServiceUnavailable -> "ServiceUnavailable"
   | Throttling -> "Throttling"
   | UnauthorizedOperation -> "UnauthorizedOperation"
@@ -157,6 +160,7 @@ let of_string e =
   | "ResourceContention" -> Some ResourceContention
   | "ResourceInUse" -> Some ResourceInUse
   | "ScalingActivityInProgress" -> Some ScalingActivityInProgress
+  | "ServiceLinkedRoleFailure" -> Some ServiceLinkedRoleFailure
   | "ServiceUnavailable" -> Some ServiceUnavailable
   | "Throttling" -> Some Throttling
   | "UnauthorizedOperation" -> Some UnauthorizedOperation
