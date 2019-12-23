@@ -8,14 +8,15 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
-         [("Version", ["2015-04-15"]);
+         [("Version", ["2016-11-15"]);
          ("Action", ["ModifyInstanceAttribute"])]
          (Util.drop_empty
             (Uri.query_of_encoded
                (Query.render (ModifyInstanceAttributeRequest.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri,
+    (Headers.render (ModifyInstanceAttributeRequest.to_headers req)), "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
