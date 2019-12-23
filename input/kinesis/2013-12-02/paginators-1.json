@@ -9,7 +9,12 @@
       "non_aggregate_keys": [
         "StreamDescription.StreamARN",
         "StreamDescription.StreamName",
-        "StreamDescription.StreamStatus"
+        "StreamDescription.StreamStatus",
+        "StreamDescription.RetentionPeriodHours",
+        "StreamDescription.EnhancedMonitoring",
+        "StreamDescription.EncryptionType",
+        "StreamDescription.KeyId",
+        "StreamDescription.StreamCreationTimestamp"
       ]
     },
     "ListStreams": {
@@ -18,6 +23,18 @@
       "more_results": "HasMoreStreams",
       "output_token": "StreamNames[-1]",
       "result_key": "StreamNames"
+    },
+    "ListShards": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "Shards"
+    },
+    "ListStreamConsumers": {
+      "input_token": "NextToken",
+      "limit_key": "MaxResults",
+      "output_token": "NextToken",
+      "result_key": "Consumers"
     }
   }
 }
