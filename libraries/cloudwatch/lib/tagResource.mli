@@ -1,5 +1,5 @@
 open Types
-type input = SetAlarmStateInput.t
+type input = TagResourceInput.t
 type output = unit
 type error = Errors_internal.t
 include

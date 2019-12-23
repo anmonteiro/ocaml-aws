@@ -1,7 +1,7 @@
 open Types
 open Aws
-type input = ListMetricsInput.t
-type output = ListMetricsOutput.t
+type input = DescribeAnomalyDetectorsInput.t
+type output = DescribeAnomalyDetectorsOutput.t
 type error = Errors_internal.t
 let service = "monitoring"
 let to_http service region req =
@@ -9,24 +9,30 @@ let to_http service region req =
     Uri.add_query_params
       (Uri.of_string
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
-      (List.append [("Version", ["2010-08-01"]); ("Action", ["ListMetrics"])]
+      (List.append
+         [("Version", ["2010-08-01"]);
+         ("Action", ["DescribeAnomalyDetectors"])]
          (Util.drop_empty
             (Uri.query_of_encoded
-               (Query.render (ListMetricsInput.to_query req))))) in
-  (`POST, uri, (Headers.render (ListMetricsInput.to_headers req)), "")
+               (Query.render (DescribeAnomalyDetectorsInput.to_query req))))) in
+  (`POST, uri,
+    (Headers.render (DescribeAnomalyDetectorsInput.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
     let resp =
-      Util.option_bind (Xml.member "ListMetricsResponse" (snd xml))
-        (Xml.member "ListMetricsResult") in
+      Util.option_bind
+        (Xml.member "DescribeAnomalyDetectorsResponse" (snd xml))
+        (Xml.member "DescribeAnomalyDetectorsResult") in
     try
-      Util.or_error (Util.option_bind resp ListMetricsOutput.parse)
+      Util.or_error
+        (Util.option_bind resp DescribeAnomalyDetectorsOutput.parse)
         (let open Error in
            BadResponse
              {
                body;
-               message = "Could not find well formed ListMetricsOutput."
+               message =
+                 "Could not find well formed DescribeAnomalyDetectorsOutput."
              })
     with
     | Xml.RequiredFieldMissing msg ->
@@ -36,7 +42,7 @@ let of_http body =
                {
                  body;
                  message =
-                   ("Error parsing ListMetricsOutput - missing field in body or children: "
+                   ("Error parsing DescribeAnomalyDetectorsOutput - missing field in body or children: "
                       ^ msg)
                })
   with

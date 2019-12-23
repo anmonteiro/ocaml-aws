@@ -1,6 +1,6 @@
 open Types
 open Aws
-type input = SetAlarmStateInput.t
+type input = DeleteAnomalyDetectorInput.t
 type output = unit
 type error = Errors_internal.t
 let service = "monitoring"
@@ -10,11 +10,12 @@ let to_http service region req =
       (Uri.of_string
          ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
-         [("Version", ["2010-08-01"]); ("Action", ["SetAlarmState"])]
+         [("Version", ["2010-08-01"]); ("Action", ["DeleteAnomalyDetector"])]
          (Util.drop_empty
             (Uri.query_of_encoded
-               (Query.render (SetAlarmStateInput.to_query req))))) in
-  (`POST, uri, (Headers.render (SetAlarmStateInput.to_headers req)), "")
+               (Query.render (DeleteAnomalyDetectorInput.to_query req))))) in
+  (`POST, uri, (Headers.render (DeleteAnomalyDetectorInput.to_headers req)),
+    "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

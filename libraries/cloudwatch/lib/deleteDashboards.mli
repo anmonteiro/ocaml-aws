@@ -1,5 +1,5 @@
 open Types
-type input = SetAlarmStateInput.t
+type input = DeleteDashboardsInput.t
 type output = unit
 type error = Errors_internal.t
 include
