@@ -1,6 +1,6 @@
 (library
  (name        aws_ssm)
  (public_name aws_ssm)
- (synopsis "aws-Amazon Simple Systems Management Service")
+ (synopsis "aws-Amazon Simple Systems Manager (SSM)")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws yojson))

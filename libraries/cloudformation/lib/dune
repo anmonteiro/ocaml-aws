@@ -3,4 +3,4 @@
  (public_name aws_cloudformation)
  (synopsis "aws-AWS CloudFormation")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

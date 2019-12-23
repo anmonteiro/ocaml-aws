@@ -3,4 +3,4 @@
  (public_name aws_ec2)
  (synopsis "aws-Amazon Elastic Compute Cloud")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

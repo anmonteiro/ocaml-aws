@@ -8,17 +8,20 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-04-01"]); ("Action", ["GetHostedZone"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (GetHostedZoneRequest.to_query req))))) in
-  (`GET, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/2013-04-01/hostedzone/" ^ req.GetHostedZoneRequest.id)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (GetHostedZoneRequest.to_query req)))) in
+  (`GET, uri, (Headers.render (GetHostedZoneRequest.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "GetHostedZoneResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise (Failure "Could not find well formed GetHostedZoneResponse.") in
     try
       Util.or_error (Util.option_bind resp GetHostedZoneResponse.parse)
         (let open Error in

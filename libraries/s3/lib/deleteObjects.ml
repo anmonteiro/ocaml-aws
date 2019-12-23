@@ -8,17 +8,23 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["DeleteObjects"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (DeleteObjectsRequest.to_query req))))) in
-  (`POST, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (("/" ^ req.DeleteObjectsRequest.bucket) ^ "?delete")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DeleteObjectsRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (DeleteObjectsRequest.to_headers req)),
+    (Ezxmlm.to_string
+       [Ezxmlm.make_tag "Delete"
+          ([], (Delete.to_xml req.DeleteObjectsRequest.delete))]))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "DeleteObjectsResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise (Failure "Could not find well formed DeleteObjectsOutput.") in
     try
       Util.or_error (Util.option_bind resp DeleteObjectsOutput.parse)
         (let open Error in

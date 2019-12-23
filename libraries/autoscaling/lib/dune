@@ -3,4 +3,4 @@
  (public_name aws_autoscaling)
  (synopsis "aws-Auto Scaling")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

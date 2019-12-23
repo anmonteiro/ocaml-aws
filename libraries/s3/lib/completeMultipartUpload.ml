@@ -8,18 +8,30 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]);
-         ("Action", ["CompleteMultipartUpload"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (CompleteMultipartUploadRequest.to_query req))))) in
-  (`POST, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ((("/" ^ req.CompleteMultipartUploadRequest.bucket) ^ "/") ^
+               req.CompleteMultipartUploadRequest.key)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (CompleteMultipartUploadRequest.to_query req)))) in
+  (`POST, uri,
+    (Headers.render (CompleteMultipartUploadRequest.to_headers req)),
+    (match req.CompleteMultipartUploadRequest.multipart_upload with
+     | Some var ->
+         Ezxmlm.to_string
+           [Ezxmlm.make_tag "CompleteMultipartUpload"
+              ([], (CompletedMultipartUpload.to_xml var))]
+     | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "CompleteMultipartUploadResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise
+            (Failure
+               "Could not find well formed CompleteMultipartUploadOutput.") in
     try
       Util.or_error
         (Util.option_bind resp CompleteMultipartUploadOutput.parse)

@@ -1,4 +1,5 @@
 type t =
+  | APICallRateForCustomerExceeded 
   | AuthFailure 
   | AuthorizationAlreadyExists 
   | AuthorizationNotFound 
@@ -27,6 +28,7 @@ type t =
   | InvalidCacheParameterGroupState 
   | InvalidCacheSecurityGroupState 
   | InvalidClientTokenId 
+  | InvalidKMSKeyFault 
   | InvalidParameter 
   | InvalidParameterCombination 
   | InvalidParameterValue 
@@ -39,20 +41,27 @@ type t =
   | MissingAction 
   | MissingAuthenticationToken 
   | MissingParameter 
+  | NoOperationFault 
+  | NodeGroupNotFoundFault 
+  | NodeGroupsPerReplicationGroupQuotaExceeded 
   | NodeQuotaForClusterExceeded 
   | NodeQuotaForCustomerExceeded 
   | OptInRequired 
   | PendingVerification 
   | QuotaExceeded_CacheSecurityGroup 
   | ReplicationGroupAlreadyExists 
+  | ReplicationGroupAlreadyUnderMigrationFault 
   | ReplicationGroupNotFoundFault 
+  | ReplicationGroupNotUnderMigrationFault 
   | RequestExpired 
   | RequestLimitExceeded 
   | ReservedCacheNodeAlreadyExists 
   | ReservedCacheNodeNotFound 
   | ReservedCacheNodeQuotaExceeded 
   | ReservedCacheNodesOfferingNotFound 
+  | ServiceLinkedRoleNotFoundFault 
   | ServiceUnavailable 
+  | ServiceUpdateNotFoundFault 
   | SnapshotAlreadyExistsFault 
   | SnapshotFeatureNotSupportedFault 
   | SnapshotNotFoundFault 
@@ -60,6 +69,7 @@ type t =
   | SubnetInUse 
   | TagNotFound 
   | TagQuotaPerResourceExceeded 
+  | TestFailoverNotAvailableFault 
   | Throttling 
   | UnauthorizedOperation 
   | UnknownParameter 
@@ -95,6 +105,7 @@ let common =
   IncompleteSignature]
 let to_http_code e =
   match e with
+  | APICallRateForCustomerExceeded -> Some 400
   | AuthFailure -> None
   | AuthorizationAlreadyExists -> Some 400
   | AuthorizationNotFound -> Some 404
@@ -123,6 +134,7 @@ let to_http_code e =
   | InvalidCacheParameterGroupState -> Some 400
   | InvalidCacheSecurityGroupState -> Some 400
   | InvalidClientTokenId -> Some 403
+  | InvalidKMSKeyFault -> Some 400
   | InvalidParameter -> None
   | InvalidParameterCombination -> Some 400
   | InvalidParameterValue -> Some 400
@@ -135,20 +147,27 @@ let to_http_code e =
   | MissingAction -> Some 400
   | MissingAuthenticationToken -> Some 403
   | MissingParameter -> Some 400
+  | NoOperationFault -> Some 400
+  | NodeGroupNotFoundFault -> Some 404
+  | NodeGroupsPerReplicationGroupQuotaExceeded -> Some 400
   | NodeQuotaForClusterExceeded -> Some 400
   | NodeQuotaForCustomerExceeded -> Some 400
   | OptInRequired -> Some 403
   | PendingVerification -> None
   | QuotaExceeded_CacheSecurityGroup -> Some 400
   | ReplicationGroupAlreadyExists -> Some 400
+  | ReplicationGroupAlreadyUnderMigrationFault -> Some 400
   | ReplicationGroupNotFoundFault -> Some 404
+  | ReplicationGroupNotUnderMigrationFault -> Some 400
   | RequestExpired -> Some 400
   | RequestLimitExceeded -> None
   | ReservedCacheNodeAlreadyExists -> Some 404
   | ReservedCacheNodeNotFound -> Some 404
   | ReservedCacheNodeQuotaExceeded -> Some 400
   | ReservedCacheNodesOfferingNotFound -> Some 404
+  | ServiceLinkedRoleNotFoundFault -> Some 400
   | ServiceUnavailable -> Some 503
+  | ServiceUpdateNotFoundFault -> Some 404
   | SnapshotAlreadyExistsFault -> Some 400
   | SnapshotFeatureNotSupportedFault -> Some 400
   | SnapshotNotFoundFault -> Some 404
@@ -156,6 +175,7 @@ let to_http_code e =
   | SubnetInUse -> Some 400
   | TagNotFound -> Some 404
   | TagQuotaPerResourceExceeded -> Some 400
+  | TestFailoverNotAvailableFault -> Some 400
   | Throttling -> Some 400
   | UnauthorizedOperation -> None
   | UnknownParameter -> None
@@ -164,6 +184,7 @@ let to_http_code e =
   | Uninhabited -> None
 let to_string e =
   match e with
+  | APICallRateForCustomerExceeded -> "APICallRateForCustomerExceeded"
   | AuthFailure -> "AuthFailure"
   | AuthorizationAlreadyExists -> "AuthorizationAlreadyExists"
   | AuthorizationNotFound -> "AuthorizationNotFound"
@@ -192,6 +213,7 @@ let to_string e =
   | InvalidCacheParameterGroupState -> "InvalidCacheParameterGroupState"
   | InvalidCacheSecurityGroupState -> "InvalidCacheSecurityGroupState"
   | InvalidClientTokenId -> "InvalidClientTokenId"
+  | InvalidKMSKeyFault -> "InvalidKMSKeyFault"
   | InvalidParameter -> "InvalidParameter"
   | InvalidParameterCombination -> "InvalidParameterCombination"
   | InvalidParameterValue -> "InvalidParameterValue"
@@ -204,13 +226,21 @@ let to_string e =
   | MissingAction -> "MissingAction"
   | MissingAuthenticationToken -> "MissingAuthenticationToken"
   | MissingParameter -> "MissingParameter"
+  | NoOperationFault -> "NoOperationFault"
+  | NodeGroupNotFoundFault -> "NodeGroupNotFoundFault"
+  | NodeGroupsPerReplicationGroupQuotaExceeded ->
+      "NodeGroupsPerReplicationGroupQuotaExceeded"
   | NodeQuotaForClusterExceeded -> "NodeQuotaForClusterExceeded"
   | NodeQuotaForCustomerExceeded -> "NodeQuotaForCustomerExceeded"
   | OptInRequired -> "OptInRequired"
   | PendingVerification -> "PendingVerification"
   | QuotaExceeded_CacheSecurityGroup -> "QuotaExceeded.CacheSecurityGroup"
   | ReplicationGroupAlreadyExists -> "ReplicationGroupAlreadyExists"
+  | ReplicationGroupAlreadyUnderMigrationFault ->
+      "ReplicationGroupAlreadyUnderMigrationFault"
   | ReplicationGroupNotFoundFault -> "ReplicationGroupNotFoundFault"
+  | ReplicationGroupNotUnderMigrationFault ->
+      "ReplicationGroupNotUnderMigrationFault"
   | RequestExpired -> "RequestExpired"
   | RequestLimitExceeded -> "RequestLimitExceeded"
   | ReservedCacheNodeAlreadyExists -> "ReservedCacheNodeAlreadyExists"
@@ -218,7 +248,9 @@ let to_string e =
   | ReservedCacheNodeQuotaExceeded -> "ReservedCacheNodeQuotaExceeded"
   | ReservedCacheNodesOfferingNotFound ->
       "ReservedCacheNodesOfferingNotFound"
+  | ServiceLinkedRoleNotFoundFault -> "ServiceLinkedRoleNotFoundFault"
   | ServiceUnavailable -> "ServiceUnavailable"
+  | ServiceUpdateNotFoundFault -> "ServiceUpdateNotFoundFault"
   | SnapshotAlreadyExistsFault -> "SnapshotAlreadyExistsFault"
   | SnapshotFeatureNotSupportedFault -> "SnapshotFeatureNotSupportedFault"
   | SnapshotNotFoundFault -> "SnapshotNotFoundFault"
@@ -226,6 +258,7 @@ let to_string e =
   | SubnetInUse -> "SubnetInUse"
   | TagNotFound -> "TagNotFound"
   | TagQuotaPerResourceExceeded -> "TagQuotaPerResourceExceeded"
+  | TestFailoverNotAvailableFault -> "TestFailoverNotAvailableFault"
   | Throttling -> "Throttling"
   | UnauthorizedOperation -> "UnauthorizedOperation"
   | UnknownParameter -> "UnknownParameter"
@@ -234,6 +267,7 @@ let to_string e =
   | Uninhabited -> "Uninhabited"
 let of_string e =
   match e with
+  | "APICallRateForCustomerExceeded" -> Some APICallRateForCustomerExceeded
   | "AuthFailure" -> Some AuthFailure
   | "AuthorizationAlreadyExists" -> Some AuthorizationAlreadyExists
   | "AuthorizationNotFound" -> Some AuthorizationNotFound
@@ -265,6 +299,7 @@ let of_string e =
   | "InvalidCacheParameterGroupState" -> Some InvalidCacheParameterGroupState
   | "InvalidCacheSecurityGroupState" -> Some InvalidCacheSecurityGroupState
   | "InvalidClientTokenId" -> Some InvalidClientTokenId
+  | "InvalidKMSKeyFault" -> Some InvalidKMSKeyFault
   | "InvalidParameter" -> Some InvalidParameter
   | "InvalidParameterCombination" -> Some InvalidParameterCombination
   | "InvalidParameterValue" -> Some InvalidParameterValue
@@ -277,6 +312,10 @@ let of_string e =
   | "MissingAction" -> Some MissingAction
   | "MissingAuthenticationToken" -> Some MissingAuthenticationToken
   | "MissingParameter" -> Some MissingParameter
+  | "NoOperationFault" -> Some NoOperationFault
+  | "NodeGroupNotFoundFault" -> Some NodeGroupNotFoundFault
+  | "NodeGroupsPerReplicationGroupQuotaExceeded" ->
+      Some NodeGroupsPerReplicationGroupQuotaExceeded
   | "NodeQuotaForClusterExceeded" -> Some NodeQuotaForClusterExceeded
   | "NodeQuotaForCustomerExceeded" -> Some NodeQuotaForCustomerExceeded
   | "OptInRequired" -> Some OptInRequired
@@ -284,7 +323,11 @@ let of_string e =
   | "QuotaExceeded.CacheSecurityGroup" ->
       Some QuotaExceeded_CacheSecurityGroup
   | "ReplicationGroupAlreadyExists" -> Some ReplicationGroupAlreadyExists
+  | "ReplicationGroupAlreadyUnderMigrationFault" ->
+      Some ReplicationGroupAlreadyUnderMigrationFault
   | "ReplicationGroupNotFoundFault" -> Some ReplicationGroupNotFoundFault
+  | "ReplicationGroupNotUnderMigrationFault" ->
+      Some ReplicationGroupNotUnderMigrationFault
   | "RequestExpired" -> Some RequestExpired
   | "RequestLimitExceeded" -> Some RequestLimitExceeded
   | "ReservedCacheNodeAlreadyExists" -> Some ReservedCacheNodeAlreadyExists
@@ -292,7 +335,9 @@ let of_string e =
   | "ReservedCacheNodeQuotaExceeded" -> Some ReservedCacheNodeQuotaExceeded
   | "ReservedCacheNodesOfferingNotFound" ->
       Some ReservedCacheNodesOfferingNotFound
+  | "ServiceLinkedRoleNotFoundFault" -> Some ServiceLinkedRoleNotFoundFault
   | "ServiceUnavailable" -> Some ServiceUnavailable
+  | "ServiceUpdateNotFoundFault" -> Some ServiceUpdateNotFoundFault
   | "SnapshotAlreadyExistsFault" -> Some SnapshotAlreadyExistsFault
   | "SnapshotFeatureNotSupportedFault" ->
       Some SnapshotFeatureNotSupportedFault
@@ -301,6 +346,7 @@ let of_string e =
   | "SubnetInUse" -> Some SubnetInUse
   | "TagNotFound" -> Some TagNotFound
   | "TagQuotaPerResourceExceeded" -> Some TagQuotaPerResourceExceeded
+  | "TestFailoverNotAvailableFault" -> Some TestFailoverNotAvailableFault
   | "Throttling" -> Some Throttling
   | "UnauthorizedOperation" -> Some UnauthorizedOperation
   | "UnknownParameter" -> Some UnknownParameter

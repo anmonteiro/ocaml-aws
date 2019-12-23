@@ -3,4 +3,4 @@
  (public_name aws_cloudtrail)
  (synopsis "aws-AWS CloudTrail")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws yojson))

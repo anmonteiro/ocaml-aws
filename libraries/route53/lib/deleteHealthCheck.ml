@@ -8,13 +8,14 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-04-01"]); ("Action", ["DeleteHealthCheck"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (DeleteHealthCheckRequest.to_query req))))) in
-  (`DELETE, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/2013-04-01/healthcheck/" ^
+               req.DeleteHealthCheckRequest.health_check_id)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DeleteHealthCheckRequest.to_query req)))) in
+  (`DELETE, uri, (Headers.render (DeleteHealthCheckRequest.to_headers req)),
+    "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

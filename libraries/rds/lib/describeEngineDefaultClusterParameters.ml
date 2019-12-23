@@ -8,7 +8,7 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2014-10-31"]);
          ("Action", ["DescribeEngineDefaultClusterParameters"])]
@@ -16,7 +16,9 @@ let to_http service region req =
             (Uri.query_of_encoded
                (Query.render
                   (DescribeEngineDefaultClusterParametersMessage.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri,
+    (Headers.render
+       (DescribeEngineDefaultClusterParametersMessage.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in

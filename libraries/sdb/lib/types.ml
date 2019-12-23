@@ -21,13 +21,15 @@ module ReplaceableAttribute =
           replace =
             (Util.option_bind (Xml.member "Replace" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+            @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+           @
            [Util.option_map v.replace
-              (fun f -> Query.Pair ("Replace", (Boolean.to_query f)));
-           Some (Query.Pair ("Value", (String.to_query v.value)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+              (fun f -> Ezxmlm.make_tag "Replace" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -69,17 +71,22 @@ module Attribute =
             (Util.option_bind (Xml.member "AlternateValueEncoding" xml)
                String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+             @
+             [Util.option_map v.alternate_name_encoding
+                (fun f ->
+                   Ezxmlm.make_tag "AlternateNameEncoding"
+                     ([], (String.to_xml f)))])
+            @ [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+           @
            [Util.option_map v.alternate_value_encoding
               (fun f ->
-                 Query.Pair ("AlternateValueEncoding", (String.to_query f)));
-           Some (Query.Pair ("Value", (String.to_query v.value)));
-           Util.option_map v.alternate_name_encoding
-             (fun f ->
-                Query.Pair ("AlternateNameEncoding", (String.to_query f)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+                 Ezxmlm.make_tag "AlternateValueEncoding"
+                   ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -106,9 +113,11 @@ module ReplaceableAttributeList =
     type t = ReplaceableAttribute.t list
     let make elems () = elems
     let parse xml =
-      Util.option_all
-        (List.map ReplaceableAttribute.parse (Xml.members "Attribute" xml))
+      Util.option_all (List.map ReplaceableAttribute.parse [xml])
     let to_query v = Query.to_query_list ReplaceableAttribute.to_query v
+    let to_headers v =
+      Headers.to_headers_list ReplaceableAttribute.to_headers v
+    let to_xml v = List.concat (List.map ReplaceableAttribute.to_xml v)
     let to_json v = `List (List.map ReplaceableAttribute.to_json v)
     let of_json j = Json.to_list ReplaceableAttribute.of_json j
   end
@@ -116,10 +125,10 @@ module AttributeList =
   struct
     type t = Attribute.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all
-        (List.map Attribute.parse (Xml.members "Attribute" xml))
+    let parse xml = Util.option_all (List.map Attribute.parse [xml])
     let to_query v = Query.to_query_list Attribute.to_query v
+    let to_headers v = Headers.to_headers_list Attribute.to_headers v
+    let to_xml v = List.concat (List.map Attribute.to_xml v)
     let to_json v = `List (List.map Attribute.to_json v)
     let of_json j = Json.to_list Attribute.of_json j
   end
@@ -138,14 +147,19 @@ module ReplaceableItem =
           attributes =
             (Xml.required "Attributes" (ReplaceableAttributeList.parse xml))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Attributes.member",
-                   (ReplaceableAttributeList.to_query v.attributes)));
-           Some (Query.Pair ("ItemName", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some (Ezxmlm.make_tag "ItemName" ([], (String.to_xml v.name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Attributes"
+                      ([], (ReplaceableAttributeList.to_xml [x]))))
+              v.attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -174,13 +188,18 @@ module DeletableItem =
                (Util.option_bind (Xml.member "ItemName" xml) String.parse));
           attributes = (Util.of_option [] (AttributeList.parse xml))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Attributes.member", (AttributeList.to_query v.attributes)));
-           Some (Query.Pair ("ItemName", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some (Ezxmlm.make_tag "ItemName" ([], (String.to_xml v.name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Attributes"
+                      ([], (AttributeList.to_xml [x])))) v.attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -214,16 +233,22 @@ module Item =
                String.parse);
           attributes = (Xml.required "Attributes" (AttributeList.parse xml))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Attributes.member", (AttributeList.to_query v.attributes)));
-           Util.option_map v.alternate_name_encoding
-             (fun f ->
-                Query.Pair ("AlternateNameEncoding", (String.to_query f)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @ [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+            @
+            [Util.option_map v.alternate_name_encoding
+               (fun f ->
+                  Ezxmlm.make_tag "AlternateNameEncoding"
+                    ([], (String.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Attributes"
+                      ([], (AttributeList.to_xml [x])))) v.attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -257,15 +282,19 @@ module UpdateCondition =
           value = (Util.option_bind (Xml.member "Value" xml) String.parse);
           exists = (Util.option_bind (Xml.member "Exists" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.name
+                (fun f -> Ezxmlm.make_tag "Name" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.value
+               (fun f -> Ezxmlm.make_tag "Value" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.exists
-              (fun f -> Query.Pair ("Exists", (Boolean.to_query f)));
-           Util.option_map v.value
-             (fun f -> Query.Pair ("Value", (String.to_query f)));
-           Util.option_map v.name
-             (fun f -> Query.Pair ("Name", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Exists" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -284,10 +313,10 @@ module ReplaceableItemList =
   struct
     type t = ReplaceableItem.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all
-        (List.map ReplaceableItem.parse (Xml.members "Item" xml))
+    let parse xml = Util.option_all (List.map ReplaceableItem.parse [xml])
     let to_query v = Query.to_query_list ReplaceableItem.to_query v
+    let to_headers v = Headers.to_headers_list ReplaceableItem.to_headers v
+    let to_xml v = List.concat (List.map ReplaceableItem.to_xml v)
     let to_json v = `List (List.map ReplaceableItem.to_json v)
     let of_json j = Json.to_list ReplaceableItem.of_json j
   end
@@ -295,10 +324,10 @@ module AttributeNameList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all
-        (List.map String.parse (Xml.members "AttributeName" xml))
+    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -306,9 +335,10 @@ module DeletableItemList =
   struct
     type t = DeletableItem.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map DeletableItem.parse (Xml.members "Item" xml))
+    let parse xml = Util.option_all (List.map DeletableItem.parse [xml])
     let to_query v = Query.to_query_list DeletableItem.to_query v
+    let to_headers v = Headers.to_headers_list DeletableItem.to_headers v
+    let to_xml v = List.concat (List.map DeletableItem.to_xml v)
     let to_json v = `List (List.map DeletableItem.to_json v)
     let of_json j = Json.to_list DeletableItem.of_json j
   end
@@ -316,9 +346,10 @@ module ItemList =
   struct
     type t = Item.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map Item.parse (Xml.members "Item" xml))
+    let parse xml = Util.option_all (List.map Item.parse [xml])
     let to_query v = Query.to_query_list Item.to_query v
+    let to_headers v = Headers.to_headers_list Item.to_headers v
+    let to_xml v = List.concat (List.map Item.to_xml v)
     let to_json v = `List (List.map Item.to_json v)
     let of_json j = Json.to_list Item.of_json j
   end
@@ -326,9 +357,10 @@ module DomainNameList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map String.parse (Xml.members "DomainName" xml))
+    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
     let of_json j = Json.to_list String.of_json j
   end
@@ -356,16 +388,27 @@ module DeleteAttributesRequest =
             (Util.option_bind (Xml.member "Expected" xml)
                UpdateCondition.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "DomainName"
+                    ([], (String.to_xml v.domain_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "ItemName" ([], (String.to_xml v.item_name)))])
+            @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "Attributes"
+                       ([], (AttributeList.to_xml [x])))) v.attributes))
+           @
            [Util.option_map v.expected
-              (fun f -> Query.Pair ("Expected", (UpdateCondition.to_query f)));
-           Some
-             (Query.Pair
-                ("Attributes.member", (AttributeList.to_query v.attributes)));
-           Some (Query.Pair ("ItemName", (String.to_query v.item_name)));
-           Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "Expected" ([], (UpdateCondition.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -398,11 +441,13 @@ module NumberDomainBytesExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -428,13 +473,20 @@ module BatchPutAttributesRequest =
                (Util.option_bind (Xml.member "DomainName" xml) String.parse));
           items = (Xml.required "Items" (ReplaceableItemList.parse xml))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Items.member", (ReplaceableItemList.to_query v.items)));
-           Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "DomainName"
+                  ([], (String.to_xml v.domain_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Items"
+                      ([], (ReplaceableItemList.to_xml [x])))) v.items))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -473,17 +525,28 @@ module GetAttributesRequest =
           consistent_read =
             (Util.option_bind (Xml.member "ConsistentRead" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "DomainName"
+                    ([], (String.to_xml v.domain_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "ItemName" ([], (String.to_xml v.item_name)))])
+            @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "AttributeNames"
+                       ([], (AttributeNameList.to_xml [x]))))
+               v.attribute_names))
+           @
            [Util.option_map v.consistent_read
-              (fun f -> Query.Pair ("ConsistentRead", (Boolean.to_query f)));
-           Some
-             (Query.Pair
-                ("AttributeNames.member",
-                  (AttributeNameList.to_query v.attribute_names)));
-           Some (Query.Pair ("ItemName", (String.to_query v.item_name)));
-           Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "ConsistentRead" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -514,12 +577,16 @@ module GetAttributesResult =
     let make ?(attributes= [])  () = { attributes }
     let parse xml =
       Some { attributes = (Util.of_option [] (AttributeList.parse xml)) }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Attributes.member", (AttributeList.to_query v.attributes)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Attributes"
+                      ([], (AttributeList.to_xml [x])))) v.attributes))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -556,17 +623,28 @@ module PutAttributesRequest =
             (Util.option_bind (Xml.member "Expected" xml)
                UpdateCondition.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "DomainName"
+                    ([], (String.to_xml v.domain_name)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "ItemName" ([], (String.to_xml v.item_name)))])
+            @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "Attributes"
+                       ([], (ReplaceableAttributeList.to_xml [x]))))
+               v.attributes))
+           @
            [Util.option_map v.expected
-              (fun f -> Query.Pair ("Expected", (UpdateCondition.to_query f)));
-           Some
-             (Query.Pair
-                ("Attributes.member",
-                  (ReplaceableAttributeList.to_query v.attributes)));
-           Some (Query.Pair ("ItemName", (String.to_query v.item_name)));
-           Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+              (fun f ->
+                 Ezxmlm.make_tag "Expected" ([], (UpdateCondition.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -600,11 +678,13 @@ module InvalidParameterValue =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -627,11 +707,13 @@ module MissingParameter =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -654,11 +736,13 @@ module DuplicateItemName =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -681,11 +765,13 @@ module NumberSubmittedAttributesExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -711,13 +797,20 @@ module BatchDeleteAttributesRequest =
                (Util.option_bind (Xml.member "DomainName" xml) String.parse));
           items = (Xml.required "Items" (DeletableItemList.parse xml))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some
-              (Query.Pair
-                 ("Items.member", (DeletableItemList.to_query v.items)));
-           Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "DomainName"
+                  ([], (String.to_xml v.domain_name)))])
+           @
+           (List.map
+              (fun x ->
+                 Some
+                   (Ezxmlm.make_tag "Items"
+                      ([], (DeletableItemList.to_xml [x])))) v.items))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -743,11 +836,13 @@ module NumberDomainsExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -770,11 +865,13 @@ module NoSuchDomain =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -798,10 +895,14 @@ module DomainMetadataRequest =
             (Xml.required "DomainName"
                (Util.option_bind (Xml.member "DomainName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "DomainName"
+                 ([], (String.to_xml v.domain_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -825,12 +926,18 @@ module SelectResult =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some (Ezxmlm.make_tag "Items" ([], (ItemList.to_xml [x]))))
+               v.items))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some (Query.Pair ("Items.member", (ItemList.to_query v.items)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -862,14 +969,18 @@ module ListDomainsRequest =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Util.option_map v.max_number_of_domains
+               (fun f ->
+                  Ezxmlm.make_tag "MaxNumberOfDomains"
+                    ([], (Integer.to_xml f)))])
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Util.option_map v.max_number_of_domains
-             (fun f ->
-                Query.Pair ("MaxNumberOfDomains", (Integer.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -907,16 +1018,21 @@ module SelectRequest =
           consistent_read =
             (Util.option_bind (Xml.member "ConsistentRead" xml) Boolean.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Some
+                (Ezxmlm.make_tag "SelectExpression"
+                   ([], (String.to_xml v.select_expression)))])
+            @
+            [Util.option_map v.next_token
+               (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.consistent_read
-              (fun f -> Query.Pair ("ConsistentRead", (Boolean.to_query f)));
-           Util.option_map v.next_token
-             (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SelectExpression", (String.to_query v.select_expression)))])
+              (fun f ->
+                 Ezxmlm.make_tag "ConsistentRead" ([], (Boolean.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -982,27 +1098,42 @@ module DomainMetadataResult =
           timestamp =
             (Util.option_bind (Xml.member "Timestamp" xml) Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 [Util.option_map v.item_count
+                    (fun f ->
+                       Ezxmlm.make_tag "ItemCount" ([], (Integer.to_xml f)))])
+                @
+                [Util.option_map v.item_names_size_bytes
+                   (fun f ->
+                      Ezxmlm.make_tag "ItemNamesSizeBytes"
+                        ([], (Long.to_xml f)))])
+               @
+               [Util.option_map v.attribute_name_count
+                  (fun f ->
+                     Ezxmlm.make_tag "AttributeNameCount"
+                       ([], (Integer.to_xml f)))])
+              @
+              [Util.option_map v.attribute_names_size_bytes
+                 (fun f ->
+                    Ezxmlm.make_tag "AttributeNamesSizeBytes"
+                      ([], (Long.to_xml f)))])
+             @
+             [Util.option_map v.attribute_value_count
+                (fun f ->
+                   Ezxmlm.make_tag "AttributeValueCount"
+                     ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.attribute_values_size_bytes
+               (fun f ->
+                  Ezxmlm.make_tag "AttributeValuesSizeBytes"
+                    ([], (Long.to_xml f)))])
+           @
            [Util.option_map v.timestamp
-              (fun f -> Query.Pair ("Timestamp", (Integer.to_query f)));
-           Util.option_map v.attribute_values_size_bytes
-             (fun f ->
-                Query.Pair ("AttributeValuesSizeBytes", (Long.to_query f)));
-           Util.option_map v.attribute_value_count
-             (fun f ->
-                Query.Pair ("AttributeValueCount", (Integer.to_query f)));
-           Util.option_map v.attribute_names_size_bytes
-             (fun f ->
-                Query.Pair ("AttributeNamesSizeBytes", (Long.to_query f)));
-           Util.option_map v.attribute_name_count
-             (fun f ->
-                Query.Pair ("AttributeNameCount", (Integer.to_query f)));
-           Util.option_map v.item_names_size_bytes
-             (fun f -> Query.Pair ("ItemNamesSizeBytes", (Long.to_query f)));
-           Util.option_map v.item_count
-             (fun f -> Query.Pair ("ItemCount", (Integer.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Timestamp" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1054,11 +1185,13 @@ module RequestTimeout =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1081,11 +1214,13 @@ module InvalidNextToken =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1109,10 +1244,14 @@ module CreateDomainRequest =
             (Xml.required "DomainName"
                (Util.option_bind (Xml.member "DomainName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "DomainName"
+                 ([], (String.to_xml v.domain_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1134,11 +1273,13 @@ module AttributeDoesNotExist =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1161,11 +1302,13 @@ module InvalidNumberValueTests =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1188,11 +1331,13 @@ module InvalidNumberPredicates =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1218,15 +1363,19 @@ module ListDomainsResult =
           next_token =
             (Util.option_bind (Xml.member "NextToken" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            (List.map
+               (fun x ->
+                  Some
+                    (Ezxmlm.make_tag "DomainNames"
+                       ([], (DomainNameList.to_xml [x])))) v.domain_names))
+           @
            [Util.option_map v.next_token
-              (fun f -> Query.Pair ("NextToken", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("DomainNames.member",
-                  (DomainNameList.to_query v.domain_names)))])
+              (fun f -> Ezxmlm.make_tag "NextToken" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1253,11 +1402,13 @@ module InvalidQueryExpression =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1280,11 +1431,13 @@ module TooManyRequestedAttributes =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1307,11 +1460,13 @@ module NumberItemAttributesExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1335,10 +1490,14 @@ module DeleteDomainRequest =
             (Xml.required "DomainName"
                (Util.option_bind (Xml.member "DomainName" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("DomainName", (String.to_query v.domain_name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "DomainName"
+                 ([], (String.to_xml v.domain_name)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1360,11 +1519,13 @@ module NumberSubmittedItemsExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1387,11 +1548,13 @@ module NumberDomainAttributesExceeded =
           box_usage =
             (Util.option_bind (Xml.member "BoxUsage" xml) Float.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.box_usage
-              (fun f -> Query.Pair ("BoxUsage", (Float.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "BoxUsage" ([], (Float.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt

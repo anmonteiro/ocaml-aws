@@ -8,16 +8,21 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append [("Version", ["2006-03-01"]); ("Action", ["UploadPart"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (UploadPartRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ((("/" ^ req.UploadPartRequest.bucket) ^ "/") ^
+               req.UploadPartRequest.key)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (UploadPartRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (UploadPartRequest.to_headers req)),
+    (match req.UploadPartRequest.body with | Some var -> var | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "UploadPartResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ -> raise (Failure "Could not find well formed UploadPartOutput.") in
     try
       Util.or_error (Util.option_bind resp UploadPartOutput.parse)
         (let open Error in

@@ -8,7 +8,7 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2014-10-31"]);
          ("Action", ["RestoreDBClusterToPointInTime"])]
@@ -16,7 +16,9 @@ let to_http service region req =
             (Uri.query_of_encoded
                (Query.render
                   (RestoreDBClusterToPointInTimeMessage.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri,
+    (Headers.render (RestoreDBClusterToPointInTimeMessage.to_headers req)),
+    "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
@@ -51,22 +53,7 @@ let of_http body =
         (let open Error in
            BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
-  let errors =
-    [Errors_internal.OptionGroupNotFoundFault;
-    Errors_internal.InvalidSubnet;
-    Errors_internal.DBSubnetGroupNotFoundFault;
-    Errors_internal.InvalidRestoreFault;
-    Errors_internal.InvalidVPCNetworkStateFault;
-    Errors_internal.StorageQuotaExceeded;
-    Errors_internal.InvalidDBClusterSnapshotStateFault;
-    Errors_internal.InvalidDBSnapshotState;
-    Errors_internal.InsufficientDBClusterCapacityFault;
-    Errors_internal.DBClusterSnapshotNotFoundFault;
-    Errors_internal.DBClusterNotFoundFault;
-    Errors_internal.DBSubnetGroupNotFoundFault;
-    Errors_internal.StorageQuotaExceeded;
-    Errors_internal.DBClusterQuotaExceededFault;
-    Errors_internal.DBClusterAlreadyExistsFault] @ Errors_internal.common in
+  let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
   | Some var ->
       if

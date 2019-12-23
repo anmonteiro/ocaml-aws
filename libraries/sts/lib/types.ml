@@ -2,6 +2,60 @@ open Aws
 open Aws.BaseTypes
 open CalendarLib
 type calendar = Calendar.t
+module PolicyDescriptorType =
+  struct
+    type t = {
+      arn: String.t option }
+    let make ?arn  () = { arn }
+    let parse xml =
+      Some { arn = (Util.option_bind (Xml.member "arn" xml) String.parse) }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.arn
+              (fun f -> Ezxmlm.make_tag "arn" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.arn (fun f -> ("arn", (String.to_json f)))])
+    let of_json j =
+      { arn = (Util.option_map (Json.lookup j "arn") String.of_json) }
+  end
+module Tag =
+  struct
+    type t = {
+      key: String.t ;
+      value: String.t }
+    let make ~key  ~value  () = { key; value }
+    let parse xml =
+      Some
+        {
+          key =
+            (Xml.required "Key"
+               (Util.option_bind (Xml.member "Key" xml) String.parse));
+          value =
+            (Xml.required "Value"
+               (Util.option_bind (Xml.member "Value" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @ [Some (Ezxmlm.make_tag "Key" ([], (String.to_xml v.key)))]) @
+           [Some (Ezxmlm.make_tag "Value" ([], (String.to_xml v.value)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("value", (String.to_json v.value));
+           Some ("key", (String.to_json v.key))])
+    let of_json j =
+      {
+        key = (String.of_json (Util.of_option_exn (Json.lookup j "key")));
+        value = (String.of_json (Util.of_option_exn (Json.lookup j "value")))
+      }
+  end
 module Credentials =
   struct
     type t =
@@ -29,18 +83,26 @@ module Credentials =
             (Xml.required "Expiration"
                (Util.option_bind (Xml.member "Expiration" xml) DateTime.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Some
+                 (Ezxmlm.make_tag "AccessKeyId"
+                    ([], (String.to_xml v.access_key_id)))])
+             @
+             [Some
+                (Ezxmlm.make_tag "SecretAccessKey"
+                   ([], (String.to_xml v.secret_access_key)))])
+            @
+            [Some
+               (Ezxmlm.make_tag "SessionToken"
+                  ([], (String.to_xml v.session_token)))])
+           @
            [Some
-              (Query.Pair ("Expiration", (DateTime.to_query v.expiration)));
-           Some
-             (Query.Pair ("SessionToken", (String.to_query v.session_token)));
-           Some
-             (Query.Pair
-                ("SecretAccessKey", (String.to_query v.secret_access_key)));
-           Some
-             (Query.Pair ("AccessKeyId", (String.to_query v.access_key_id)))])
+              (Ezxmlm.make_tag "Expiration"
+                 ([], (DateTime.to_xml v.expiration)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -80,13 +142,15 @@ module FederatedUser =
             (Xml.required "Arn"
                (Util.option_bind (Xml.member "Arn" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Arn", (String.to_query v.arn)));
-           Some
-             (Query.Pair
-                ("FederatedUserId", (String.to_query v.federated_user_id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "FederatedUserId"
+                  ([], (String.to_xml v.federated_user_id)))])
+           @ [Some (Ezxmlm.make_tag "Arn" ([], (String.to_xml v.arn)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -99,6 +163,36 @@ module FederatedUser =
              (Util.of_option_exn (Json.lookup j "federated_user_id")));
         arn = (String.of_json (Util.of_option_exn (Json.lookup j "arn")))
       }
+  end
+module PolicyDescriptorListType =
+  struct
+    type t = PolicyDescriptorType.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all
+        (List.map PolicyDescriptorType.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list PolicyDescriptorType.to_query v
+    let to_headers v =
+      Headers.to_headers_list PolicyDescriptorType.to_headers v
+    let to_xml v =
+      List.map
+        (fun x ->
+           Ezxmlm.make_tag "member" ([], (PolicyDescriptorType.to_xml x))) v
+    let to_json v = `List (List.map PolicyDescriptorType.to_json v)
+    let of_json j = Json.to_list PolicyDescriptorType.of_json j
+  end
+module TagListType =
+  struct
+    type t = Tag.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all (List.map Tag.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list Tag.to_query v
+    let to_headers v = Headers.to_headers_list Tag.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (Tag.to_xml x))) v
+    let to_json v = `List (List.map Tag.to_json v)
+    let of_json j = Json.to_list Tag.of_json j
   end
 module AssumedRoleUser =
   struct
@@ -117,13 +211,15 @@ module AssumedRoleUser =
             (Xml.required "Arn"
                (Util.option_bind (Xml.member "Arn" xml) String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Some (Query.Pair ("Arn", (String.to_query v.arn)));
-           Some
-             (Query.Pair
-                ("AssumedRoleId", (String.to_query v.assumed_role_id)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "AssumedRoleId"
+                  ([], (String.to_xml v.assumed_role_id)))])
+           @ [Some (Ezxmlm.make_tag "Arn" ([], (String.to_xml v.arn)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -137,6 +233,19 @@ module AssumedRoleUser =
         arn = (String.of_json (Util.of_option_exn (Json.lookup j "arn")))
       }
   end
+module TagKeyListType =
+  struct
+    type t = String.t list
+    let make elems () = elems
+    let parse xml =
+      Util.option_all (List.map String.parse (Xml.members "member" xml))
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_xml v =
+      List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
+    let to_json v = `List (List.map String.to_json v)
+    let of_json j = Json.to_list String.of_json j
+  end
 module PackedPolicyTooLargeException =
   struct
     type t = {
@@ -148,11 +257,13 @@ module PackedPolicyTooLargeException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -184,16 +295,23 @@ module GetFederationTokenResponse =
             (Util.option_bind (Xml.member "PackedPolicySize" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.credentials
+                (fun f ->
+                   Ezxmlm.make_tag "Credentials" ([], (Credentials.to_xml f)))])
+            @
+            [Util.option_map v.federated_user
+               (fun f ->
+                  Ezxmlm.make_tag "FederatedUser"
+                    ([], (FederatedUser.to_xml f)))])
+           @
            [Util.option_map v.packed_policy_size
-              (fun f -> Query.Pair ("PackedPolicySize", (Integer.to_query f)));
-           Util.option_map v.federated_user
-             (fun f ->
-                Query.Pair ("FederatedUser", (FederatedUser.to_query f)));
-           Util.option_map v.credentials
-             (fun f -> Query.Pair ("Credentials", (Credentials.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "PackedPolicySize" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -226,11 +344,13 @@ module InvalidIdentityTokenException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -240,15 +360,48 @@ module InvalidIdentityTokenException =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
   end
+module GetAccessKeyInfoRequest =
+  struct
+    type t = {
+      access_key_id: String.t }
+    let make ~access_key_id  () = { access_key_id }
+    let parse xml =
+      Some
+        {
+          access_key_id =
+            (Xml.required "AccessKeyId"
+               (Util.option_bind (Xml.member "AccessKeyId" xml) String.parse))
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Some
+              (Ezxmlm.make_tag "AccessKeyId"
+                 ([], (String.to_xml v.access_key_id)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("access_key_id", (String.to_json v.access_key_id))])
+    let of_json j =
+      {
+        access_key_id =
+          (String.of_json
+             (Util.of_option_exn (Json.lookup j "access_key_id")))
+      }
+  end
 module GetFederationTokenRequest =
   struct
     type t =
       {
       name: String.t ;
       policy: String.t option ;
-      duration_seconds: Integer.t option }
-    let make ~name  ?policy  ?duration_seconds  () =
-      { name; policy; duration_seconds }
+      policy_arns: PolicyDescriptorListType.t ;
+      duration_seconds: Integer.t option ;
+      tags: TagListType.t }
+    let make ~name  ?policy  ?(policy_arns= [])  ?duration_seconds  ?(tags=
+      [])  () = { name; policy; policy_arns; duration_seconds; tags }
     let parse xml =
       Some
         {
@@ -256,31 +409,64 @@ module GetFederationTokenRequest =
             (Xml.required "Name"
                (Util.option_bind (Xml.member "Name" xml) String.parse));
           policy = (Util.option_bind (Xml.member "Policy" xml) String.parse);
+          policy_arns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "PolicyArns" xml)
+                  PolicyDescriptorListType.parse));
           duration_seconds =
             (Util.option_bind (Xml.member "DurationSeconds" xml)
-               Integer.parse)
+               Integer.parse);
+          tags =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Tags" xml) TagListType.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
-           [Util.option_map v.duration_seconds
-              (fun f -> Query.Pair ("DurationSeconds", (Integer.to_query f)));
-           Util.option_map v.policy
-             (fun f -> Query.Pair ("Policy", (String.to_query f)));
-           Some (Query.Pair ("Name", (String.to_query v.name)))])
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some (Ezxmlm.make_tag "Name" ([], (String.to_xml v.name)))])
+              @
+              [Util.option_map v.policy
+                 (fun f -> Ezxmlm.make_tag "Policy" ([], (String.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "PolicyArns"
+                        ([], (PolicyDescriptorListType.to_xml [x]))))
+                v.policy_arns))
+            @
+            [Util.option_map v.duration_seconds
+               (fun f ->
+                  Ezxmlm.make_tag "DurationSeconds" ([], (Integer.to_xml f)))])
+           @
+           (List.map
+              (fun x ->
+                 Some (Ezxmlm.make_tag "Tags" ([], (TagListType.to_xml [x]))))
+              v.tags))
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.duration_seconds
-              (fun f -> ("duration_seconds", (Integer.to_json f)));
+           [Some ("tags", (TagListType.to_json v.tags));
+           Util.option_map v.duration_seconds
+             (fun f -> ("duration_seconds", (Integer.to_json f)));
+           Some
+             ("policy_arns",
+               (PolicyDescriptorListType.to_json v.policy_arns));
            Util.option_map v.policy (fun f -> ("policy", (String.to_json f)));
            Some ("name", (String.to_json v.name))])
     let of_json j =
       {
         name = (String.of_json (Util.of_option_exn (Json.lookup j "name")));
         policy = (Util.option_map (Json.lookup j "policy") String.of_json);
+        policy_arns =
+          (PolicyDescriptorListType.of_json
+             (Util.of_option_exn (Json.lookup j "policy_arns")));
         duration_seconds =
-          (Util.option_map (Json.lookup j "duration_seconds") Integer.of_json)
+          (Util.option_map (Json.lookup j "duration_seconds") Integer.of_json);
+        tags =
+          (TagListType.of_json (Util.of_option_exn (Json.lookup j "tags")))
       }
   end
 module IDPRejectedClaimException =
@@ -294,11 +480,13 @@ module IDPRejectedClaimException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -354,26 +542,42 @@ module AssumeRoleWithSAMLResponse =
           name_qualifier =
             (Util.option_bind (Xml.member "NameQualifier" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((([] @
+                  [Util.option_map v.credentials
+                     (fun f ->
+                        Ezxmlm.make_tag "Credentials"
+                          ([], (Credentials.to_xml f)))])
+                 @
+                 [Util.option_map v.assumed_role_user
+                    (fun f ->
+                       Ezxmlm.make_tag "AssumedRoleUser"
+                         ([], (AssumedRoleUser.to_xml f)))])
+                @
+                [Util.option_map v.packed_policy_size
+                   (fun f ->
+                      Ezxmlm.make_tag "PackedPolicySize"
+                        ([], (Integer.to_xml f)))])
+               @
+               [Util.option_map v.subject
+                  (fun f -> Ezxmlm.make_tag "Subject" ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.subject_type
+                 (fun f ->
+                    Ezxmlm.make_tag "SubjectType" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.issuer
+                (fun f -> Ezxmlm.make_tag "Issuer" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.audience
+               (fun f -> Ezxmlm.make_tag "Audience" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.name_qualifier
-              (fun f -> Query.Pair ("NameQualifier", (String.to_query f)));
-           Util.option_map v.audience
-             (fun f -> Query.Pair ("Audience", (String.to_query f)));
-           Util.option_map v.issuer
-             (fun f -> Query.Pair ("Issuer", (String.to_query f)));
-           Util.option_map v.subject_type
-             (fun f -> Query.Pair ("SubjectType", (String.to_query f)));
-           Util.option_map v.subject
-             (fun f -> Query.Pair ("Subject", (String.to_query f)));
-           Util.option_map v.packed_policy_size
-             (fun f -> Query.Pair ("PackedPolicySize", (Integer.to_query f)));
-           Util.option_map v.assumed_role_user
-             (fun f ->
-                Query.Pair ("AssumedRoleUser", (AssumedRoleUser.to_query f)));
-           Util.option_map v.credentials
-             (fun f -> Query.Pair ("Credentials", (Credentials.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "NameQualifier" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -423,11 +627,40 @@ module MalformedPolicyDocumentException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
         (Util.list_filter_opt
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> ("message", (String.to_json f)))])
+    let of_json j =
+      { message = (Util.option_map (Json.lookup j "message") String.of_json)
+      }
+  end
+module RegionDisabledException =
+  struct
+    type t = {
+      message: String.t option }
+    let make ?message  () = { message }
+    let parse xml =
+      Some
+        {
+          message =
+            (Util.option_bind (Xml.member "message" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.message
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -448,11 +681,13 @@ module IDPCommunicationErrorException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -461,6 +696,17 @@ module IDPCommunicationErrorException =
     let of_json j =
       { message = (Util.option_map (Json.lookup j "message") String.of_json)
       }
+  end
+module GetCallerIdentityRequest =
+  struct
+    type t = unit
+    let make () = ()
+    let parse xml = Some ()
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v = Util.list_filter_opt []
+    let to_json v = `Assoc (Util.list_filter_opt [])
+    let of_json j = ()
   end
 module ExpiredTokenException =
   struct
@@ -473,11 +719,13 @@ module ExpiredTokenException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -498,11 +746,14 @@ module DecodeAuthorizationMessageResponse =
           decoded_message =
             (Util.option_bind (Xml.member "DecodedMessage" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.decoded_message
-              (fun f -> Query.Pair ("DecodedMessage", (String.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DecodedMessage" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -536,16 +787,23 @@ module AssumeRoleResponse =
             (Util.option_bind (Xml.member "PackedPolicySize" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.credentials
+                (fun f ->
+                   Ezxmlm.make_tag "Credentials" ([], (Credentials.to_xml f)))])
+            @
+            [Util.option_map v.assumed_role_user
+               (fun f ->
+                  Ezxmlm.make_tag "AssumedRoleUser"
+                    ([], (AssumedRoleUser.to_xml f)))])
+           @
            [Util.option_map v.packed_policy_size
-              (fun f -> Query.Pair ("PackedPolicySize", (Integer.to_query f)));
-           Util.option_map v.assumed_role_user
-             (fun f ->
-                Query.Pair ("AssumedRoleUser", (AssumedRoleUser.to_query f)));
-           Util.option_map v.credentials
-             (fun f -> Query.Pair ("Credentials", (Credentials.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "PackedPolicySize" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -567,6 +825,33 @@ module AssumeRoleResponse =
              Integer.of_json)
       }
   end
+module GetAccessKeyInfoResponse =
+  struct
+    type t = {
+      account: String.t option }
+    let make ?account  () = { account }
+    let parse xml =
+      Some
+        {
+          account =
+            (Util.option_bind (Xml.member "Account" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
+           [Util.option_map v.account
+              (fun f -> Ezxmlm.make_tag "Account" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.account
+              (fun f -> ("account", (String.to_json f)))])
+    let of_json j =
+      { account = (Util.option_map (Json.lookup j "account") String.of_json)
+      }
+  end
 module DecodeAuthorizationMessageRequest =
   struct
     type t = {
@@ -580,12 +865,14 @@ module DecodeAuthorizationMessageRequest =
                (Util.option_bind (Xml.member "EncodedMessage" xml)
                   String.parse))
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Some
-              (Query.Pair
-                 ("EncodedMessage", (String.to_query v.encoded_message)))])
+              (Ezxmlm.make_tag "EncodedMessage"
+                 ([], (String.to_xml v.encoded_message)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -609,11 +896,14 @@ module GetSessionTokenResponse =
             (Util.option_bind (Xml.member "Credentials" xml)
                Credentials.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.credentials
-              (fun f -> Query.Pair ("Credentials", (Credentials.to_query f)))])
+              (fun f ->
+                 Ezxmlm.make_tag "Credentials" ([], (Credentials.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -636,11 +926,13 @@ module InvalidAuthorizationMessageException =
           message =
             (Util.option_bind (Xml.member "message" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ([] @
            [Util.option_map v.message
-              (fun f -> Query.Pair ("message", (String.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "message" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -670,15 +962,21 @@ module GetSessionTokenRequest =
           token_code =
             (Util.option_bind (Xml.member "TokenCode" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.duration_seconds
+                (fun f ->
+                   Ezxmlm.make_tag "DurationSeconds" ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.serial_number
+               (fun f ->
+                  Ezxmlm.make_tag "SerialNumber" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.token_code
-              (fun f -> Query.Pair ("TokenCode", (String.to_query f)));
-           Util.option_map v.serial_number
-             (fun f -> Query.Pair ("SerialNumber", (String.to_query f)));
-           Util.option_map v.duration_seconds
-             (fun f -> Query.Pair ("DurationSeconds", (Integer.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "TokenCode" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -705,11 +1003,18 @@ module AssumeRoleWithSAMLRequest =
       role_arn: String.t ;
       principal_arn: String.t ;
       s_a_m_l_assertion: String.t ;
+      policy_arns: PolicyDescriptorListType.t ;
       policy: String.t option ;
       duration_seconds: Integer.t option }
-    let make ~role_arn  ~principal_arn  ~s_a_m_l_assertion  ?policy 
-      ?duration_seconds  () =
-      { role_arn; principal_arn; s_a_m_l_assertion; policy; duration_seconds
+    let make ~role_arn  ~principal_arn  ~s_a_m_l_assertion  ?(policy_arns=
+      [])  ?policy  ?duration_seconds  () =
+      {
+        role_arn;
+        principal_arn;
+        s_a_m_l_assertion;
+        policy_arns;
+        policy;
+        duration_seconds
       }
     let parse xml =
       Some
@@ -724,30 +1029,54 @@ module AssumeRoleWithSAMLRequest =
             (Xml.required "SAMLAssertion"
                (Util.option_bind (Xml.member "SAMLAssertion" xml)
                   String.parse));
+          policy_arns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "PolicyArns" xml)
+                  PolicyDescriptorListType.parse));
           policy = (Util.option_bind (Xml.member "Policy" xml) String.parse);
           duration_seconds =
             (Util.option_bind (Xml.member "DurationSeconds" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Some
+                   (Ezxmlm.make_tag "RoleArn"
+                      ([], (String.to_xml v.role_arn)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "PrincipalArn"
+                     ([], (String.to_xml v.principal_arn)))])
+              @
+              [Some
+                 (Ezxmlm.make_tag "SAMLAssertion"
+                    ([], (String.to_xml v.s_a_m_l_assertion)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "PolicyArns"
+                        ([], (PolicyDescriptorListType.to_xml [x]))))
+                v.policy_arns))
+            @
+            [Util.option_map v.policy
+               (fun f -> Ezxmlm.make_tag "Policy" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.duration_seconds
-              (fun f -> Query.Pair ("DurationSeconds", (Integer.to_query f)));
-           Util.option_map v.policy
-             (fun f -> Query.Pair ("Policy", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("SAMLAssertion", (String.to_query v.s_a_m_l_assertion)));
-           Some
-             (Query.Pair ("PrincipalArn", (String.to_query v.principal_arn)));
-           Some (Query.Pair ("RoleArn", (String.to_query v.role_arn)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DurationSeconds" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Util.option_map v.duration_seconds
               (fun f -> ("duration_seconds", (Integer.to_json f)));
            Util.option_map v.policy (fun f -> ("policy", (String.to_json f)));
+           Some
+             ("policy_arns",
+               (PolicyDescriptorListType.to_json v.policy_arns));
            Some ("s_a_m_l_assertion", (String.to_json v.s_a_m_l_assertion));
            Some ("principal_arn", (String.to_json v.principal_arn));
            Some ("role_arn", (String.to_json v.role_arn))])
@@ -761,6 +1090,9 @@ module AssumeRoleWithSAMLRequest =
         s_a_m_l_assertion =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "s_a_m_l_assertion")));
+        policy_arns =
+          (PolicyDescriptorListType.of_json
+             (Util.of_option_exn (Json.lookup j "policy_arns")));
         policy = (Util.option_map (Json.lookup j "policy") String.of_json);
         duration_seconds =
           (Util.option_map (Json.lookup j "duration_seconds") Integer.of_json)
@@ -806,24 +1138,36 @@ module AssumeRoleWithWebIdentityResponse =
           audience =
             (Util.option_bind (Xml.member "Audience" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((([] @
+                [Util.option_map v.credentials
+                   (fun f ->
+                      Ezxmlm.make_tag "Credentials"
+                        ([], (Credentials.to_xml f)))])
+               @
+               [Util.option_map v.subject_from_web_identity_token
+                  (fun f ->
+                     Ezxmlm.make_tag "SubjectFromWebIdentityToken"
+                       ([], (String.to_xml f)))])
+              @
+              [Util.option_map v.assumed_role_user
+                 (fun f ->
+                    Ezxmlm.make_tag "AssumedRoleUser"
+                      ([], (AssumedRoleUser.to_xml f)))])
+             @
+             [Util.option_map v.packed_policy_size
+                (fun f ->
+                   Ezxmlm.make_tag "PackedPolicySize"
+                     ([], (Integer.to_xml f)))])
+            @
+            [Util.option_map v.provider
+               (fun f -> Ezxmlm.make_tag "Provider" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.audience
-              (fun f -> Query.Pair ("Audience", (String.to_query f)));
-           Util.option_map v.provider
-             (fun f -> Query.Pair ("Provider", (String.to_query f)));
-           Util.option_map v.packed_policy_size
-             (fun f -> Query.Pair ("PackedPolicySize", (Integer.to_query f)));
-           Util.option_map v.assumed_role_user
-             (fun f ->
-                Query.Pair ("AssumedRoleUser", (AssumedRoleUser.to_query f)));
-           Util.option_map v.subject_from_web_identity_token
-             (fun f ->
-                Query.Pair
-                  ("SubjectFromWebIdentityToken", (String.to_query f)));
-           Util.option_map v.credentials
-             (fun f -> Query.Pair ("Credentials", (Credentials.to_query f)))])
+              (fun f -> Ezxmlm.make_tag "Audience" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -859,6 +1203,50 @@ module AssumeRoleWithWebIdentityResponse =
           (Util.option_map (Json.lookup j "audience") String.of_json)
       }
   end
+module GetCallerIdentityResponse =
+  struct
+    type t =
+      {
+      user_id: String.t option ;
+      account: String.t option ;
+      arn: String.t option }
+    let make ?user_id  ?account  ?arn  () = { user_id; account; arn }
+    let parse xml =
+      Some
+        {
+          user_id = (Util.option_bind (Xml.member "UserId" xml) String.parse);
+          account =
+            (Util.option_bind (Xml.member "Account" xml) String.parse);
+          arn = (Util.option_bind (Xml.member "Arn" xml) String.parse)
+        }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((([] @
+             [Util.option_map v.user_id
+                (fun f -> Ezxmlm.make_tag "UserId" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.account
+               (fun f -> Ezxmlm.make_tag "Account" ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.arn
+              (fun f -> Ezxmlm.make_tag "Arn" ([], (String.to_xml f)))])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.arn (fun f -> ("arn", (String.to_json f)));
+           Util.option_map v.account
+             (fun f -> ("account", (String.to_json f)));
+           Util.option_map v.user_id
+             (fun f -> ("user_id", (String.to_json f)))])
+    let of_json j =
+      {
+        user_id = (Util.option_map (Json.lookup j "user_id") String.of_json);
+        account = (Util.option_map (Json.lookup j "account") String.of_json);
+        arn = (Util.option_map (Json.lookup j "arn") String.of_json)
+      }
+  end
 module AssumeRoleWithWebIdentityRequest =
   struct
     type t =
@@ -867,15 +1255,17 @@ module AssumeRoleWithWebIdentityRequest =
       role_session_name: String.t ;
       web_identity_token: String.t ;
       provider_id: String.t option ;
+      policy_arns: PolicyDescriptorListType.t ;
       policy: String.t option ;
       duration_seconds: Integer.t option }
     let make ~role_arn  ~role_session_name  ~web_identity_token  ?provider_id
-       ?policy  ?duration_seconds  () =
+       ?(policy_arns= [])  ?policy  ?duration_seconds  () =
       {
         role_arn;
         role_session_name;
         web_identity_token;
         provider_id;
+        policy_arns;
         policy;
         duration_seconds
       }
@@ -895,33 +1285,58 @@ module AssumeRoleWithWebIdentityRequest =
                   String.parse));
           provider_id =
             (Util.option_bind (Xml.member "ProviderId" xml) String.parse);
+          policy_arns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "PolicyArns" xml)
+                  PolicyDescriptorListType.parse));
           policy = (Util.option_bind (Xml.member "Policy" xml) String.parse);
           duration_seconds =
             (Util.option_bind (Xml.member "DurationSeconds" xml)
                Integer.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        ((((((([] @
+                 [Some
+                    (Ezxmlm.make_tag "RoleArn"
+                       ([], (String.to_xml v.role_arn)))])
+                @
+                [Some
+                   (Ezxmlm.make_tag "RoleSessionName"
+                      ([], (String.to_xml v.role_session_name)))])
+               @
+               [Some
+                  (Ezxmlm.make_tag "WebIdentityToken"
+                     ([], (String.to_xml v.web_identity_token)))])
+              @
+              [Util.option_map v.provider_id
+                 (fun f ->
+                    Ezxmlm.make_tag "ProviderId" ([], (String.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "PolicyArns"
+                        ([], (PolicyDescriptorListType.to_xml [x]))))
+                v.policy_arns))
+            @
+            [Util.option_map v.policy
+               (fun f -> Ezxmlm.make_tag "Policy" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.duration_seconds
-              (fun f -> Query.Pair ("DurationSeconds", (Integer.to_query f)));
-           Util.option_map v.policy
-             (fun f -> Query.Pair ("Policy", (String.to_query f)));
-           Util.option_map v.provider_id
-             (fun f -> Query.Pair ("ProviderId", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("WebIdentityToken", (String.to_query v.web_identity_token)));
-           Some
-             (Query.Pair
-                ("RoleSessionName", (String.to_query v.role_session_name)));
-           Some (Query.Pair ("RoleArn", (String.to_query v.role_arn)))])
+              (fun f ->
+                 Ezxmlm.make_tag "DurationSeconds" ([], (Integer.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Util.option_map v.duration_seconds
               (fun f -> ("duration_seconds", (Integer.to_json f)));
            Util.option_map v.policy (fun f -> ("policy", (String.to_json f)));
+           Some
+             ("policy_arns",
+               (PolicyDescriptorListType.to_json v.policy_arns));
            Util.option_map v.provider_id
              (fun f -> ("provider_id", (String.to_json f)));
            Some ("web_identity_token", (String.to_json v.web_identity_token));
@@ -939,6 +1354,9 @@ module AssumeRoleWithWebIdentityRequest =
              (Util.of_option_exn (Json.lookup j "web_identity_token")));
         provider_id =
           (Util.option_map (Json.lookup j "provider_id") String.of_json);
+        policy_arns =
+          (PolicyDescriptorListType.of_json
+             (Util.of_option_exn (Json.lookup j "policy_arns")));
         policy = (Util.option_map (Json.lookup j "policy") String.of_json);
         duration_seconds =
           (Util.option_map (Json.lookup j "duration_seconds") Integer.of_json)
@@ -950,18 +1368,25 @@ module AssumeRoleRequest =
       {
       role_arn: String.t ;
       role_session_name: String.t ;
+      policy_arns: PolicyDescriptorListType.t ;
       policy: String.t option ;
       duration_seconds: Integer.t option ;
+      tags: TagListType.t ;
+      transitive_tag_keys: TagKeyListType.t ;
       external_id: String.t option ;
       serial_number: String.t option ;
       token_code: String.t option }
-    let make ~role_arn  ~role_session_name  ?policy  ?duration_seconds 
+    let make ~role_arn  ~role_session_name  ?(policy_arns= [])  ?policy 
+      ?duration_seconds  ?(tags= [])  ?(transitive_tag_keys= []) 
       ?external_id  ?serial_number  ?token_code  () =
       {
         role_arn;
         role_session_name;
+        policy_arns;
         policy;
         duration_seconds;
+        tags;
+        transitive_tag_keys;
         external_id;
         serial_number;
         token_code
@@ -976,10 +1401,21 @@ module AssumeRoleRequest =
             (Xml.required "RoleSessionName"
                (Util.option_bind (Xml.member "RoleSessionName" xml)
                   String.parse));
+          policy_arns =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "PolicyArns" xml)
+                  PolicyDescriptorListType.parse));
           policy = (Util.option_bind (Xml.member "Policy" xml) String.parse);
           duration_seconds =
             (Util.option_bind (Xml.member "DurationSeconds" xml)
                Integer.parse);
+          tags =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Tags" xml) TagListType.parse));
+          transitive_tag_keys =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "TransitiveTagKeys" xml)
+                  TagKeyListType.parse));
           external_id =
             (Util.option_bind (Xml.member "ExternalId" xml) String.parse);
           serial_number =
@@ -987,23 +1423,58 @@ module AssumeRoleRequest =
           token_code =
             (Util.option_bind (Xml.member "TokenCode" xml) String.parse)
         }
-    let to_query v =
-      Query.List
-        (Util.list_filter_opt
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_xml v =
+      Util.list_filter_opt
+        (((((((((([] @
+                    [Some
+                       (Ezxmlm.make_tag "RoleArn"
+                          ([], (String.to_xml v.role_arn)))])
+                   @
+                   [Some
+                      (Ezxmlm.make_tag "RoleSessionName"
+                         ([], (String.to_xml v.role_session_name)))])
+                  @
+                  (List.map
+                     (fun x ->
+                        Some
+                          (Ezxmlm.make_tag "PolicyArns"
+                             ([], (PolicyDescriptorListType.to_xml [x]))))
+                     v.policy_arns))
+                 @
+                 [Util.option_map v.policy
+                    (fun f ->
+                       Ezxmlm.make_tag "Policy" ([], (String.to_xml f)))])
+                @
+                [Util.option_map v.duration_seconds
+                   (fun f ->
+                      Ezxmlm.make_tag "DurationSeconds"
+                        ([], (Integer.to_xml f)))])
+               @
+               (List.map
+                  (fun x ->
+                     Some
+                       (Ezxmlm.make_tag "Tags" ([], (TagListType.to_xml [x]))))
+                  v.tags))
+              @
+              (List.map
+                 (fun x ->
+                    Some
+                      (Ezxmlm.make_tag "TransitiveTagKeys"
+                         ([], (TagKeyListType.to_xml [x]))))
+                 v.transitive_tag_keys))
+             @
+             [Util.option_map v.external_id
+                (fun f ->
+                   Ezxmlm.make_tag "ExternalId" ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.serial_number
+               (fun f ->
+                  Ezxmlm.make_tag "SerialNumber" ([], (String.to_xml f)))])
+           @
            [Util.option_map v.token_code
-              (fun f -> Query.Pair ("TokenCode", (String.to_query f)));
-           Util.option_map v.serial_number
-             (fun f -> Query.Pair ("SerialNumber", (String.to_query f)));
-           Util.option_map v.external_id
-             (fun f -> Query.Pair ("ExternalId", (String.to_query f)));
-           Util.option_map v.duration_seconds
-             (fun f -> Query.Pair ("DurationSeconds", (Integer.to_query f)));
-           Util.option_map v.policy
-             (fun f -> Query.Pair ("Policy", (String.to_query f)));
-           Some
-             (Query.Pair
-                ("RoleSessionName", (String.to_query v.role_session_name)));
-           Some (Query.Pair ("RoleArn", (String.to_query v.role_arn)))])
+              (fun f -> Ezxmlm.make_tag "TokenCode" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
@@ -1013,9 +1484,16 @@ module AssumeRoleRequest =
              (fun f -> ("serial_number", (String.to_json f)));
            Util.option_map v.external_id
              (fun f -> ("external_id", (String.to_json f)));
+           Some
+             ("transitive_tag_keys",
+               (TagKeyListType.to_json v.transitive_tag_keys));
+           Some ("tags", (TagListType.to_json v.tags));
            Util.option_map v.duration_seconds
              (fun f -> ("duration_seconds", (Integer.to_json f)));
            Util.option_map v.policy (fun f -> ("policy", (String.to_json f)));
+           Some
+             ("policy_arns",
+               (PolicyDescriptorListType.to_json v.policy_arns));
            Some ("role_session_name", (String.to_json v.role_session_name));
            Some ("role_arn", (String.to_json v.role_arn))])
     let of_json j =
@@ -1025,9 +1503,17 @@ module AssumeRoleRequest =
         role_session_name =
           (String.of_json
              (Util.of_option_exn (Json.lookup j "role_session_name")));
+        policy_arns =
+          (PolicyDescriptorListType.of_json
+             (Util.of_option_exn (Json.lookup j "policy_arns")));
         policy = (Util.option_map (Json.lookup j "policy") String.of_json);
         duration_seconds =
           (Util.option_map (Json.lookup j "duration_seconds") Integer.of_json);
+        tags =
+          (TagListType.of_json (Util.of_option_exn (Json.lookup j "tags")));
+        transitive_tag_keys =
+          (TagKeyListType.of_json
+             (Util.of_option_exn (Json.lookup j "transitive_tag_keys")));
         external_id =
           (Util.option_map (Json.lookup j "external_id") String.of_json);
         serial_number =

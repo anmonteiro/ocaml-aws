@@ -8,7 +8,7 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2014-10-31"]);
          ("Action", ["CreateDBInstanceReadReplica"])]
@@ -16,7 +16,8 @@ let to_http service region req =
             (Uri.query_of_encoded
                (Query.render
                   (CreateDBInstanceReadReplicaMessage.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri,
+    (Headers.render (CreateDBInstanceReadReplicaMessage.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
@@ -51,25 +52,7 @@ let of_http body =
         (let open Error in
            BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
-  let errors =
-    [Errors_internal.KMSKeyNotAccessibleFault;
-    Errors_internal.StorageTypeNotSupported;
-    Errors_internal.InvalidDBSubnetGroupFault;
-    Errors_internal.DBSubnetGroupNotAllowedFault;
-    Errors_internal.OptionGroupNotFoundFault;
-    Errors_internal.ProvisionedIopsNotAvailableInAZFault;
-    Errors_internal.InvalidVPCNetworkStateFault;
-    Errors_internal.InvalidSubnet;
-    Errors_internal.DBSubnetGroupDoesNotCoverEnoughAZs;
-    Errors_internal.DBSubnetGroupNotFoundFault;
-    Errors_internal.InvalidDBInstanceState;
-    Errors_internal.DBInstanceNotFound;
-    Errors_internal.StorageQuotaExceeded;
-    Errors_internal.InstanceQuotaExceeded;
-    Errors_internal.DBSecurityGroupNotFound;
-    Errors_internal.DBParameterGroupNotFound;
-    Errors_internal.InsufficientDBInstanceCapacity;
-    Errors_internal.DBInstanceAlreadyExists] @ Errors_internal.common in
+  let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
   | Some var ->
       if

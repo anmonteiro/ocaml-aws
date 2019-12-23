@@ -8,13 +8,13 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["DeleteBucketCors"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (DeleteBucketCorsRequest.to_query req))))) in
-  (`DELETE, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (("/" ^ req.DeleteBucketCorsRequest.bucket) ^ "?cors")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DeleteBucketCorsRequest.to_query req)))) in
+  (`DELETE, uri, (Headers.render (DeleteBucketCorsRequest.to_headers req)),
+    "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

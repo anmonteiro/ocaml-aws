@@ -8,14 +8,15 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2015-02-02"]);
          ("Action", ["CreateReplicationGroup"])]
          (Util.drop_empty
             (Uri.query_of_encoded
                (Query.render (CreateReplicationGroupMessage.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri,
+    (Headers.render (CreateReplicationGroupMessage.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
@@ -50,21 +51,7 @@ let of_http body =
         (let open Error in
            BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
-  let errors =
-    [Errors_internal.InvalidParameterCombination;
-    Errors_internal.InvalidParameterValue;
-    Errors_internal.TagQuotaPerResourceExceeded;
-    Errors_internal.InvalidVPCNetworkStateFault;
-    Errors_internal.CacheParameterGroupNotFound;
-    Errors_internal.NodeQuotaForCustomerExceeded;
-    Errors_internal.NodeQuotaForClusterExceeded;
-    Errors_internal.ClusterQuotaForCustomerExceeded;
-    Errors_internal.CacheSubnetGroupNotFoundFault;
-    Errors_internal.CacheSecurityGroupNotFound;
-    Errors_internal.InsufficientCacheClusterCapacity;
-    Errors_internal.ReplicationGroupAlreadyExists;
-    Errors_internal.InvalidCacheClusterState;
-    Errors_internal.CacheClusterNotFound] @ Errors_internal.common in
+  let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
   | Some var ->
       if

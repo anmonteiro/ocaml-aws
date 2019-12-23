@@ -8,10 +8,10 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       [("Version", ["2014-10-31"]);
       ("Action", ["DescribeAccountAttributes"])] in
-  (`POST, uri, [])
+  (`POST, uri, (Headers.render (Headers.List [])), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in

@@ -8,17 +8,28 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["RestoreObject"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (RestoreObjectRequest.to_query req))))) in
-  (`POST, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (((("/" ^ req.RestoreObjectRequest.bucket) ^ "/") ^
+                req.RestoreObjectRequest.key)
+               ^ "?restore")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (RestoreObjectRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (RestoreObjectRequest.to_headers req)),
+    (match req.RestoreObjectRequest.restore_request with
+     | Some var ->
+         Ezxmlm.to_string
+           [Ezxmlm.make_tag "RestoreRequest"
+              ([], (RestoreRequest.to_xml var))]
+     | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "RestoreObjectResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ ->
+          raise (Failure "Could not find well formed RestoreObjectOutput.") in
     try
       Util.or_error (Util.option_bind resp RestoreObjectOutput.parse)
         (let open Error in

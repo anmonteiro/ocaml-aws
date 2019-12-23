@@ -8,18 +8,17 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2014-10-31"]); ("Action", ["AddTagsToResource"])]
          (Util.drop_empty
             (Uri.query_of_encoded
                (Query.render (AddTagsToResourceMessage.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri, (Headers.render (AddTagsToResourceMessage.to_headers req)),
+    "")
 let of_http body = `Ok ()
 let parse_error code err =
-  let errors =
-    [Errors_internal.DBSnapshotNotFound; Errors_internal.DBInstanceNotFound]
-      @ Errors_internal.common in
+  let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
   | Some var ->
       if

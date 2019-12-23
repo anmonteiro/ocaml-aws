@@ -8,13 +8,13 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
       (List.append
          [("Version", ["2012-06-01"]); ("Action", ["DeleteLoadBalancer"])]
          (Util.drop_empty
             (Uri.query_of_encoded
                (Query.render (DeleteAccessPointInput.to_query req))))) in
-  (`POST, uri, [])
+  (`POST, uri, (Headers.render (DeleteAccessPointInput.to_headers req)), "")
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

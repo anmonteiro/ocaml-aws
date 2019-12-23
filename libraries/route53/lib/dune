@@ -3,4 +3,4 @@
  (public_name aws_route53)
  (synopsis "aws-Amazon Route 53")
  (flags (:standard -w -27))
- (libraries aws))
+ (libraries aws ))

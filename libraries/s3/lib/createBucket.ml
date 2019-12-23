@@ -8,17 +8,25 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["CreateBucket"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (CreateBucketRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ("/" ^ req.CreateBucketRequest.bucket)))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (CreateBucketRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (CreateBucketRequest.to_headers req)),
+    (match req.CreateBucketRequest.create_bucket_configuration with
+     | Some var ->
+         Ezxmlm.to_string
+           [Ezxmlm.make_tag "CreateBucketConfiguration"
+              ([], (CreateBucketConfiguration.to_xml var))]
+     | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "CreateBucketResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ -> raise (Failure "Could not find well formed CreateBucketOutput.") in
     try
       Util.or_error (Util.option_bind resp CreateBucketOutput.parse)
         (let open Error in

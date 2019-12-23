@@ -3,20 +3,42 @@ type t =
   | AuthorizationAlreadyExists 
   | AuthorizationNotFound 
   | AuthorizationQuotaExceeded 
+  | BackupPolicyNotFoundFault 
   | Blocked 
   | CertificateNotFound 
+  | CustomAvailabilityZoneAlreadyExists 
+  | CustomAvailabilityZoneNotFound 
+  | CustomAvailabilityZoneQuotaExceeded 
   | DBClusterAlreadyExistsFault 
+  | DBClusterBacktrackNotFoundFault 
+  | DBClusterEndpointAlreadyExistsFault 
+  | DBClusterEndpointNotFoundFault 
+  | DBClusterEndpointQuotaExceededFault 
   | DBClusterNotFoundFault 
   | DBClusterParameterGroupNotFound 
   | DBClusterQuotaExceededFault 
+  | DBClusterRoleAlreadyExists 
+  | DBClusterRoleNotFound 
+  | DBClusterRoleQuotaExceeded 
   | DBClusterSnapshotAlreadyExistsFault 
   | DBClusterSnapshotNotFoundFault 
   | DBInstanceAlreadyExists 
+  | DBInstanceAutomatedBackupNotFound 
+  | DBInstanceAutomatedBackupQuotaExceeded 
   | DBInstanceNotFound 
+  | DBInstanceRoleAlreadyExists 
+  | DBInstanceRoleNotFound 
+  | DBInstanceRoleQuotaExceeded 
   | DBLogFileNotFoundFault 
   | DBParameterGroupAlreadyExists 
   | DBParameterGroupNotFound 
   | DBParameterGroupQuotaExceeded 
+  | DBProxyAlreadyExistsFault 
+  | DBProxyNotFoundFault 
+  | DBProxyQuotaExceededFault 
+  | DBProxyTargetAlreadyRegisteredFault 
+  | DBProxyTargetGroupNotFoundFault 
+  | DBProxyTargetNotFoundFault 
   | DBSecurityGroupAlreadyExists 
   | DBSecurityGroupNotFound 
   | DBSecurityGroupNotSupported 
@@ -32,32 +54,42 @@ type t =
   | DomainNotFoundFault 
   | DryRunOperation 
   | EventSubscriptionQuotaExceeded 
+  | GlobalClusterAlreadyExistsFault 
+  | GlobalClusterNotFoundFault 
+  | GlobalClusterQuotaExceededFault 
   | IdempotentParameterMismatch 
   | IncompleteSignature 
+  | InstallationMediaAlreadyExists 
+  | InstallationMediaNotFound 
   | InstanceQuotaExceeded 
   | InsufficientDBClusterCapacityFault 
   | InsufficientDBInstanceCapacity 
-  | InsufficientDomainCapacityFault 
   | InsufficientStorageClusterCapacity 
   | InternalFailure 
   | InvalidAction 
   | InvalidClientTokenId 
+  | InvalidDBClusterCapacityFault 
+  | InvalidDBClusterEndpointStateFault 
   | InvalidDBClusterSnapshotStateFault 
   | InvalidDBClusterStateFault 
+  | InvalidDBInstanceAutomatedBackupState 
   | InvalidDBInstanceState 
   | InvalidDBParameterGroupState 
+  | InvalidDBProxyStateFault 
   | InvalidDBSecurityGroupState 
   | InvalidDBSnapshotState 
   | InvalidDBSubnetGroupFault 
   | InvalidDBSubnetGroupStateFault 
   | InvalidDBSubnetStateFault 
   | InvalidEventSubscriptionState 
+  | InvalidGlobalClusterStateFault 
   | InvalidOptionGroupStateFault 
   | InvalidParameter 
   | InvalidParameterCombination 
   | InvalidParameterValue 
   | InvalidQueryParameter 
   | InvalidRestoreFault 
+  | InvalidS3BucketFault 
   | InvalidSubnet 
   | InvalidVPCNetworkStateFault 
   | KMSKeyNotAccessibleFault 
@@ -84,6 +116,7 @@ type t =
   | SNSNoAuthorization 
   | SNSTopicArnNotFound 
   | ServiceUnavailable 
+  | SharedSnapshotQuotaExceeded 
   | SnapshotQuotaExceeded 
   | SourceNotFound 
   | StorageQuotaExceeded 
@@ -131,20 +164,42 @@ let to_http_code e =
   | AuthorizationAlreadyExists -> Some 400
   | AuthorizationNotFound -> Some 404
   | AuthorizationQuotaExceeded -> Some 400
+  | BackupPolicyNotFoundFault -> Some 404
   | Blocked -> None
   | CertificateNotFound -> Some 404
+  | CustomAvailabilityZoneAlreadyExists -> Some 400
+  | CustomAvailabilityZoneNotFound -> Some 404
+  | CustomAvailabilityZoneQuotaExceeded -> Some 400
   | DBClusterAlreadyExistsFault -> Some 400
+  | DBClusterBacktrackNotFoundFault -> Some 404
+  | DBClusterEndpointAlreadyExistsFault -> Some 400
+  | DBClusterEndpointNotFoundFault -> Some 400
+  | DBClusterEndpointQuotaExceededFault -> Some 403
   | DBClusterNotFoundFault -> Some 404
   | DBClusterParameterGroupNotFound -> Some 404
   | DBClusterQuotaExceededFault -> Some 403
+  | DBClusterRoleAlreadyExists -> Some 400
+  | DBClusterRoleNotFound -> Some 404
+  | DBClusterRoleQuotaExceeded -> Some 400
   | DBClusterSnapshotAlreadyExistsFault -> Some 400
   | DBClusterSnapshotNotFoundFault -> Some 404
   | DBInstanceAlreadyExists -> Some 400
+  | DBInstanceAutomatedBackupNotFound -> Some 404
+  | DBInstanceAutomatedBackupQuotaExceeded -> Some 400
   | DBInstanceNotFound -> Some 404
+  | DBInstanceRoleAlreadyExists -> Some 400
+  | DBInstanceRoleNotFound -> Some 404
+  | DBInstanceRoleQuotaExceeded -> Some 400
   | DBLogFileNotFoundFault -> Some 404
   | DBParameterGroupAlreadyExists -> Some 400
   | DBParameterGroupNotFound -> Some 404
   | DBParameterGroupQuotaExceeded -> Some 400
+  | DBProxyAlreadyExistsFault -> Some 400
+  | DBProxyNotFoundFault -> Some 404
+  | DBProxyQuotaExceededFault -> Some 400
+  | DBProxyTargetAlreadyRegisteredFault -> Some 400
+  | DBProxyTargetGroupNotFoundFault -> Some 404
+  | DBProxyTargetNotFoundFault -> Some 404
   | DBSecurityGroupAlreadyExists -> Some 400
   | DBSecurityGroupNotFound -> Some 404
   | DBSecurityGroupNotSupported -> Some 400
@@ -160,32 +215,42 @@ let to_http_code e =
   | DomainNotFoundFault -> Some 404
   | DryRunOperation -> None
   | EventSubscriptionQuotaExceeded -> Some 400
+  | GlobalClusterAlreadyExistsFault -> Some 400
+  | GlobalClusterNotFoundFault -> Some 404
+  | GlobalClusterQuotaExceededFault -> Some 400
   | IdempotentParameterMismatch -> None
   | IncompleteSignature -> Some 400
+  | InstallationMediaAlreadyExists -> Some 400
+  | InstallationMediaNotFound -> Some 404
   | InstanceQuotaExceeded -> Some 400
   | InsufficientDBClusterCapacityFault -> Some 403
   | InsufficientDBInstanceCapacity -> Some 400
-  | InsufficientDomainCapacityFault -> Some 400
   | InsufficientStorageClusterCapacity -> Some 400
   | InternalFailure -> Some 500
   | InvalidAction -> Some 400
   | InvalidClientTokenId -> Some 403
+  | InvalidDBClusterCapacityFault -> Some 400
+  | InvalidDBClusterEndpointStateFault -> Some 400
   | InvalidDBClusterSnapshotStateFault -> Some 400
   | InvalidDBClusterStateFault -> Some 400
+  | InvalidDBInstanceAutomatedBackupState -> Some 400
   | InvalidDBInstanceState -> Some 400
   | InvalidDBParameterGroupState -> Some 400
+  | InvalidDBProxyStateFault -> Some 400
   | InvalidDBSecurityGroupState -> Some 400
   | InvalidDBSnapshotState -> Some 400
   | InvalidDBSubnetGroupFault -> Some 400
   | InvalidDBSubnetGroupStateFault -> Some 400
   | InvalidDBSubnetStateFault -> Some 400
   | InvalidEventSubscriptionState -> Some 400
+  | InvalidGlobalClusterStateFault -> Some 400
   | InvalidOptionGroupStateFault -> Some 400
   | InvalidParameter -> None
   | InvalidParameterCombination -> Some 400
   | InvalidParameterValue -> Some 400
   | InvalidQueryParameter -> Some 400
   | InvalidRestoreFault -> Some 400
+  | InvalidS3BucketFault -> Some 400
   | InvalidSubnet -> Some 400
   | InvalidVPCNetworkStateFault -> Some 400
   | KMSKeyNotAccessibleFault -> Some 400
@@ -212,6 +277,7 @@ let to_http_code e =
   | SNSNoAuthorization -> Some 400
   | SNSTopicArnNotFound -> Some 404
   | ServiceUnavailable -> Some 503
+  | SharedSnapshotQuotaExceeded -> Some 400
   | SnapshotQuotaExceeded -> Some 400
   | SourceNotFound -> Some 404
   | StorageQuotaExceeded -> Some 400
@@ -232,21 +298,49 @@ let to_string e =
   | AuthorizationAlreadyExists -> "AuthorizationAlreadyExists"
   | AuthorizationNotFound -> "AuthorizationNotFound"
   | AuthorizationQuotaExceeded -> "AuthorizationQuotaExceeded"
+  | BackupPolicyNotFoundFault -> "BackupPolicyNotFoundFault"
   | Blocked -> "Blocked"
   | CertificateNotFound -> "CertificateNotFound"
+  | CustomAvailabilityZoneAlreadyExists ->
+      "CustomAvailabilityZoneAlreadyExists"
+  | CustomAvailabilityZoneNotFound -> "CustomAvailabilityZoneNotFound"
+  | CustomAvailabilityZoneQuotaExceeded ->
+      "CustomAvailabilityZoneQuotaExceeded"
   | DBClusterAlreadyExistsFault -> "DBClusterAlreadyExistsFault"
+  | DBClusterBacktrackNotFoundFault -> "DBClusterBacktrackNotFoundFault"
+  | DBClusterEndpointAlreadyExistsFault ->
+      "DBClusterEndpointAlreadyExistsFault"
+  | DBClusterEndpointNotFoundFault -> "DBClusterEndpointNotFoundFault"
+  | DBClusterEndpointQuotaExceededFault ->
+      "DBClusterEndpointQuotaExceededFault"
   | DBClusterNotFoundFault -> "DBClusterNotFoundFault"
   | DBClusterParameterGroupNotFound -> "DBClusterParameterGroupNotFound"
   | DBClusterQuotaExceededFault -> "DBClusterQuotaExceededFault"
+  | DBClusterRoleAlreadyExists -> "DBClusterRoleAlreadyExists"
+  | DBClusterRoleNotFound -> "DBClusterRoleNotFound"
+  | DBClusterRoleQuotaExceeded -> "DBClusterRoleQuotaExceeded"
   | DBClusterSnapshotAlreadyExistsFault ->
       "DBClusterSnapshotAlreadyExistsFault"
   | DBClusterSnapshotNotFoundFault -> "DBClusterSnapshotNotFoundFault"
   | DBInstanceAlreadyExists -> "DBInstanceAlreadyExists"
+  | DBInstanceAutomatedBackupNotFound -> "DBInstanceAutomatedBackupNotFound"
+  | DBInstanceAutomatedBackupQuotaExceeded ->
+      "DBInstanceAutomatedBackupQuotaExceeded"
   | DBInstanceNotFound -> "DBInstanceNotFound"
+  | DBInstanceRoleAlreadyExists -> "DBInstanceRoleAlreadyExists"
+  | DBInstanceRoleNotFound -> "DBInstanceRoleNotFound"
+  | DBInstanceRoleQuotaExceeded -> "DBInstanceRoleQuotaExceeded"
   | DBLogFileNotFoundFault -> "DBLogFileNotFoundFault"
   | DBParameterGroupAlreadyExists -> "DBParameterGroupAlreadyExists"
   | DBParameterGroupNotFound -> "DBParameterGroupNotFound"
   | DBParameterGroupQuotaExceeded -> "DBParameterGroupQuotaExceeded"
+  | DBProxyAlreadyExistsFault -> "DBProxyAlreadyExistsFault"
+  | DBProxyNotFoundFault -> "DBProxyNotFoundFault"
+  | DBProxyQuotaExceededFault -> "DBProxyQuotaExceededFault"
+  | DBProxyTargetAlreadyRegisteredFault ->
+      "DBProxyTargetAlreadyRegisteredFault"
+  | DBProxyTargetGroupNotFoundFault -> "DBProxyTargetGroupNotFoundFault"
+  | DBProxyTargetNotFoundFault -> "DBProxyTargetNotFoundFault"
   | DBSecurityGroupAlreadyExists -> "DBSecurityGroupAlreadyExists"
   | DBSecurityGroupNotFound -> "DBSecurityGroupNotFound"
   | DBSecurityGroupNotSupported -> "DBSecurityGroupNotSupported"
@@ -263,35 +357,47 @@ let to_string e =
   | DomainNotFoundFault -> "DomainNotFoundFault"
   | DryRunOperation -> "DryRunOperation"
   | EventSubscriptionQuotaExceeded -> "EventSubscriptionQuotaExceeded"
+  | GlobalClusterAlreadyExistsFault -> "GlobalClusterAlreadyExistsFault"
+  | GlobalClusterNotFoundFault -> "GlobalClusterNotFoundFault"
+  | GlobalClusterQuotaExceededFault -> "GlobalClusterQuotaExceededFault"
   | IdempotentParameterMismatch -> "IdempotentParameterMismatch"
   | IncompleteSignature -> "IncompleteSignature"
+  | InstallationMediaAlreadyExists -> "InstallationMediaAlreadyExists"
+  | InstallationMediaNotFound -> "InstallationMediaNotFound"
   | InstanceQuotaExceeded -> "InstanceQuotaExceeded"
   | InsufficientDBClusterCapacityFault ->
       "InsufficientDBClusterCapacityFault"
   | InsufficientDBInstanceCapacity -> "InsufficientDBInstanceCapacity"
-  | InsufficientDomainCapacityFault -> "InsufficientDomainCapacityFault"
   | InsufficientStorageClusterCapacity ->
       "InsufficientStorageClusterCapacity"
   | InternalFailure -> "InternalFailure"
   | InvalidAction -> "InvalidAction"
   | InvalidClientTokenId -> "InvalidClientTokenId"
+  | InvalidDBClusterCapacityFault -> "InvalidDBClusterCapacityFault"
+  | InvalidDBClusterEndpointStateFault ->
+      "InvalidDBClusterEndpointStateFault"
   | InvalidDBClusterSnapshotStateFault ->
       "InvalidDBClusterSnapshotStateFault"
   | InvalidDBClusterStateFault -> "InvalidDBClusterStateFault"
+  | InvalidDBInstanceAutomatedBackupState ->
+      "InvalidDBInstanceAutomatedBackupState"
   | InvalidDBInstanceState -> "InvalidDBInstanceState"
   | InvalidDBParameterGroupState -> "InvalidDBParameterGroupState"
+  | InvalidDBProxyStateFault -> "InvalidDBProxyStateFault"
   | InvalidDBSecurityGroupState -> "InvalidDBSecurityGroupState"
   | InvalidDBSnapshotState -> "InvalidDBSnapshotState"
   | InvalidDBSubnetGroupFault -> "InvalidDBSubnetGroupFault"
   | InvalidDBSubnetGroupStateFault -> "InvalidDBSubnetGroupStateFault"
   | InvalidDBSubnetStateFault -> "InvalidDBSubnetStateFault"
   | InvalidEventSubscriptionState -> "InvalidEventSubscriptionState"
+  | InvalidGlobalClusterStateFault -> "InvalidGlobalClusterStateFault"
   | InvalidOptionGroupStateFault -> "InvalidOptionGroupStateFault"
   | InvalidParameter -> "InvalidParameter"
   | InvalidParameterCombination -> "InvalidParameterCombination"
   | InvalidParameterValue -> "InvalidParameterValue"
   | InvalidQueryParameter -> "InvalidQueryParameter"
   | InvalidRestoreFault -> "InvalidRestoreFault"
+  | InvalidS3BucketFault -> "InvalidS3BucketFault"
   | InvalidSubnet -> "InvalidSubnet"
   | InvalidVPCNetworkStateFault -> "InvalidVPCNetworkStateFault"
   | KMSKeyNotAccessibleFault -> "KMSKeyNotAccessibleFault"
@@ -320,6 +426,7 @@ let to_string e =
   | SNSNoAuthorization -> "SNSNoAuthorization"
   | SNSTopicArnNotFound -> "SNSTopicArnNotFound"
   | ServiceUnavailable -> "ServiceUnavailable"
+  | SharedSnapshotQuotaExceeded -> "SharedSnapshotQuotaExceeded"
   | SnapshotQuotaExceeded -> "SnapshotQuotaExceeded"
   | SourceNotFound -> "SourceNotFound"
   | StorageQuotaExceeded -> "StorageQuotaExceeded"
@@ -340,21 +447,50 @@ let of_string e =
   | "AuthorizationAlreadyExists" -> Some AuthorizationAlreadyExists
   | "AuthorizationNotFound" -> Some AuthorizationNotFound
   | "AuthorizationQuotaExceeded" -> Some AuthorizationQuotaExceeded
+  | "BackupPolicyNotFoundFault" -> Some BackupPolicyNotFoundFault
   | "Blocked" -> Some Blocked
   | "CertificateNotFound" -> Some CertificateNotFound
+  | "CustomAvailabilityZoneAlreadyExists" ->
+      Some CustomAvailabilityZoneAlreadyExists
+  | "CustomAvailabilityZoneNotFound" -> Some CustomAvailabilityZoneNotFound
+  | "CustomAvailabilityZoneQuotaExceeded" ->
+      Some CustomAvailabilityZoneQuotaExceeded
   | "DBClusterAlreadyExistsFault" -> Some DBClusterAlreadyExistsFault
+  | "DBClusterBacktrackNotFoundFault" -> Some DBClusterBacktrackNotFoundFault
+  | "DBClusterEndpointAlreadyExistsFault" ->
+      Some DBClusterEndpointAlreadyExistsFault
+  | "DBClusterEndpointNotFoundFault" -> Some DBClusterEndpointNotFoundFault
+  | "DBClusterEndpointQuotaExceededFault" ->
+      Some DBClusterEndpointQuotaExceededFault
   | "DBClusterNotFoundFault" -> Some DBClusterNotFoundFault
   | "DBClusterParameterGroupNotFound" -> Some DBClusterParameterGroupNotFound
   | "DBClusterQuotaExceededFault" -> Some DBClusterQuotaExceededFault
+  | "DBClusterRoleAlreadyExists" -> Some DBClusterRoleAlreadyExists
+  | "DBClusterRoleNotFound" -> Some DBClusterRoleNotFound
+  | "DBClusterRoleQuotaExceeded" -> Some DBClusterRoleQuotaExceeded
   | "DBClusterSnapshotAlreadyExistsFault" ->
       Some DBClusterSnapshotAlreadyExistsFault
   | "DBClusterSnapshotNotFoundFault" -> Some DBClusterSnapshotNotFoundFault
   | "DBInstanceAlreadyExists" -> Some DBInstanceAlreadyExists
+  | "DBInstanceAutomatedBackupNotFound" ->
+      Some DBInstanceAutomatedBackupNotFound
+  | "DBInstanceAutomatedBackupQuotaExceeded" ->
+      Some DBInstanceAutomatedBackupQuotaExceeded
   | "DBInstanceNotFound" -> Some DBInstanceNotFound
+  | "DBInstanceRoleAlreadyExists" -> Some DBInstanceRoleAlreadyExists
+  | "DBInstanceRoleNotFound" -> Some DBInstanceRoleNotFound
+  | "DBInstanceRoleQuotaExceeded" -> Some DBInstanceRoleQuotaExceeded
   | "DBLogFileNotFoundFault" -> Some DBLogFileNotFoundFault
   | "DBParameterGroupAlreadyExists" -> Some DBParameterGroupAlreadyExists
   | "DBParameterGroupNotFound" -> Some DBParameterGroupNotFound
   | "DBParameterGroupQuotaExceeded" -> Some DBParameterGroupQuotaExceeded
+  | "DBProxyAlreadyExistsFault" -> Some DBProxyAlreadyExistsFault
+  | "DBProxyNotFoundFault" -> Some DBProxyNotFoundFault
+  | "DBProxyQuotaExceededFault" -> Some DBProxyQuotaExceededFault
+  | "DBProxyTargetAlreadyRegisteredFault" ->
+      Some DBProxyTargetAlreadyRegisteredFault
+  | "DBProxyTargetGroupNotFoundFault" -> Some DBProxyTargetGroupNotFoundFault
+  | "DBProxyTargetNotFoundFault" -> Some DBProxyTargetNotFoundFault
   | "DBSecurityGroupAlreadyExists" -> Some DBSecurityGroupAlreadyExists
   | "DBSecurityGroupNotFound" -> Some DBSecurityGroupNotFound
   | "DBSecurityGroupNotSupported" -> Some DBSecurityGroupNotSupported
@@ -371,35 +507,47 @@ let of_string e =
   | "DomainNotFoundFault" -> Some DomainNotFoundFault
   | "DryRunOperation" -> Some DryRunOperation
   | "EventSubscriptionQuotaExceeded" -> Some EventSubscriptionQuotaExceeded
+  | "GlobalClusterAlreadyExistsFault" -> Some GlobalClusterAlreadyExistsFault
+  | "GlobalClusterNotFoundFault" -> Some GlobalClusterNotFoundFault
+  | "GlobalClusterQuotaExceededFault" -> Some GlobalClusterQuotaExceededFault
   | "IdempotentParameterMismatch" -> Some IdempotentParameterMismatch
   | "IncompleteSignature" -> Some IncompleteSignature
+  | "InstallationMediaAlreadyExists" -> Some InstallationMediaAlreadyExists
+  | "InstallationMediaNotFound" -> Some InstallationMediaNotFound
   | "InstanceQuotaExceeded" -> Some InstanceQuotaExceeded
   | "InsufficientDBClusterCapacityFault" ->
       Some InsufficientDBClusterCapacityFault
   | "InsufficientDBInstanceCapacity" -> Some InsufficientDBInstanceCapacity
-  | "InsufficientDomainCapacityFault" -> Some InsufficientDomainCapacityFault
   | "InsufficientStorageClusterCapacity" ->
       Some InsufficientStorageClusterCapacity
   | "InternalFailure" -> Some InternalFailure
   | "InvalidAction" -> Some InvalidAction
   | "InvalidClientTokenId" -> Some InvalidClientTokenId
+  | "InvalidDBClusterCapacityFault" -> Some InvalidDBClusterCapacityFault
+  | "InvalidDBClusterEndpointStateFault" ->
+      Some InvalidDBClusterEndpointStateFault
   | "InvalidDBClusterSnapshotStateFault" ->
       Some InvalidDBClusterSnapshotStateFault
   | "InvalidDBClusterStateFault" -> Some InvalidDBClusterStateFault
+  | "InvalidDBInstanceAutomatedBackupState" ->
+      Some InvalidDBInstanceAutomatedBackupState
   | "InvalidDBInstanceState" -> Some InvalidDBInstanceState
   | "InvalidDBParameterGroupState" -> Some InvalidDBParameterGroupState
+  | "InvalidDBProxyStateFault" -> Some InvalidDBProxyStateFault
   | "InvalidDBSecurityGroupState" -> Some InvalidDBSecurityGroupState
   | "InvalidDBSnapshotState" -> Some InvalidDBSnapshotState
   | "InvalidDBSubnetGroupFault" -> Some InvalidDBSubnetGroupFault
   | "InvalidDBSubnetGroupStateFault" -> Some InvalidDBSubnetGroupStateFault
   | "InvalidDBSubnetStateFault" -> Some InvalidDBSubnetStateFault
   | "InvalidEventSubscriptionState" -> Some InvalidEventSubscriptionState
+  | "InvalidGlobalClusterStateFault" -> Some InvalidGlobalClusterStateFault
   | "InvalidOptionGroupStateFault" -> Some InvalidOptionGroupStateFault
   | "InvalidParameter" -> Some InvalidParameter
   | "InvalidParameterCombination" -> Some InvalidParameterCombination
   | "InvalidParameterValue" -> Some InvalidParameterValue
   | "InvalidQueryParameter" -> Some InvalidQueryParameter
   | "InvalidRestoreFault" -> Some InvalidRestoreFault
+  | "InvalidS3BucketFault" -> Some InvalidS3BucketFault
   | "InvalidSubnet" -> Some InvalidSubnet
   | "InvalidVPCNetworkStateFault" -> Some InvalidVPCNetworkStateFault
   | "KMSKeyNotAccessibleFault" -> Some KMSKeyNotAccessibleFault
@@ -428,6 +576,7 @@ let of_string e =
   | "SNSNoAuthorization" -> Some SNSNoAuthorization
   | "SNSTopicArnNotFound" -> Some SNSTopicArnNotFound
   | "ServiceUnavailable" -> Some ServiceUnavailable
+  | "SharedSnapshotQuotaExceeded" -> Some SharedSnapshotQuotaExceeded
   | "SnapshotQuotaExceeded" -> Some SnapshotQuotaExceeded
   | "SourceNotFound" -> Some SourceNotFound
   | "StorageQuotaExceeded" -> Some StorageQuotaExceeded

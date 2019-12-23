@@ -8,41 +8,20 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2013-11-01"]); ("Action", ["DescribeTrails"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (DescribeTrailsRequest.to_query req))))) in
-  (`POST, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (DescribeTrailsRequest.to_query req)))) in
+  (`POST, uri, (Headers.render (DescribeTrailsRequest.to_headers req)), "")
 let of_http body =
   try
-    let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "DescribeTrailsResponse" (snd xml) in
-    try
-      Util.or_error (Util.option_bind resp DescribeTrailsResponse.parse)
-        (let open Error in
-           BadResponse
-             {
-               body;
-               message = "Could not find well formed DescribeTrailsResponse."
-             })
-    with
-    | Xml.RequiredFieldMissing msg ->
-        let open Error in
-          `Error
-            (BadResponse
-               {
-                 body;
-                 message =
-                   ("Error parsing DescribeTrailsResponse - missing field in body or children: "
-                      ^ msg)
-               })
+    let json = Yojson.Basic.from_string body in
+    `Ok (DescribeTrailsResponse.of_json json)
   with
-  | Failure msg ->
+  | Yojson.Json_error msg ->
       `Error
         (let open Error in
-           BadResponse { body; message = ("Error parsing xml: " ^ msg) })
+           BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with

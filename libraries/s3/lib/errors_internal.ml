@@ -2,6 +2,7 @@ type t =
   | AuthFailure 
   | Blocked 
   | BucketAlreadyExists 
+  | BucketAlreadyOwnedByYou 
   | DryRunOperation 
   | IdempotentParameterMismatch 
   | IncompleteSignature 
@@ -64,6 +65,7 @@ let to_http_code e =
   | AuthFailure -> None
   | Blocked -> None
   | BucketAlreadyExists -> None
+  | BucketAlreadyOwnedByYou -> None
   | DryRunOperation -> None
   | IdempotentParameterMismatch -> None
   | IncompleteSignature -> Some 400
@@ -99,6 +101,7 @@ let to_string e =
   | AuthFailure -> "AuthFailure"
   | Blocked -> "Blocked"
   | BucketAlreadyExists -> "BucketAlreadyExists"
+  | BucketAlreadyOwnedByYou -> "BucketAlreadyOwnedByYou"
   | DryRunOperation -> "DryRunOperation"
   | IdempotentParameterMismatch -> "IdempotentParameterMismatch"
   | IncompleteSignature -> "IncompleteSignature"
@@ -134,6 +137,7 @@ let of_string e =
   | "AuthFailure" -> Some AuthFailure
   | "Blocked" -> Some Blocked
   | "BucketAlreadyExists" -> Some BucketAlreadyExists
+  | "BucketAlreadyOwnedByYou" -> Some BucketAlreadyOwnedByYou
   | "DryRunOperation" -> Some DryRunOperation
   | "IdempotentParameterMismatch" -> Some IdempotentParameterMismatch
   | "IncompleteSignature" -> Some IncompleteSignature
