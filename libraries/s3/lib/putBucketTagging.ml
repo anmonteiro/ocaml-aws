@@ -8,13 +8,15 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["PutBucketTagging"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (PutBucketTaggingRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (("/" ^ req.PutBucketTaggingRequest.bucket) ^ "?tagging")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (PutBucketTaggingRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (PutBucketTaggingRequest.to_headers req)),
+    (Ezxmlm.to_string
+       [Ezxmlm.make_tag "Tagging"
+          ([], (Tagging.to_xml req.PutBucketTaggingRequest.tagging))]))
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

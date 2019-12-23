@@ -8,16 +8,18 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append [("Version", ["2006-03-01"]); ("Action", ["ListBuckets"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (Aws.BaseTypes.Unit.to_query req))))) in
-  (`GET, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ "/"))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (Aws.BaseTypes.Unit.to_query req)))) in
+  (`GET, uri, (Headers.render (Aws.BaseTypes.Unit.to_headers req)), "")
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "ListBucketsResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ -> raise (Failure "Could not find well formed ListBucketsOutput.") in
     try
       Util.or_error (Util.option_bind resp ListBucketsOutput.parse)
         (let open Error in

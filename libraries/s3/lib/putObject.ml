@@ -8,16 +8,20 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append [("Version", ["2006-03-01"]); ("Action", ["PutObject"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (PutObjectRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            ((("/" ^ req.PutObjectRequest.bucket) ^ "/") ^
+               req.PutObjectRequest.key)))
+      (Util.drop_empty
+         (Uri.query_of_encoded (Query.render (PutObjectRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (PutObjectRequest.to_headers req)),
+    (match req.PutObjectRequest.body with | Some var -> var | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "PutObjectResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ -> raise (Failure "Could not find well formed PutObjectOutput.") in
     try
       Util.or_error (Util.option_bind resp PutObjectOutput.parse)
         (let open Error in

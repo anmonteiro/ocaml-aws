@@ -8,13 +8,13 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["PutBucketPolicy"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (PutBucketPolicyRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (("/" ^ req.PutBucketPolicyRequest.bucket) ^ "?policy")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (PutBucketPolicyRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (PutBucketPolicyRequest.to_headers req)),
+    req.PutBucketPolicyRequest.policy)
 let of_http body = `Ok ()
 let parse_error code err =
   let errors = [] @ Errors_internal.common in

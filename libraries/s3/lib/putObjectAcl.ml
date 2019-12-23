@@ -8,17 +8,27 @@ let to_http service region req =
   let uri =
     Uri.add_query_params
       (Uri.of_string
-         (Aws.Util.of_option_exn (Endpoints.url_of service region)))
-      (List.append
-         [("Version", ["2006-03-01"]); ("Action", ["PutObjectAcl"])]
-         (Util.drop_empty
-            (Uri.query_of_encoded
-               (Query.render (PutObjectAclRequest.to_query req))))) in
-  (`PUT, uri, [])
+         ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+            (((("/" ^ req.PutObjectAclRequest.bucket) ^ "/") ^
+                req.PutObjectAclRequest.key)
+               ^ "?acl")))
+      (Util.drop_empty
+         (Uri.query_of_encoded
+            (Query.render (PutObjectAclRequest.to_query req)))) in
+  (`PUT, uri, (Headers.render (PutObjectAclRequest.to_headers req)),
+    (match req.PutObjectAclRequest.access_control_policy with
+     | Some var ->
+         Ezxmlm.to_string
+           [Ezxmlm.make_tag "AccessControlPolicy"
+              ([], (AccessControlPolicy.to_xml var))]
+     | None -> ""))
 let of_http body =
   try
     let xml = Ezxmlm.from_string body in
-    let resp = Xml.member "PutObjectAclResponse" (snd xml) in
+    let resp =
+      match List.hd (snd xml) with
+      | `El (_, xs) -> Some xs
+      | _ -> raise (Failure "Could not find well formed PutObjectAclOutput.") in
     try
       Util.or_error (Util.option_bind resp PutObjectAclOutput.parse)
         (let open Error in
