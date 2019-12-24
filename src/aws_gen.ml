@@ -155,7 +155,6 @@ let main input override errors_path outdir =
   let service_name  = Json.(member_exn "serviceFullName" meta |> to_string) in
   let api_version   = Json.(member_exn "apiVersion"     meta |> to_string) in
   let protocol      = Json.(member_exn "protocol" meta |> to_string) in
-  let is_ec2        = protocol = "ec2" in
   let extra_libs = match protocol with
     | "rest-json" | "json" -> ["yojson"]
     | _ -> []
@@ -209,7 +208,7 @@ let main input override errors_path outdir =
   let dir     = outdir </> lib_name_dir in
   let lib_dir = dir    </> "lib" in
   let lib_dir_test = dir </> "lib_test" in
-  generate_types_module lib_dir (Generate.types is_ec2 shapes);
+  generate_types_module lib_dir (Generate.types protocol shapes);
   log "## Wrote %d/%d shape modules..."
     (StringTable.cardinal shapes) (List.length shp_json);
   Printing.write_structure (lib_dir </> "errors_internal.ml") (Generate.errors errors common_errors);

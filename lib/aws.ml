@@ -187,7 +187,7 @@ module type Call = sig
 
   val service : string
   val to_http : string -> string -> input -> Request.t
-  val of_http : string -> [`Ok of output | `Error of error Error.error_response]
+  val of_http : (string * string) list -> string -> [`Ok of output | `Error of error Error.error_response]
   val parse_error : int -> string -> error option
 end
 
@@ -256,6 +256,16 @@ module Headers = struct
   let to_headers_hashtbl to_headers tbl =
     List (Hashtbl.fold
             (fun k v acc -> (Pair (k, to_headers v)) :: acc) tbl [])
+
+  module Assoc = struct
+    type t = (string * string) list
+
+    let find name headers =
+     try
+      Some (List.assoc name headers)
+     with
+     | Not_found -> None
+  end
 end
 
 
@@ -444,7 +454,7 @@ module Signing = struct
         | None -> Digestif.SHA256.digest_string str
 
       let sha256 ?key str =
-	_sha256 ?key str |> Digestif.SHA256.to_raw_string
+        _sha256 ?key str |> Digestif.SHA256.to_raw_string
 
       let sha256_hex ?key str =
         _sha256 ?key str |> Digestif.SHA256.to_hex
@@ -473,10 +483,7 @@ module Signing = struct
      * http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
      *)
     let sign_request ~access_key ~secret_key ~service ~region (meth, uri, headers, body) =
-      (* TODO: after rebase, check if this is right. *)
-      (* let host = Util.of_option_exn (Endpoints.endpoint_of service region) in *)
-      (* let uri = Uri.of_string ((Endpoints.default_endpoint service region) ^ (Uri.path_and_query uri)) in *)
-      let uri = Uri.of_string ((Util.of_option_exn (Endpoints.endpoint_of service region)) ^ (Uri.path_and_query uri)) in
+      let uri = Uri.of_string ((Util.of_option_exn (Endpoints.url_of service region)) ^ (Uri.path_and_query uri)) in
       let host = Util.of_option_exn (Uri.host uri) in
       let params = encode_query (Uri.query uri) in
       let sign key msg = Hash.sha256 ~key msg in
@@ -487,7 +494,7 @@ module Signing = struct
       let headers = ("Content-Length", String.length body |> string_of_int) :: headers in
       let amzdate = Time.date_time now in
       let datestamp = Time.date_yymmdd now in
-      let canonical_uri = "/" in
+      let canonical_uri = Uri.path uri in
       let canonical_querystring = params in
       let canonical_headers =
         ("host", host) :: ("x-amz-date", amzdate) :: headers |>

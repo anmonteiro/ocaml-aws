@@ -79,4 +79,4 @@ val split_with : ('a -> bool) -> 'a list -> 'a list * 'a list
 
 val split_with_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
 
-val prim_type_map : (string * string) list
+val is_prim : string -> bool

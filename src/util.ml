@@ -115,6 +115,9 @@ let prim_type_map =
   ;("timestamp","DateTime")
   ;("blob","Blob")]
 
+ let is_prim shp =
+  List.mem_assoc (String.lowercase_ascii shp) prim_type_map
+
 (* NOTE(dbp 2015-01-26): Shapes that just have primitive types
    (boolean, integer, etc) types aren't actually useful (they
    communicate no information, since all of the typing is
@@ -138,7 +141,7 @@ let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t)
   in
   let new_shapes =
     StringTable.fold (fun key (nm, ty, contents) acc ->
-      if List.mem_assoc ty prim_type_map then
+      if is_prim ty then
         acc
       else
         let content =

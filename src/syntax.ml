@@ -222,6 +222,9 @@ let tryfail body with_ =
 let try_msg exc body with_ =
   Exp.try_ body [Exp.case (Pat.construct (lid exc) (Some (Pat.var (strloc "msg")))) with_]
 
+let assert_false =
+ Exp.assert_ (Exp.construct (lid "false") None)
+
 (* include nm with_ (in .mli; where with_ is list of elements
    created with `withy` below) *)
 let sinclude_ nm with_ = Sig.include_ { pincl_mod =
