@@ -31,27 +31,16 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Migrate_parsetree
-open Ast_404
+open Ppxlib.Selected_ast.Ast
 
 open Parsetree
 open Ast_helper
-open Ast_convenience_404
 open Asttypes
+
 
 let strloc txt = { txt; loc = !default_loc }
 
-(* open Module (in .ml) *)
-let open_ nm = Str.open_ (Opn.mk (lid nm))
-
-(* open Module (in .mli) *)
-let sopen_ nm = Sig.open_ (Opn.mk (lid nm))
-
-(* let open Module in E *)
-let letom nm = Exp.open_ Fresh (lid nm)
-
-(* module nm1 = nm2 *)
-let modlet nm1 nm2 = Str.module_ (Mb.mk (strloc nm1) (Mod.ident (lid nm2)))
+let lid txt = strloc (Longident.parse txt)
 
 (* nm (as a type) *)
 let ty0 nm = Typ.constr (lid nm) []
@@ -70,17 +59,6 @@ let tyreclet nm fs =
 let styreclet nm fs =
   Sig.type_ Recursive [Type.mk ~kind:(Ptype_record (List.map (fun (nm, ty) -> Type.field (strloc nm) ty) fs)) (strloc nm)]
 
-(* type nm = unit *)
-let tyunit nm =
-  Str.type_ Recursive [ Type.mk ~manifest:(ty0 "unit") (strloc nm) ]
-
-let styunit nm =
-  Sig.type_ Recursive [ Type.mk ~manifest:(ty0 "unit") (strloc nm) ]
-
-(* type nm = ty (in .ml) *)
-let tylet nm ty =
-  Str.type_ Recursive [Type.mk ~manifest:ty (strloc nm)]
-
 (* type nm = | nm0 of ty0 | ... *)
 let tyvariantlet nm variants =
   Str.type_ Recursive
@@ -95,18 +73,6 @@ let styvariantlet nm variants =
                       (List.map (fun (cnm,args) -> Type.constructor ~args:(Pcstr_tuple args) (strloc cnm)) variants))
        (strloc nm)]
 
-(* type nm = ty (in .mli) *)
-let stylet nm ty =
-  Sig.type_ Recursive [Type.mk ~manifest:ty (strloc nm)]
-
-(* let nm = body *)
-let let_ nm body =
-  Str.value Nonrecursive [Vb.mk (Pat.var (strloc nm)) body]
-
-(* let nm = value in body *)
-let letin nm value body =
-  Exp.let_ Nonrecursive [Vb.mk (Pat.var (strloc nm)) value] body
-
 (* fun ~arg -> body *)
 let funlab arg body =
   Exp.fun_ (Labelled arg) None (Pat.var (strloc arg)) body
@@ -119,21 +85,6 @@ let funopt arg body =
 let funopt_def exp arg body =
   Exp.fun_ (Optional arg) (Some exp) (Pat.var (strloc arg)) body
 
-(* fun arg -> body *)
-let fun_ arg body =
-  Exp.fun_ Nolabel None (Pat.var (strloc arg)) body
-
-(* fun arg1 arg2 -> body *)
-let fun2 arg1 arg2 body =
-  Exp.fun_ Nolabel None (Pat.var (strloc arg1))
-    (Exp.fun_ Nolabel None (Pat.var (strloc arg2)) body)
-
-(* fun arg1 arg2 arg3 -> body *)
-let fun3 arg1 arg2 arg3 body =
-  Exp.fun_ Nolabel None (Pat.var (strloc arg1))
-    (Exp.fun_ Nolabel None (Pat.var (strloc arg2))
-       (Exp.fun_ Nolabel None (Pat.var (strloc arg3)) body))
-
 let arrowlab arg typ1 typ2 =
   Typ.arrow (Labelled arg) typ1 typ2
 
@@ -142,12 +93,6 @@ let arrowopt arg typ1 typ2 =
 
 let arrow typ1 typ2 =
   Typ.arrow Nolabel typ1 typ2
-
-let val_ nm typ =
-  Sig.value (Val.mk (strloc nm) typ)
-
-let spair a b = Typ.tuple [a; b]
-let constr nm a = Typ.constr (lid nm)  [ a ]
 
 let tname nm = Typ.constr (lid nm)  [ ]
 
@@ -171,25 +116,17 @@ let app1 f a = Exp.apply (ident f) [(Nolabel, a)]
 (* f a0 a1 *)
 let app2 f a0 a1 = Exp.apply (ident f) [(Nolabel, a0);(Nolabel, a1)]
 
-(* f a0 a1 a2 *)
-let app3 f a0 a1 a2 = Exp.apply (ident f) [(Nolabel, a0);(Nolabel, a1);(Nolabel, a2)]
-
 (* s (the string literal) *)
 let str s = Exp.constant (Pconst_string (s, None))
-
 
 (* n (the int literal) *)
 let int n = Exp.constant (Pconst_integer (string_of_int n, None))
 
 (* (a, b) *)
 let pair a b = Exp.tuple [a; b]
-let tuple = Exp.tuple
-let unit () = Exp.tuple []
 
 (* [x; ..] (the list of expressions) *)
 let list xs = List.fold_left (fun rest x -> Exp.construct (lid "::") (Some (pair x rest))) (Exp.construct (lid "[]") None) xs
-
-let list_expr x rest = Exp.construct (lid "::") (Some (pair x rest))
 
 (* `v *)
 let variant v = Exp.variant v None
@@ -206,40 +143,6 @@ let rec_module nmvs =
       Mb.mk (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
     nmvs)
 
-(* include NM *)
-let include_ nm =
- Str.include_ (Incl.mk (Mod.ident (lid nm)))
-
-(* try body with _ -> with_ *)
-let try_ body with_ =
-  Exp.try_ body [Exp.case (Pat.any ()) with_]
-
-(* try body with Failure msg -> with_ (so msg is bound) *)
-let tryfail body with_ =
-  Exp.try_ body [Exp.case (Pat.construct (lid "Failure") (Some (Pat.var (strloc "msg")))) with_]
-
-(* try body with Exception msg -> with_ (so msg in bound) *)
-let try_msg exc body with_ =
-  Exp.try_ body [Exp.case (Pat.construct (lid exc) (Some (Pat.var (strloc "msg")))) with_]
-
-let assert_false =
- Exp.assert_ (Exp.construct (lid "false") None)
-
-(* include nm with_ (in .mli; where with_ is list of elements
-   created with `withy` below) *)
-let sinclude_ nm with_ = Sig.include_ { pincl_mod =
-                                          Mty.with_ (Mty.ident (lid nm))
-                                            with_
-                                      ; pincl_loc = !default_loc
-                                      ; pincl_attributes = []
-                                      }
-
-(* with nm0 := nm1 (in .mli; for use in include) *)
-let withty _nm0 nm1 = Pwith_typesubst (Type.mk ~manifest:(ty0 nm1) (strloc nm1))
-
-(* if cond then thn else els *)
-let ifthen cond thn els = Exp.ifthenelse cond thn (Some els)
-
 (* match exp with | Constructor -> body | Constructor -> body ... *)
 let matchvar exp branches = Exp.match_ exp (List.map (fun (nm, body) ->
     Exp.case (Pat.construct (lid nm) None) body) branches)
@@ -250,9 +153,3 @@ let matchstrs exp branches els =
       Exp.case (Pat.constant (Pconst_string (nm, None))) body) branches)
                   @ [Exp.case (Pat.any ()) els])
 
-(* match exp with | Some var -> some_body | None -> none_body *)
-let matchoption exp some_body none_body =
-  Exp.match_ exp
-    [Exp.case (Pat.construct (lid "Some") (Some (Pat.var (strloc "var")))) some_body
-    ; Exp.case (Pat.construct (lid "None") None) none_body
-    ]

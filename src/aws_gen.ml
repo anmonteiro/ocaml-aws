@@ -35,6 +35,9 @@ open Cmdliner
 
 open Structures
 open Util
+open Ppxlib
+
+let loc = !Ast_helper.default_loc
 
 let uncapitalize s =
   let at_start = ref true in
@@ -123,8 +126,8 @@ let generate_types_module lib_dir (imports, modules) =
   if (len > 1000) then begin
    let types_1, types_2 = split_with_i (fun i _itm -> i <= len / 2) modules in
     Printing.write_structure (lib_dir </> "types_1.ml") (imports @ types_1);
-    Printing.write_structure (lib_dir </> "types_2.ml") (imports @ [Syntax.open_ "Types_1"] @ types_2);
-    Printing.write_structure (lib_dir </> "types.ml") Syntax.[include_ "Types_1"; include_ "Types_2"];
+    Printing.write_structure (lib_dir </> "types_2.ml") (imports @ [[%stri open Types_1]] @ types_2);
+    Printing.write_structure (lib_dir </> "types.ml") [[%stri include Types_1]; [%stri include Types_2]];
   end
   else
     Printing.write_structure (lib_dir </> "types.ml") (imports @ modules)

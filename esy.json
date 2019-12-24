@@ -10,8 +10,7 @@
     "@opam/yojson": ">= 1.6.0",
     "@opam/base-unix": "*",
     "@opam/cmdliner": "*",
-    "@opam/ppx_tools_versioned": "*",
-    "@opam/ocaml-migrate-parsetree": "*",
+    "@opam/ppxlib": "*",
     "@opam/ocamlgraph": "*"
   },
   "devDependencies": {

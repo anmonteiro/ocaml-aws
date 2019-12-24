@@ -31,8 +31,7 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Migrate_parsetree
-open Ast_404
+open Ppxlib.Selected_ast.Ast
 
 module Printing : sig
   val write_all : filename:string -> string -> unit

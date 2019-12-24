@@ -31,7 +31,6 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Migrate_parsetree
 open Structures
 
 module Printing = struct
@@ -43,15 +42,15 @@ module Printing = struct
     with_output filename (fun out ->
       output_string out contents)
 
-  let migration = Versions.migrate Versions.ocaml_404 Versions.ocaml_current
+  module Migration = Ppxlib.Selected_ast.To_ocaml
 
   let write_structure filename es =
-    write_all ~filename (Pprintast.string_of_structure (migration.Versions.copy_structure es))
+    write_all ~filename (Pprintast.string_of_structure (Migration.copy_structure es))
 
   let string_of_signature x =
     ignore (Format.flush_str_formatter ());
     let f = Format.str_formatter in
-    Pprintast.signature f (migration.Versions.copy_signature x);
+    Pprintast.signature f (Migration.copy_signature x);
     Format.flush_str_formatter ()
 
   let write_signature filename es =
