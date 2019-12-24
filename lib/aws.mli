@@ -133,7 +133,7 @@ module type Call = sig
 
   (** This function converts from a HTTP response body to an output
       or an error if the response could not be decoded. *)
-  val of_http : string -> [`Ok of output | `Error of error Error.error_response]
+  val of_http : (string * string) list -> string -> [`Ok of output | `Error of error Error.error_response]
 
   (** This function parses an AWS error (which has been successfully
       deserialized from XML) into an API specific native error that
@@ -203,6 +203,12 @@ module Headers : sig
   val to_headers_list : ('a -> t) -> 'a list -> t
 
   val to_headers_hashtbl : ('a -> t) -> (string, 'a) Hashtbl.t -> t
+
+  module Assoc : sig
+    type t = (string * string) list
+
+    val find : string -> t -> string option
+  end
 end
 
 (** This module contains helpers used for XML parsing. It wraps Ezxmlm

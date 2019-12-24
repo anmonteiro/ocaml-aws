@@ -68,7 +68,8 @@ let run_request
       in
       `Error (HttpError (code, aws_error))
     else
-      match M.of_http body with
+     let header_list = Cohttp.Header.to_list (Response.headers resp) in
+      match M.of_http header_list body with
       | `Ok v -> `Ok v
       | `Error t -> `Error (Aws.Error.HttpError (code, t))
     end)
