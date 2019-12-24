@@ -43,7 +43,7 @@ LIBRARIES := \
 $(LIBRARIES): aws-%:
 	dune exec aws-gen -- -i input/$*/latest/service-2.json -r input/$*/overrides.json -e input/errors.json -o libraries
 
-gen: build aws-ec2 $(LIBRARIES)
+gen: $(LIBRARIES)
 
 # mv libraries/ssm/aws_ssm.opam .
 # mv libraries/cloudwatch/aws_cloudwatch.opam .
