@@ -79,6 +79,9 @@ module Char = struct
     _is_alpha i || (i >= 48 && i <= 57)
 end
 
+let to_lib_name s =
+  String.map (fun c -> if Char.is_alphanum c then (Char.lowercase_ascii c) else '-') s
+
 let to_variant_name s =
   String.map (fun c -> if Char.is_alphanum c then c else '_')
     (if Char.is_alpha (String.get s 0)

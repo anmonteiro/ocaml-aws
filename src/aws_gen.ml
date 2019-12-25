@@ -143,9 +143,11 @@ let main input override errors_path outdir =
   in
   (* Override endpoint names for particular services. *)
   let lib_name' meta =
-    match Json.(member_exn "endpointPrefix" meta |> to_string) with
-    | "monitoring" -> "cloudwatch"
-    | a -> a
+    let svc_id = match Json.(member_exn "serviceId" meta |> to_string_option) with
+    | Some x -> x
+    | None -> failwith input
+    in
+    Util.to_lib_name svc_id
   in
 
   let meta     = Json.(member_exn "metadata"       desc) in

@@ -1,0 +1,6 @@
+{
+  "referenceUrl": "https://docs.aws.amazon.com/signer/latest/api/Welcome.html",
+  "operationUrl": "https://docs.aws.amazon.com/signer/latest/api/API_",
+  "libraryName": "aws_shield",
+  "libraryVersion": "0.1.0"
+}

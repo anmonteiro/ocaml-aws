@@ -709,7 +709,7 @@ let op service version protocol shapes op =
                     | None -> "" ]
               | _ ->
                 begin match protocol with
-                | "json" | "restjson" ->
+                | "json" | "rest-json" ->
                   if found.Structure.required then
                     [%expr Yojson.Basic.to_string ([%e ident (found.Structure.shape ^ ".to_json")] [%e field_access])]
                   else
