@@ -8,6 +8,7 @@ module Structure = struct
     ; required : bool
     ; payload : bool
     ; flattened : bool
+    ; doc : string option
     }
 
   type t = member list
@@ -23,11 +24,12 @@ module Shape = struct
   type t =
    { name : string
    ; content : contents
+   ; doc : string option
      (* generate a recursive module; bool is if already generated both *)
-   ; mutable depends_on: t option * bool }
+   ; mutable depends_on: t option * bool
+   }
 
-
-  type parsed = string * string * contents option
+  type parsed = string * string * contents option * string option
 end
 
 module Operation = struct
@@ -39,6 +41,7 @@ module Operation = struct
     ; output_shape : string option
     ; output_wrapper : string option
     ; errors : string list
+    ; doc : string option
     }
 end
 
@@ -47,7 +50,9 @@ module Error = struct
     { shape_name : string
     ; string_name : string
     ; variant_name : string
-    ; http_code : int option }
+    ; http_code : int option
+    ; doc : string option
+    }
 
   let compare t1 t2 =
     compare

@@ -192,19 +192,23 @@ let main input override errors_path outdir =
       in
       common @ specific
   in
+  let (errs, shps) = List.partition (fun (_nm, flds) ->
+     match Json.member "exception" flds with
+        | `Bool true -> true
+        | `Null | `Bool false -> false
+        | _ -> assert false)
+    shp_json
+  in
   let errors =
-    List.sort_uniq Structures.Error.compare (Util.filter_map shp_json ~f:(fun (nm, flds) ->
-      match Json.member "exception" flds with
-      | `Bool true -> Some(Reading.error nm flds)
-      | `Null | `Bool false -> None
-      | _ -> assert false)
-    @ common_errors)
+    List.sort_uniq
+      Structures.Error.compare
+      (List.map (fun (nm, flds) -> Reading.error nm flds) errs @ common_errors)
   in
   let (shapes, ops) = inline_shapes parsed_ops
     (List.fold_left (fun acc j ->
-      let (nm, _, _) as shape = Reading.shape j in
+      let (nm, _, _, _) as shape = Reading.shape j in
       StringTable.add nm shape acc)
-    StringTable.empty shp_json)
+    StringTable.empty shps)
   in
   mkdir_p [outdir; lib_name_dir; "lib"];
   mkdir_p [outdir; lib_name_dir; "lib_test"];
@@ -217,9 +221,9 @@ let main input override errors_path outdir =
   Printing.write_structure (lib_dir </> "errors_internal.ml") (Generate.errors errors common_errors);
   log "## Wrote %d error variants..." (List.length errors);
   List.iter (fun op ->
-    let (mli, ml) = Generate.op lib_name api_version protocol shapes op in
+    let (doc, mli, ml) = Generate.op lib_name api_version protocol shapes op in
     let modname = uncapitalize op.Operation.name in
-    Printing.write_signature (lib_dir </> (modname ^ ".mli")) mli;
+    Printing.write_signature ?doc (lib_dir </> (modname ^ ".mli")) mli;
     Printing.write_structure (lib_dir </> (modname ^ ".ml")) ml)
   ops;
   log "## Wrote %d/%d ops modules..."

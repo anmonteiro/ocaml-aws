@@ -114,7 +114,6 @@ let toposort (shapes : Shape.t StringTable.t) =
   T.iter (fun shape -> out := shape :: !out) graph;
   !out
 
-
 let types protocol shapes =
   let is_ec2 = protocol = "ec2" in
   let option_type shp = function
@@ -125,8 +124,17 @@ let types protocol shapes =
       Syntax.styreclet "t" (List.map (fun (nm,shp,req) ->
           (nm, option_type shp req)) fs)
     in
+    let ty_with_doc x =
+     match x.psig_desc with
+     | Psig_type (r, [ decl ]) ->
+       { x with
+         psig_desc = Psig_type (r, [ { decl with ptype_attributes = Syntax.doc_attrs v.Shape.doc } ])
+       }
+     | _ -> x
+    in
     let ty =
-      match v.Shape.content with
+     ty_with_doc @@
+      match v.content with
       | Shape.Structure [ ] ->
         (* Hack for a unit type since empty records aren't yet valid *)
         [%sigi: type t = unit]
@@ -190,24 +198,33 @@ let types protocol shapes =
   let build_module_structure v =
     let open Syntax in
     let mkrecty fs =
-      tyreclet "t" (List.map (fun (nm,shp,req) ->
-          (nm, option_type shp req)) fs)
+      tyreclet "t" (List.map (fun (nm,shp,req, doc) ->
+          (nm, option_type shp req, doc)) fs)
+    in
+    let ty_with_doc x =
+     match x.pstr_desc with
+     | Pstr_type (r, [ decl ]) ->
+       { x with
+         pstr_desc = Pstr_type (r, [ { decl with ptype_attributes = Syntax.doc_attrs v.Shape.doc } ])
+       }
+     | _ -> x
     in
     let ty =
+      ty_with_doc @@
       match v.Shape.content with
       | Shape.Structure [ ] ->
         (* Hack for a unit type since empty records aren't yet valid *)
         [%stri type t = unit]
       | Shape.Structure members ->
         mkrecty (List.map (fun m ->
-          (m.Structure.field_name, (String.capitalize_ascii m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
+          (m.Structure.field_name, (String.capitalize_ascii m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape, m.doc))
           members)
       | Shape.List (shp, _, _flatten) ->
         [%stri type t = [%t tname (shp ^ ".t") ] list]
       | Shape.Map ((kshp, _loc), (vshp, _)) ->
         [%stri type t = [%t ty2 "Hashtbl.t" (kshp ^ ".t") (vshp ^ ".t")]]
       | Shape.Enum opts ->
-        tyvariantlet "t" (List.map (fun t -> (Util.to_variant_name t, [])) opts)
+        tyvariantlet "t" (List.map (fun t -> (Util.to_variant_name t, [], None)) opts)
     in
     let make = match v.Shape.content with
       | Shape.Structure [ ] ->
@@ -511,18 +528,18 @@ let types protocol shapes =
     (* Don't emit to_headers / to_query if the op doesn't need them. *)
     let base = [ty] @ extra @ [ make; to_query; to_headers; to_json; of_json ] in
     (* Force capitalize the module name, because some shapes may have uncapitalized names *)
-    (String.capitalize_ascii v.Shape.name), base @ (if has_payload ~shapes v.name then [ of_headers ] else [ parse; to_xml ]) in
+    (String.capitalize_ascii v.Shape.name), base @ (if has_payload ~shapes v.name then [ of_headers ] else [ parse; to_xml ]), v.doc in
   let build_module v =
-    let name, itms = build_module_structure v in
+    let name, itms, doc = build_module_structure v in
     match v.Shape.depends_on with
     | Some dshp, false ->
-      let oname, oitms = build_module_structure dshp in
+      let oname, oitms, odoc = build_module_structure dshp in
       let sigs = build_module_signature v in
       let osigs = build_module_signature dshp in
       dshp.depends_on <- fst dshp.depends_on, true;
-      [ Syntax.rec_module [ (name, itms, sigs); oname, oitms, osigs ] ]
+      [ Syntax.rec_module [ name, itms, sigs, doc; oname, oitms, osigs, odoc ] ]
     | _, true -> []
-    | None, _ -> [ Syntax.module_ name itms ]
+    | None, _ -> [ Syntax.module_ ?doc name itms ]
   in
   let modules = List.concat (List.map build_module (toposort shapes)) in
   let imports =
@@ -819,8 +836,9 @@ let op service version protocol shapes op =
         | None -> None
       ]
   in
-  (** Tuple corresponding to (mli, ml) *)
-  ([ [%sigi: open Types]
+  (** Tuple corresponding to (doc, mli, ml) *)
+  (op.Operation.doc,
+   [ [%sigi: open Types]
    ; [%sigi: type input = [%t mkty op.Operation.input_shape]]
    ; [%sigi: type output = [%t mkty op.Operation.output_shape]]
    ; [%sigi: type error = Errors_internal.t]
@@ -842,10 +860,16 @@ let op service version protocol shapes op =
 
 
 let errors errs common_errors =
-  let errs = errs @ [Error.({shape_name = "UninhabitedError"; variant_name = "Uninhabited"; string_name = "Uninhabited"; http_code = None})] in
+  let errs =
+    errs @ [Error.({ shape_name = "UninhabitedError"
+                   ; variant_name = "Uninhabited"
+                   ; string_name = "Uninhabited"
+                   ; http_code = None
+                   ; doc = None})]
+  in
   let open Syntax in
   [ tyvariantlet "t"
-      (List.map (fun e -> (e.Error.variant_name, [])) errs)
+      (List.map (fun e -> (e.Error.variant_name, [], e.doc)) errs)
   ; [%stri let common = [%e (list (List.map (fun e -> ident e.Error.variant_name) common_errors))]]
   ; [%stri let to_http_code e =
     [%e matchvar (ident "e")

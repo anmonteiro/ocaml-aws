@@ -51,9 +51,17 @@ let ty1 nm1 nm2 = Typ.constr (lid nm1) [ty0 nm2]
 (* nm2 nm1 (as a type) *)
 let ty2 nm1 nm2 nm3 = Typ.constr (lid nm1) [ty0 nm2; ty0 nm3]
 
+let doc_attrs = function
+ | Some doc -> [Docstrings.(docs_attr (docstring doc !default_loc)) ]
+ | None -> []
+
 (* type nm = { fs.. } *)
 let tyreclet nm fs =
-  Str.type_ Recursive [Type.mk ~kind:(Ptype_record (List.map (fun (nm, ty) -> Type.field (strloc nm) ty) fs)) (strloc nm)]
+  Str.type_
+    Recursive
+    [Type.mk
+      ~kind:(Ptype_record (List.map (fun (nm, ty, doc) ->
+        Type.field ~attrs:(doc_attrs doc) (strloc nm) ty) fs)) (strloc nm)]
 
 (* type nm = { fs.. }  (in .mli) *)
 let styreclet nm fs =
@@ -62,8 +70,13 @@ let styreclet nm fs =
 (* type nm = | nm0 of ty0 | ... *)
 let tyvariantlet nm variants =
   Str.type_ Recursive
-    [Type.mk ~kind:(Ptype_variant
-                      (List.map (fun (cnm,args) -> Type.constructor ~args:(Pcstr_tuple args) (strloc cnm)) variants))
+    [Type.mk
+       ~kind:(Ptype_variant (List.map (fun (cnm, args, doc) ->
+         Type.constructor
+           ~attrs:(doc_attrs doc)
+           ~args:(Pcstr_tuple args)
+           (strloc cnm))
+         variants))
        (strloc nm)]
 
 (* type nm = | nm0 of ty0 | ... (in .mli) *)
@@ -134,13 +147,13 @@ let variant v = Exp.variant v None
 let variant1 v a = Exp.variant v (Some a)
 
 (* module nm = vs *)
-let module_ nm vs =
-  Str.module_ (Mb.mk (strloc nm) (Mod.structure vs))
+let module_ ?doc nm vs =
+  Str.module_ (Mb.mk ~attrs:(doc_attrs doc) (strloc nm) (Mod.structure vs))
 
 let rec_module nmvs =
   Str.rec_module
-    (List.map (fun (nm, vs, sigs) ->
-      Mb.mk (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
+    (List.map (fun (nm, vs, sigs, doc) ->
+      Mb.mk ~attrs:(doc_attrs doc) (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
     nmvs)
 
 (* match exp with | Constructor -> body | Constructor -> body ... *)

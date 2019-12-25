@@ -53,6 +53,7 @@ module Structure : sig
     ; required : bool
     ; payload : bool
     ; flattened : bool
+    ; doc : string option
     }
 
   type t = member list
@@ -97,14 +98,15 @@ module Shape : sig
    { name : string
    ; content : contents
      (* generate a recursive module; bool is if already generated both *)
+   ; doc : string option
    ; mutable depends_on: t option * bool }
 
   (** We parse all shapes, but after inlining/filtering, the base
       types (Boolean, Double, et) no longer exist, so the bulk of the
       code deals with the [t] above, but we parse into this [parsed]
       type, which is Name, Shape Name, Contents if Structure,List, or
-      Enum. *)
-  type parsed = string * string * contents option
+      Enum; Documentation. *)
+  type parsed = string * string * contents option * string option
 
 end
 
@@ -127,6 +129,7 @@ module Operation : sig
     ; output_shape : string option
     ; output_wrapper : string option
     ; errors : string list
+    ; doc : string option
     }
 end
 
@@ -150,6 +153,7 @@ module Error : sig
     ; string_name : string
     ; variant_name : string
     ; http_code : int option
+    ; doc : string option
     }
 
   (** Ignores the legacy shape name to remove duplicates *)
