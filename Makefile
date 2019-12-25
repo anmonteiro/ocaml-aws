@@ -23,21 +23,7 @@ update-version:
 endpoints:
 	dune exec endpoint-gen -- -i input/endpoints.json -o lib
 
-LIBRARIES := \
-	aws-ec2 \
-	aws-autoscaling \
-	aws-cloudformation \
-	aws-cloudtrail \
-	aws-cloudwatch \
-	aws-elasticache \
-	aws-elb \
-	aws-rds \
-	aws-sdb \
-	aws-ssm \
-	aws-sts \
-	aws-s3  \
-	aws-route53 \
-	aws-sqs \
+LIBRARIES := $(shell for file in `find ./input -type d -depth 1 -exec basename {} \;`; do echo "aws-$$file"; done)
 
 .PHONY: $(LIBRARIES)
 $(LIBRARIES): aws-%:

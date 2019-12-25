@@ -63,7 +63,10 @@ let dune ~lib_name ~extra_libs ~service_name =
  (flags (:standard -w -27))
  (libraries aws %s))
 |}
- lib_name lib_name service_name (String.concat " " extra_libs)
+ (String.map (function | '-' -> '_' | c -> c) lib_name)
+ lib_name
+ service_name
+ (String.concat " " extra_libs)
 
 let dune_test ~lib_name =
   (* Necessary cause '%' is reserved string in 'sprintf' and I didn't know

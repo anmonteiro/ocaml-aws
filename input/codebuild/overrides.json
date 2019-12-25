@@ -1,0 +1,6 @@
+{
+  "referenceUrl": "https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html",
+  "operationUrl": "https://docs.aws.amazon.com/codebuild/latest/APIReference/API_",
+  "libraryName": "aws_codebuild",
+  "libraryVersion": "0.1.0"
+}

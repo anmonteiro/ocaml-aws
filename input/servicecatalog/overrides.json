@@ -1,0 +1,6 @@
+{
+  "referenceUrl": "https://docs.aws.amazon.com/servicecatalog/latest/dg/api-reference.html",
+  "operationUrl": "https://docs.aws.amazon.com/servicecatalog/latest/dg/API_",
+  "libraryName": "aws_servicecatalog",
+  "libraryVersion": "0.1.0"
+}

@@ -1,0 +1,6 @@
+{
+  "referenceUrl": "https://docs.aws.amazon.com/lake-formation/latest/dg/api-reference.html",
+  "operationUrl": "https://docs.aws.amazon.com/lake-formation/latest/dg/API_",
+  "libraryName": "aws_lakeformation",
+  "libraryVersion": "0.1.0"
+}

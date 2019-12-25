@@ -95,10 +95,7 @@ let svc_name_info dir =
   let json = Yojson.Basic.from_file input in
   let meta = Json.member "metadata" json in
   let service_name = Json.(member "serviceFullName" meta |> to_string) in
-  let service_id = match Json.(member "serviceId" meta |> to_string_option) with
-   | Some id -> id
-   | None -> service_name
-  in
+  let service_id = Json.(member "serviceId" meta |> to_string) in
   let endpoint_prefix = Json.(member "endpointPrefix" meta |> to_string) in
   service_id, endpoint_prefix, service_name
 

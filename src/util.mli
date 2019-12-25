@@ -40,6 +40,7 @@ module Printing : sig
   val write_signature : string -> Parsetree.signature -> unit
 end
 
+val to_lib_name : string -> string
 
 (** This translates strings into legal variant identfiers. This is
     used, for example, in creating enum types and exception variants. *)
