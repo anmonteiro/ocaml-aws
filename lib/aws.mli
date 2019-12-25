@@ -351,3 +351,5 @@ module BaseTypes : sig
 end
 
 module Endpoints = Endpoints
+
+module Services = Services

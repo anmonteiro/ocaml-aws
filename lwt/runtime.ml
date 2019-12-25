@@ -33,46 +33,112 @@
 
 open Lwt.Infix
 
+type t =
+  { conn : Piaf.Client.t
+  ; uri : Uri.t
+  ; region : string
+  ; access_key : string
+  ; secret_key : string
+  }
+
+let to_meth = function
+  | #Piaf.Method.t as t -> t
+  | `PATCH -> `Other "PATCH"
+
+let create_connection ~region ~access_key ~secret_key service =
+  let open Aws in
+  let svc = Services.to_string service in
+  let uri = Uri.of_string (Util.of_option_exn (Endpoints.url_of svc region)) in
+  Piaf.Client.create uri >|= function
+    | Ok conn ->
+      Ok { conn; uri; region; access_key; secret_key }
+    | Error msg ->
+      Error (Aws.Error.TransportError msg)
+
+let run_request_generic
+  (type input)
+  (type output)
+  (type error)
+  (module M : Aws.Call with type input = input
+                        and type output = output
+                        and type error = error)
+  req_fn ~headers ~body ~meth path =
+  let open Piaf in
+  Format.eprintf "HEADERS: %a@." Headers.pp_hum (Headers.of_list headers);
+  Lwt.catch (fun () ->
+    req_fn
+      ~headers
+      ~body:(Body.of_string body)
+      ~meth:(to_meth meth)
+      path
+    >>= function
+      | Ok (resp, body) ->
+        Format.eprintf "RESP: %a@." Response.pp_hum resp;
+        Body.to_string body >|= fun body ->
+        let code = Status.to_code resp.status in
+        begin if code >= 300 then
+          let open Aws.Error in
+          let aws_error =
+            match parse_aws_error body with
+            | `Error message -> BadResponse { body; message }
+            | `Ok ers ->
+              AwsError (List.map (fun (aws_code, message) ->
+                match M.parse_error code aws_code with
+                | None   -> (Unknown aws_code, message)
+                | Some e -> (Understood e    , message))
+                ers)
+          in
+          Error (HttpError (code, aws_error))
+        else
+         let header_list = Headers.to_list resp.headers in
+          match M.of_http header_list body with
+          | `Ok v -> Ok v
+          | `Error t -> Error (Aws.Error.HttpError (code, t))
+        end
+      | Error _ -> assert false)
+  (function
+    | Failure msg -> Lwt.return (Error (Aws.Error.TransportError msg))
+    | exn         -> Lwt.fail exn)
+
 let run_request
     (type input)
     (type output)
     (type error)
-    ~region
-    ~access_key
-    ~secret_key
+    t
     (module M : Aws.Call with type input = input
                           and type output = output
                           and type error = error)
     (inp : M.input)
   =
+  let { conn; region; access_key; secret_key; _ } = t in
   let meth, uri, headers, body =
     Aws.Signing.sign_request ~access_key ~secret_key ~service:M.service ~region (M.to_http M.service region inp)
   in
-  let open Cohttp in
-  let headers = Header.of_list headers in
-  Lwt.catch (fun () ->
-    Cohttp_lwt_unix.Client.call ~headers ~body:(Cohttp_lwt.Body.of_string body) meth uri >>= fun (resp, body) ->
-    Cohttp_lwt.Body.to_string body >|= fun body ->
-    let code = Code.code_of_status (Response.status resp) in
-    begin if code >= 300 then
-      let open Aws.Error in
-      let aws_error =
-        match parse_aws_error body with
-        | `Error message -> BadResponse { body; message }
-        | `Ok ers ->
-          AwsError (List.map (fun (aws_code, message) ->
-            match M.parse_error code aws_code with
-            | None   -> (Unknown aws_code, message)
-            | Some e -> (Understood e    , message))
-            ers)
-      in
-      `Error (HttpError (code, aws_error))
-    else
-     let header_list = Cohttp.Header.to_list (Response.headers resp) in
-      match M.of_http header_list body with
-      | `Ok v -> `Ok v
-      | `Error t -> `Error (Aws.Error.HttpError (code, t))
-    end)
-  (function
-    | Failure msg -> Lwt.return (`Error (Aws.Error.TransportError msg))
-    | exn         -> Lwt.fail exn)
+  run_request_generic
+    (module M)
+    (fun ~headers ~body ~meth path ->
+      Piaf.Client.request conn ~headers ~body ~meth path)
+    ~headers ~body ~meth (Uri.path_and_query uri)
+
+module Oneshot = struct
+  let run_request
+      (type input)
+      (type output)
+      (type error)
+      ~region
+      ~access_key
+      ~secret_key
+      (module M : Aws.Call with type input = input
+                            and type output = output
+                            and type error = error)
+      (inp : M.input)
+    =
+    let meth, uri, headers, body =
+      Aws.Signing.sign_request ~access_key ~secret_key ~service:M.service ~region (M.to_http M.service region inp)
+    in
+    run_request_generic
+      (module M)
+      (fun ~headers ~body ~meth uri ->
+        Piaf.Client.Oneshot.request ~headers ~body ~meth uri)
+      ~headers ~body ~meth uri
+end

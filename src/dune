@@ -1,6 +1,6 @@
 (executables
- (names aws_gen endpoint_gen)
- (public_names aws-gen endpoint-gen)
+ (names aws_gen endpoint_gen svc_gen)
+ (public_names aws-gen endpoint-gen svc-gen)
  (package aws-gen)
  (preprocess
   (pps ppxlib.metaquot))

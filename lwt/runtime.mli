@@ -31,9 +31,25 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
+type t
+
+val create_connection
+  :  region:string
+  -> access_key:string
+  -> secret_key: string
+  -> Aws.Services.t
+  -> (t, 'error Aws.Error.t) result Lwt.t
+
 val run_request :
-  region:string ->
-  access_key:string ->
-  secret_key: string ->
+  t ->
   ('input, 'output, 'error) Aws.call ->
-  'input -> [`Ok of 'output | `Error of 'error Aws.Error.t] Lwt.t
+  'input -> ('output, 'error Aws.Error.t) result Lwt.t
+
+module Oneshot : sig
+  val run_request :
+    region:string ->
+    access_key:string ->
+    secret_key: string ->
+    ('input, 'output, 'error) Aws.call ->
+    'input -> ('output, 'error Aws.Error.t) result Lwt.t
+end
