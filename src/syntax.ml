@@ -156,6 +156,11 @@ let rec_module nmvs =
       Mb.mk ~attrs:(doc_attrs doc) (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
     nmvs)
 
+let modalias nm alias =
+ Sig.module_ (Md.mk (strloc nm) (Mty.alias (lid alias)))
+
+let modident nm = Mod.ident (lid nm)
+
 (* match exp with | Constructor -> body | Constructor -> body ... *)
 let matchvar exp branches = Exp.match_ exp (List.map (fun (nm, body) ->
     Exp.case (Pat.construct (lid nm) None) body) branches)
