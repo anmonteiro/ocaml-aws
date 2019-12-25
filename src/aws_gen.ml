@@ -199,10 +199,16 @@ let main input override errors_path outdir =
         | _ -> assert false)
     shp_json
   in
+  let svc_errors = List.map (fun (nm, flds) -> Reading.error nm flds) errs in
   let errors =
     List.sort_uniq
       Structures.Error.compare
-      (List.map (fun (nm, flds) -> Reading.error nm flds) errs @ common_errors)
+      (svc_errors @
+      (* Filter out errors from common that we read from the service description. *)
+      (List.filter (fun { Error.variant_name; _ } ->
+        not (List.exists (fun { Error.variant_name = svc_error; _ } ->
+         svc_error = variant_name) svc_errors))
+        common_errors))
   in
   let (shapes, ops) = inline_shapes parsed_ops
     (List.fold_left (fun acc j ->

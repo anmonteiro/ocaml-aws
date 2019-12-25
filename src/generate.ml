@@ -836,12 +836,28 @@ let op service version protocol shapes op =
         | None -> None
       ]
   in
+  let mk_modalias nm alias =
+   let alias = match alias with
+   | None -> "Aws.BaseTypes.Unit"
+   | Some alias -> alias
+   in
+   modalias nm alias
+  in
+  let mk_modident x =
+   let nm = match x with
+   | None -> "Aws.BaseTypes.Unit"
+   | Some alias -> alias
+   in
+   modident nm
+  in
   (** Tuple corresponding to (doc, mli, ml) *)
   (op.Operation.doc,
    [ [%sigi: open Types]
    ; [%sigi: type input = [%t mkty op.Operation.input_shape]]
    ; [%sigi: type output = [%t mkty op.Operation.output_shape]]
    ; [%sigi: type error = Errors_internal.t]
+   ; mk_modalias "Input" op.Operation.input_shape
+   ; mk_modalias "Output" op.Operation.output_shape
    ; [%sigi: include Aws.Call
                 with type input := input
                  and type output := output
@@ -852,6 +868,8 @@ let op service version protocol shapes op =
    ; [%stri type input = [%t mkty op.Operation.input_shape ]]
    ; [%stri type output = [%t mkty op.Operation.output_shape]]
    ; [%stri type error = Errors_internal.t]
+   ; [%stri module Input = [%m mk_modident op.Operation.input_shape]]
+   ; [%stri module Output = [%m mk_modident op.Operation.output_shape]]
    ; [%stri let service = [%e (str service)]]
    ; [%stri let to_http service region req = [%e to_body]]
    ; [%stri let of_http headers body = [%e of_body]]
