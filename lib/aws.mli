@@ -347,7 +347,11 @@ module BaseTypes : sig
   module Long     : Base with type t = int
   module Double   : Base with type t = float
   module Float    : Base with type t = float
-  module DateTime : Base with type t = CalendarLib.Calendar.t
+  module DateTime : sig
+   include Base with type t = CalendarLib.Calendar.t
+
+   val of_http_string : string -> t
+  end
 end
 
 module Endpoints = Endpoints

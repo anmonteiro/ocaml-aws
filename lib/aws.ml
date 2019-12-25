@@ -206,6 +206,12 @@ module Time = struct
 
   let parse s = P.from_fstring "%Y-%m-%dT%T" (String.sub s 0 (String.length s - 5))
 
+  (* From RFC7231§7.1.1.1:
+   *   An example of the preferred format is
+   *
+   *     Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate *)
+  let parse_http s = P.from_fstring "%a, %d %b %Y %H:%M:%S GMT" s
+
   let format t = P.sprint "%Y-%m-%dT%T.000Z" t
 end
 
@@ -439,6 +445,7 @@ module BaseTypes = struct
       | Some s -> try Some(Time.parse s) with Invalid_argument _ -> None
     let to_string c = Time.format c
     let of_string s = Time.parse s
+    let of_http_string s = Time.parse_http s
   end
 
 end

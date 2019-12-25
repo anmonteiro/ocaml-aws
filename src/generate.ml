@@ -474,10 +474,17 @@ let types protocol shapes =
                 | Some name -> name
                 | None      -> mem.Structure.name
               in
+              let of_string_fn = match mem.Structure.shape with
+               | "DateTime" ->
+                 (* If we're reading from HTTP headers, the date string is
+                  * specified in the RFC7231§7.1.1.1 format. *)
+                 ".of_http_string"
+               | _ -> ".of_string"
+              in
               let b =
                 [%expr Util.option_map
                   (Headers.Assoc.find [%e (str loc_name)] headers)
-                  [%e ident ((String.capitalize_ascii mem.Structure.shape) ^ ".of_string")]]
+                  [%e ident ((String.capitalize_ascii mem.Structure.shape) ^ of_string_fn)]]
               in
               let op =
                 if mem.Structure.required then
