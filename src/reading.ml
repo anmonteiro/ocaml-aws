@@ -70,6 +70,7 @@ let parse_member rq payload (mnm, mj) =
   ; flattened = (match Json.member "flattened" mj with
     | `Null -> false
     | loc   -> (Json.to_bool loc))
+  ; doc = Json.member "documentation" mj |> Json.to_string_option
   }
 
 let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
@@ -85,7 +86,8 @@ let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
       | Some x -> Some (Json.to_string x)
       | None -> None
     in
-    (nm, "structure", Some (Shape.Structure (List.map (parse_member required payload) member)))
+    let doc = Json.member "documentation" j |> Json.to_string_option in
+    (nm, "structure", Some (Shape.Structure (List.map (parse_member required payload) member)), doc)
   | `String "list" ->
     let member = Json.member_exn "member" j in
     let shape  = Json.member_exn "shape" member |> Json.to_string in
@@ -98,7 +100,8 @@ let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
       | `Null    -> None
       | loc_name -> Some (Json.to_string loc_name)
     in
-    (nm, "list", Some (Shape.List(shape, loc_name, flattened)))
+    let doc = Json.member "documentation" j |> Json.to_string_option in
+    (nm, "list", Some (Shape.List(shape, loc_name, flattened)), doc)
   | `String "map" ->
     let key = Json.member_exn "key" j in
     let key_shape  = Json.member_exn "shape" key |> Json.to_string in
@@ -114,14 +117,16 @@ let shape ((nm, j) : (string * Yojson.Basic.t)) : Shape.parsed =
       | `Null    -> None
       | loc_name -> Some (Json.to_string loc_name)
     in
-    (nm, "map", Some (Shape.Map((key_shape, key_loc_name), (value_shape, value_loc_name))))
+    let doc = Json.member "documentation" j |> Json.to_string_option in
+    (nm, "map", Some (Shape.Map((key_shape, key_loc_name), (value_shape, value_loc_name))), doc)
   | `String ty ->
+    let doc = Json.member "documentation" j |> Json.to_string_option in
     if ty = "string" && Json.member "enum" j <> `Null then
       let enum    = Json.(member_exn "enum" j |> to_list) in
       let options = List.map Json.to_string enum in
-      (nm, "enum", Some (Shape.Enum options))
+      (nm, "enum", Some (Shape.Enum options), doc)
     else
-      (nm, ty, None)
+      (nm, ty, None, doc)
   | _ -> failwith (Printf.sprintf "Couldn't find 'type' on shape with name '%s'" nm)
 
 let op (_nm, j) : Operation.t =
@@ -153,6 +158,7 @@ let op (_nm, j) : Operation.t =
     | errors -> Util.filter_map (Json.to_list errors) ~f:(fun e ->
         try Some Json.(member "error" e |> member "code" |> to_string) with _ -> None)
   in
+  let doc = Json.member "documentation" j |> Json.to_string_option in
   { Operation.name
   ; http_meth
   ; http_uri
@@ -160,6 +166,7 @@ let op (_nm, j) : Operation.t =
   ; output_shape
   ; output_wrapper
   ; errors
+  ; doc
   }
 
 (* there might be a weird bug here that is not generating the errors *)
@@ -177,10 +184,12 @@ let error shape_name json =
       | exception _ -> None
       | _      -> assert false
     in
+    let doc = Json.member "documentation" json |> Json.to_string_option in
     { Error.shape_name
     ; string_name = code
     ; variant_name = Util.to_variant_name code
     ; http_code
+    ; doc
     }
   with _ ->
     failwith (Printf.sprintf "Couldn't parse error %s (fields missing or malformed): '%s'"

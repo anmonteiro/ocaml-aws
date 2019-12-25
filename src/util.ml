@@ -38,8 +38,15 @@ module Printing = struct
     let out = open_out file in
     try f out; flush out; close_out out with _ -> close_out out
 
-  let write_all ~filename contents =
+  let write_all ~filename ?doc contents =
     with_output filename (fun out ->
+      begin match doc with
+      | Some doc ->
+        (* Small hack to write a documentation comment at the top of the file.
+         * Needs to be in quotes (%S) otherwise OCaml thinks there are
+         * unterminated string literals in some cases. *)
+        output_string out (Format.asprintf "(** %S *)@\n" doc)
+      | None -> () end;
       output_string out contents)
 
   module Migration = Ppxlib.Selected_ast.To_ocaml
@@ -53,8 +60,8 @@ module Printing = struct
     Pprintast.signature f (Migration.copy_signature x);
     Format.flush_str_formatter ()
 
-  let write_signature filename es =
-    write_all ~filename (string_of_signature es)
+  let write_signature ?doc filename es =
+    write_all ?doc ~filename (string_of_signature es)
 end
 
 module StringTable = Map.Make(String)
@@ -137,12 +144,12 @@ let prim_type_map =
 let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t) =
   let replace_shape default =
     try
-      let _, shptyp, _ = StringTable.find default shapes in
+      let _, shptyp, _, _ = StringTable.find default shapes in
       List.assoc shptyp prim_type_map
     with Not_found -> default
   in
   let new_shapes =
-    StringTable.fold (fun key (nm, ty, contents) acc ->
+    StringTable.fold (fun key (nm, ty, contents, doc) acc ->
       if is_prim ty then
         acc
       else
@@ -159,13 +166,13 @@ let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t)
             Shape.Map ((replace_shape kshp, kln), (replace_shape vshp, vln))
           | Some (Shape.Enum opts) -> Shape.Enum opts
         in
-        StringTable.add key { Shape.name = nm; content; depends_on = None, false } acc)
+        StringTable.add key { Shape.name = nm; content; depends_on = None, false; doc } acc)
     shapes StringTable.empty
   in
   let is_empty_struct shp =
     try
       match StringTable.find shp shapes with
-      | (_, _, Some (Shape.Structure [])) -> true
+      | (_, _, Some (Shape.Structure []), _) -> true
       | _                                 -> false
     with Not_found -> false
   in

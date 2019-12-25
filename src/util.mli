@@ -34,10 +34,10 @@
 open Ppxlib.Selected_ast.Ast
 
 module Printing : sig
-  val write_all : filename:string -> string -> unit
+  val write_all : filename:string -> ?doc:string -> string -> unit
 
   val write_structure : string -> Parsetree.structure -> unit
-  val write_signature : string -> Parsetree.signature -> unit
+  val write_signature : ?doc:string -> string -> Parsetree.signature -> unit
 end
 
 val to_lib_name : string -> string
