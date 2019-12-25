@@ -2788,5 +2788,5 @@ let endpoint_of svc_name region =
   | _ -> None
 let url_of svc_name region =
   match endpoint_of svc_name region with
-  | Some var -> Some ("https://" ^ var)
+  | Some host -> Some ("https://" ^ host)
   | None -> None

@@ -175,7 +175,7 @@ module Request = struct
 
   type headers = (string * string) list
 
-  type t = (meth * Uri.t * headers * string)
+  type t = meth * Uri.t * headers * string
 
 end
 
@@ -444,6 +444,7 @@ module BaseTypes = struct
 end
 
 module Endpoints = Endpoints
+module Services = Services
 
 module Signing = struct
 

@@ -31,8 +31,6 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Cmdliner
-
 open Structures
 open Util
 open Ppxlib
@@ -244,6 +242,7 @@ let main input override errors_path outdir =
     (Templates.opam ~service_name);
 
 module CommandLine = struct
+  open Cmdliner
   let input =
     let doc = "JSON file specifying library to generate" in
     Arg.(required & opt (some non_dir_file) None & info ["i"; "input-file"] ~docv:"Filename" ~doc)
@@ -268,6 +267,7 @@ module CommandLine = struct
 end
 
 let () =
+  let open Cmdliner in
   match Term.eval CommandLine.(gen_t, info) with
   | `Error _ -> exit 1
   | _        -> exit 0

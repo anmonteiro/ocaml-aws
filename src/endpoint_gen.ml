@@ -1,4 +1,6 @@
-open Cmdliner
+open Ppxlib
+
+let loc = !Ast_helper.default_loc
 
 let (</>) a b = Filename.concat a b
 let log s = Printf.eprintf (s ^^ "\n%!")
@@ -12,42 +14,42 @@ let write_endpoint
   svc_name
   dns_suffix
   (default_hostname : string option)
-  ((region, endpoint) : (string * Endpoints_t.endpoint)) = Syntax.(
+  ((region, endpoint) : (string * Endpoints_t.endpoint)) =
+  let open Syntax in
   let host = match (endpoint.hostname, default_hostname) with
-    | (None, None) -> (ident "None")
+    | (None, None) -> [%expr None]
     | (None, Some(hostname))
-    | (Some(hostname), _) -> (app1 "Some" (str (var_replace hostname svc_name region dns_suffix))) in
+    | (Some(hostname), _) ->
+      [%expr Some [%e str (var_replace hostname svc_name region dns_suffix)]]
+  in
   (region, host)
-)
+
 
 let write_service
   dns_suffix
   (partition_defaults : Endpoints_t.partition_defaults)
-  ((svc_name, svc) : (string * Endpoints_t.service)) = Syntax.(
-  (svc_name, (matchstrs
-    (ident "region")
-    (svc.endpoints |> List.map (write_endpoint svc_name dns_suffix partition_defaults.hostname))
-    (ident "None")))
-)
+  ((svc_name, svc) : (string * Endpoints_t.service)) =
+    let open Syntax in
+    svc_name, (matchstrs
+      [%expr region]
+      (svc.endpoints |> List.map (write_endpoint svc_name dns_suffix partition_defaults.hostname))
+      [%expr None])
 
-let write_partition (p : Endpoints_t.partition) = Syntax.(
-  let_ "endpoint_of"
-    (fun2 "svc_name" "region"
-      (matchstrs
-        (ident "svc_name")
+let write_partition (p : Endpoints_t.partition) =
+  let match_ = Syntax.matchstrs
+        [%expr svc_name]
         (p.services |> List.map (write_service p.dns_suffix p.defaults))
-        (ident "None")))
-)
+        [%expr None]
+  in
+  [%stri let endpoint_of svc_name region = [%e match_]]
 
-let write_url_of = Syntax.(
-  let_ "url_of"
-    (fun2 "svc_name" "region"
-      (matchoption
-        (app2 "endpoint_of" (ident "svc_name") (ident "region"))
-        (app1 "Some" (app2 "^" (str "https://") (ident "var")))
-        (ident "None")
-      ))
-)
+let write_url_of =
+  [%stri
+    let url_of svc_name region =
+      match endpoint_of svc_name region with
+      | Some host -> Some ("https://" ^ host)
+      | None -> None
+  ]
 
 let main input outdir =
   log "Start processing endpoints";
@@ -64,6 +66,8 @@ let main input outdir =
   close_in inc;
 
 module CommandLine = struct
+  open Cmdliner
+
   let input =
     let doc = "JSON file specifying AWS endpoints to generate" in
     Arg.(required & opt (some non_dir_file) None & info ["i"; "input-file"] ~docv:"Filename" ~doc)
@@ -81,6 +85,7 @@ end
 
 (** entrypoint *)
 let () =
+  let open Cmdliner in
   match Term.eval CommandLine.(gen_t, info) with
   | `Error _ -> exit 1
   | _        -> exit 0

@@ -30,7 +30,7 @@ LIBRARIES := \
 	aws-cloudtrail \
 	aws-cloudwatch \
 	aws-elasticache \
-	aws-elasticloadbalancing \
+	aws-elb \
 	aws-rds \
 	aws-sdb \
 	aws-ssm \
