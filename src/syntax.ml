@@ -37,10 +37,14 @@ open Parsetree
 open Ast_helper
 open Asttypes
 
-
 let strloc txt = { txt; loc = !default_loc }
 
 let lid txt = strloc (Longident.parse txt)
+
+(* open Module (in .ml) *)
+let open_ nm = Str.open_ (Opn.mk (Mod.ident (lid nm)))
+(* open Module (in .mli) *)
+let sopen nm = Sig.open_ (Opn.mk (lid nm))
 
 (* nm (as a type) *)
 let ty0 nm = Typ.constr (lid nm) []
@@ -156,10 +160,16 @@ let rec_module nmvs =
       Mb.mk ~attrs:(doc_attrs doc) (strloc nm) (Mod.constraint_ (Mod.structure vs) (Mty.signature sigs)))
     nmvs)
 
-let modalias nm alias =
+let smodalias nm alias =
  Sig.module_ (Md.mk (strloc nm) (Mty.alias (lid alias)))
 
+let modsig nm sigs =
+ Sig.module_ (Md.mk (strloc nm) (Mty.signature sigs))
+
 let modident nm = Mod.ident (lid nm)
+
+let modalias nm alias =
+ Str.module_ (Mb.mk (strloc nm) (modident alias))
 
 (* match exp with | Constructor -> body | Constructor -> body ... *)
 let matchvar exp branches = Exp.match_ exp (List.map (fun (nm, body) ->
@@ -171,3 +181,6 @@ let matchstrs exp branches els =
       Exp.case (Pat.constant (Pconst_string (nm, None))) body) branches)
                   @ [Exp.case (Pat.any ()) els])
 
+let option_type shp = function
+  | true -> ty0 shp
+  | false -> ty1 "option" shp

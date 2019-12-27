@@ -104,6 +104,26 @@ module Json = struct
     original)
 end
 
+let op_name_maps ops =
+  (* shape -> op_name *)
+  let input_lst, output_lst =
+   List.split (List.map (fun { Operation.input_shape; output_shape; name; _ } ->
+    match input_shape, output_shape with
+    | Some i, Some o ->
+      Some (i, name), Some (o, name)
+    | Some i, None ->
+      Some (i, name), None
+    | None, Some o ->
+      None , Some (o, name)
+    | None, None -> None, None) ops)
+  in
+  let add lst =
+    List.fold_left (fun acc (k, v) -> StringTable.add k v acc)
+    StringTable.empty
+    (List.filter_map (fun x -> x) lst)
+  in
+  add input_lst, add output_lst
+
 let log s = Printf.eprintf (s ^^ "\n%!")
 let (</>) a b = Filename.concat a b
 
@@ -117,18 +137,6 @@ let rec mkdir_p ?(root="") dirs =
       with Unix.Unix_error (Unix.EEXIST,_,_) -> ()
     end;
     mkdir_p ~root:dir ds
-
-let generate_types_module lib_dir (imports, modules) =
-  (* Arbitrary, but `ocamlopt` stack overflows on really large files *)
-  let len = List.length modules in
-  if (len > 1000) then begin
-   let types_1, types_2 = split_with_i (fun i _itm -> i <= len / 2) modules in
-    Printing.write_structure (lib_dir </> "types_1.ml") (imports @ types_1);
-    Printing.write_structure (lib_dir </> "types_2.ml") (imports @ [[%stri open Types_1]] @ types_2);
-    Printing.write_structure (lib_dir </> "types.ml") [[%stri include Types_1]; [%stri include Types_2]];
-  end
-  else
-    Printing.write_structure (lib_dir </> "types.ml") (imports @ modules)
 
 let main input override errors_path outdir =
   log "## Generating...";
@@ -221,13 +229,15 @@ let main input override errors_path outdir =
   let dir     = outdir </> lib_name_dir in
   let lib_dir = dir    </> "lib" in
   let lib_dir_test = dir </> "lib_test" in
-  generate_types_module lib_dir (Generate.types protocol shapes);
+  let op_names = op_name_maps ops in
+  let imports, modules = Generate.types protocol op_names shapes in
+  Printing.write_structure (lib_dir </> "types.ml") (imports @ modules);
   log "## Wrote %d/%d shape modules..."
     (StringTable.cardinal shapes) (List.length shp_json);
   Printing.write_structure (lib_dir </> "errors_internal.ml") (Generate.errors errors common_errors);
   log "## Wrote %d error variants..." (List.length errors);
   List.iter (fun op ->
-    let (doc, mli, ml) = Generate.op lib_name api_version protocol shapes op in
+    let (doc, mli, ml) = Generate.op lib_name api_version protocol shapes op_names op in
     let modname = uncapitalize op.Operation.name in
     Printing.write_signature ?doc (lib_dir </> (modname ^ ".mli")) mli;
     Printing.write_structure (lib_dir </> (modname ^ ".ml")) ml)
