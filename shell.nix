@@ -1,8 +1,8 @@
 let
   pkgs = import ./nix/sources.nix {};
   inherit (pkgs) lib;
-  piafPkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; });
-  piafDrvs = lib.filterAttrs (_: value: lib.isDerivation value) piafPkgs;
+  awsPkgs = pkgs.recurseIntoAttrs (import ./nix { inherit pkgs; });
+  awsDrvs = lib.filterAttrs (_: value: lib.isDerivation value) awsPkgs;
 
   filterDrvs = inputs:
     lib.filter
@@ -11,14 +11,14 @@ let
         # the shell. They always have `pname`
         !(lib.hasAttr "pname" drv) ||
         drv.pname == null ||
-        !(lib.any (name: name == drv.pname || name == drv.name) (lib.attrNames piafDrvs)))
+        !(lib.any (name: name == drv.pname || name == drv.name) (lib.attrNames awsDrvs)))
       inputs;
 
 in
   with pkgs;
 
   (mkShell {
-    inputsFrom = lib.attrValues piafDrvs;
+    inputsFrom = lib.attrValues awsDrvs;
     buildInputs = with ocamlPackages; [ merlin ocamlformat utop ];
   }).overrideAttrs (o : {
     propagatedBuildInputs = filterDrvs o.propagatedBuildInputs;
