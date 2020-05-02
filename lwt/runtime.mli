@@ -34,7 +34,8 @@
 type t
 
 val create_connection
-  :  region:string
+  :  ?config:Piaf.Config.t
+  -> region:string
   -> access_key:string
   -> secret_key: string
   -> Aws.Services.t

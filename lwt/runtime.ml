@@ -45,11 +45,11 @@ let to_meth = function
   | #Piaf.Method.t as t -> t
   | `PATCH -> `Other "PATCH"
 
-let create_connection ~region ~access_key ~secret_key service =
+let create_connection ?config ~region ~access_key ~secret_key service =
   let open Aws in
   let svc = Services.to_string service in
   let uri = Uri.of_string (Util.of_option_exn (Endpoints.url_of svc region)) in
-  Piaf.Client.create uri >|= function
+  Piaf.Client.create ?config uri >|= function
     | Ok conn ->
       Ok { conn; uri; region; access_key; secret_key }
     | Error msg ->
@@ -72,10 +72,11 @@ let run_request_generic
       ~meth:(to_meth meth)
       path
     >>= function
-      | Ok (resp, body) ->
+      | Ok resp ->
+        let body = Response.body resp in
         Format.eprintf "RESP: %a@." Response.pp_hum resp;
         Body.to_string body >|= fun body ->
-        let code = Status.to_code resp.status in
+        let code = Status.to_code (Response.status resp) in
         begin if code >= 300 then
           let open Aws.Error in
           let aws_error =
@@ -90,7 +91,7 @@ let run_request_generic
           in
           Error (HttpError (code, aws_error))
         else
-         let header_list = Headers.to_list resp.headers in
+         let header_list = Headers.to_list (Response.headers resp) in
           match M.of_http header_list body with
           | `Ok v -> Ok v
           | `Error t -> Error (Aws.Error.HttpError (code, t))
