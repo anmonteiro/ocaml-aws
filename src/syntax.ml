@@ -90,6 +90,10 @@ let styvariantlet nm variants =
                       (List.map (fun (cnm,args) -> Type.constructor ~args:(Pcstr_tuple args) (strloc cnm)) variants))
        (strloc nm)]
 
+(* type nm = nm0 * nm1 *)
+let tytup _nm elts =
+ Typ.tuple elts
+
 (* fun ~arg -> body *)
 let funlab arg body =
   Exp.fun_ (Labelled arg) None (Pat.var (strloc arg)) body

@@ -121,6 +121,8 @@ module type Call = sig
       for a single API. *)
   type error
 
+  val streaming : bool
+
   (** The AWS service, for example, 'ec2'. This is used for request
       signing, and to determine the endpoint to send the request. *)
   val service : string
@@ -133,7 +135,12 @@ module type Call = sig
 
   (** This function converts from a HTTP response body to an output
       or an error if the response could not be decoded. *)
-  val of_http : (string * string) list -> string -> [`Ok of output | `Error of error Error.error_response]
+  val of_http
+    :  (string * string) list
+    -> [ `String of string | `Streaming of Piaf.Body.t ]
+    -> [ `Ok of output
+       | `Error of error Error.error_response
+       ]
 
   (** This function parses an AWS error (which has been successfully
       deserialized from XML) into an API specific native error that

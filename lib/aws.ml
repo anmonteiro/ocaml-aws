@@ -185,9 +185,14 @@ module type Call = sig
   type output
   type error
 
+  val streaming : bool
   val service : string
   val to_http : string -> string -> input -> Request.t
-  val of_http : (string * string) list -> string -> [`Ok of output | `Error of error Error.error_response]
+  val of_http
+    : (string * string) list
+    -> [ `String of string | `Streaming of Piaf.Body.t ]
+    -> [`Ok of output | `Error of error Error.error_response]
+
   val parse_error : int -> string -> error option
 end
 
@@ -499,31 +504,73 @@ module Signing = struct
         sign (sign (sign (sign ("AWS4" ^ key) date) region) service) "aws4_request" in
       let now = Time.now_utc () in
       (* TODO: only append Content-Length header when body is empty *)
-      let headers = ("Content-Length", String.length body |> string_of_int) :: headers in
+      let headers = ("content-length", String.length body |> string_of_int) :: headers in
       let amzdate = Time.date_time now in
       let datestamp = Time.date_yymmdd now in
       let canonical_uri = Uri.path uri in
       let canonical_querystring = params in
+      let full_headers =
+        ("host", host) ::
+        ("x-amz-date", amzdate) ::
+        (List.map (fun (k, v) -> String.lowercase_ascii k, v) headers)
+      in
       let canonical_headers =
-        ("host", host) :: ("x-amz-date", amzdate) :: headers |>
-        List.sort (fun (k1,_) (k2,_) -> compare k1 k2) |>
-        List.map (fun (k,v) -> (String.lowercase_ascii k) ^ ":" ^ v) |>
-        String.concat "\n" |>
-        (fun x -> x ^ "\n") in
-      let signed_headers =
-        "host" :: "x-amz-date" :: (List.map (fun (k,_) -> (String.lowercase_ascii k)) headers) |>
-        List.sort compare |>
-        String.concat ";" in
+        List.sort (fun (k1,_) (k2,_) -> compare k1 k2) full_headers
+      in
+      let canonical_headers_serialized =
+       String.concat "\n"
+        (* TODO(anmonteiro): do better here. *)
+        ((List.map (fun (k,v) -> k ^ ":" ^ v) canonical_headers) @ [ "" ])
+      in
+      let signed_headers = String.concat ";" (List.map fst canonical_headers) in
       let payload_hash = Hash.sha256_hex body in
-      let canonical_request = Request.string_of_meth meth ^ "\n" ^ canonical_uri ^ "\n" ^ canonical_querystring ^ "\n" ^ canonical_headers ^ "\n" ^ signed_headers ^ "\n" ^ payload_hash in
+      let canonical_request =
+        String.concat
+          "\n"
+          [ Request.string_of_meth meth
+          ; canonical_uri
+          ; canonical_querystring
+          ; canonical_headers_serialized
+          ; signed_headers
+          ; payload_hash
+          ]
+      in
       let algorithm = "AWS4-HMAC-SHA256" in
-      let credential_scope = datestamp ^ "/" ^ region ^ "/" ^ service ^ "/" ^ "aws4_request" in
-      let string_to_sign = algorithm ^ "\n" ^  amzdate ^ "\n" ^  credential_scope ^ "\n" ^  Hash.sha256_hex canonical_request in
+      let credential_scope =
+        String.concat "/" [ datestamp; region; service; "aws4_request" ]
+      in
+      let string_to_sign =
+        String.concat
+          "\n"
+          [ algorithm
+          ; amzdate
+          ; credential_scope
+          ; Hash.sha256_hex canonical_request
+          ]
+      in
       let signing_key = get_signature_key secret_key datestamp region service in
       let signature = Hash.sha256_hex ~key:signing_key string_to_sign in
-      let authorization_header = String.concat "" [algorithm; " "; "Credential="; access_key; "/"; credential_scope; ", "; "SignedHeaders="; signed_headers; ", "; "Signature="; signature] in
-      let headers = ("x-amz-date", amzdate) :: ("x-amz-content-sha256", payload_hash) :: ("Authorization", authorization_header) :: headers in
+      let authorization_header =
+        String.concat ""
+          [ algorithm
+          ; " "
+          ; "Credential="
+          ; access_key
+          ; "/"
+          ; credential_scope
+          ; ", "
+          ; "SignedHeaders="
+          ; signed_headers
+          ; ", "
+          ; "Signature="
+          ; signature
+          ]
+      in
+      let headers =
+        ("x-amz-date", amzdate) ::
+        ("x-amz-content-sha256", payload_hash) ::
+        ("authorization", authorization_header) ::
+        headers
+      in
       (meth, uri, headers, body)
   end
-
-

@@ -55,6 +55,9 @@ let create_connection ?config ~region ~access_key ~secret_key service =
     | Error msg ->
       Error (Aws.Error.TransportError msg)
 
+let shutdown t =
+  Piaf.Client.shutdown t.conn
+
 let run_request_generic
   (type input)
   (type output)
@@ -64,7 +67,6 @@ let run_request_generic
                         and type error = error)
   req_fn ~headers ~body ~meth path =
   let open Piaf in
-  Format.eprintf "HEADERS: %a@." Headers.pp_hum (Headers.of_list headers);
   Lwt.catch (fun () ->
     req_fn
       ~headers
@@ -74,11 +76,10 @@ let run_request_generic
     >>= function
       | Ok resp ->
         let body = Response.body resp in
-        Format.eprintf "RESP: %a@." Response.pp_hum resp;
-        Body.to_string body >|= fun body ->
         let code = Status.to_code (Response.status resp) in
-        begin if code >= 300 then
+        if code >= 300 then begin
           let open Aws.Error in
+          Body.to_string body >|= fun body ->
           let aws_error =
             match parse_aws_error body with
             | `Error message -> BadResponse { body; message }
@@ -90,8 +91,14 @@ let run_request_generic
                 ers)
           in
           Error (HttpError (code, aws_error))
-        else
+        end else begin
          let header_list = Headers.to_list (Response.headers resp) in
+         let body = if M.streaming then
+           Lwt.return (`Streaming body)
+          else
+           Body.to_string body >|= fun body -> `String body
+         in
+         body >|= fun body ->
           match M.of_http header_list body with
           | `Ok v -> Ok v
           | `Error t -> Error (Aws.Error.HttpError (code, t))

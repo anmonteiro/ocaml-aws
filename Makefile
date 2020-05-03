@@ -23,7 +23,11 @@ update-version:
 endpoints:
 	dune exec endpoint-gen -- -i input/endpoints.json -o lib
 
-LIBRARIES := $(shell for file in `find ./input/ -maxdepth 1 -type d \! -name input -exec basename {} \;`; do echo "aws-$$file"; done)
+LIBRARIES := $(shell \
+  FILES=$$(find ./input/ -maxdepth 1 -type d \! -name input -exec basename {} \;); \
+  for file in $$FILES; \
+    do echo "aws-$$file"; \
+  done)
 
 .PHONY: $(LIBRARIES)
 $(LIBRARIES): aws-%:
