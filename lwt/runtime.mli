@@ -46,6 +46,8 @@ val run_request :
   ('input, 'output, 'error) Aws.call ->
   'input -> ('output, 'error Aws.Error.t) result Lwt.t
 
+val shutdown : t -> unit Lwt.t
+
 module Oneshot : sig
   val run_request :
     region:string ->

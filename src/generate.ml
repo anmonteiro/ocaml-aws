@@ -114,7 +114,11 @@ let toposort (shapes : Shape.t StringTable.t) =
   T.iter (fun shape -> out := shape :: !out) graph;
   !out
 
-let build_module_signature protocol ~shapes v =
+(* XXX(anmonteiro): `include_payload` dictates whether the payload type should
+ * be included as part of the module. This is used for request types because
+ * we need to calculate the content hash for those to include in the signature.
+ * We, however, support streaming output payloads. *)
+let build_module_signature ?(include_payload=false) protocol ~shapes v =
   let open Syntax in
   let mkrecsty fs =
     styreclet "t" (List.map (fun (nm,shp,req) ->
@@ -135,11 +139,20 @@ let build_module_signature protocol ~shapes v =
       (* Hack for a unit type since empty records aren't yet valid *)
       [%sigi: type t = unit]
     | Shape.Structure members ->
-      mkrecsty (List.map (fun m ->
-        ( m.Structure.field_name
-        , (String.capitalize_ascii m.Structure.shape) ^ ".t"
-        , m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
-        members)
+      let members = List.filter_map (fun m ->
+       if m.Structure.payload && not include_payload then begin
+        None
+       end else
+        Some
+         ( m.Structure.field_name
+         , (String.capitalize_ascii m.Structure.shape) ^ ".t"
+         , m.Structure.required || is_list ~shapes ~shp:m.Structure.shape))
+       members
+      in
+      if members == [] then
+       mkrecsty members
+      else
+       mkrecsty members
     | Shape.List (shp, _, _flatten) ->
       [%sigi: type t = [%t (Syntax.ty1 "list" (shp ^ ".t"))]]
     | Shape.Map ((kshp, _loc), (vshp, _)) ->
@@ -150,6 +163,11 @@ let build_module_signature protocol ~shapes v =
   let make = match v.Shape.content with
     | Shape.Structure [ ] -> [%sigi: val make: unit -> t]
     | Shape.Structure members ->
+      let members =
+       List.filter (fun { Structure.payload; _ } ->
+        not payload || include_payload)
+        members
+      in
       let rec mkarrow (args : Structure.member list) ret = match args with
         | [ ] -> ret
         | (x::xs) ->
@@ -158,7 +176,10 @@ let build_module_signature protocol ~shapes v =
             else Syntax.arrowopt
            in
            fn x.Structure.field_name (Syntax.tname ((String.capitalize_ascii x.Structure.shape) ^ ".t")) (mkarrow xs ret) in
-      [%sigi: val make: [%t (mkarrow members (Syntax.sfununit "t"))]]
+      if members == [] then
+       [%sigi: val make: unit -> t]
+      else
+       [%sigi: val make: [%t (mkarrow members (Syntax.sfununit "t"))]]
     | Shape.List _
     | Shape.Enum _
     | Shape.Map _ -> [%sigi: val make: t -> unit -> t]
@@ -179,11 +200,7 @@ let build_module_signature protocol ~shapes v =
   let to_xml = [%sigi: val to_xml: t -> Ezxmlm.nodes] in
   let parse_payload =
     if has_payload ~shapes v.name then
-      [ [%sigi:
-          val of_headers
-            :  Aws.Headers.Assoc.t
-            -> [%t (Syntax.tname ((String.capitalize_ascii (get_payload_shape ~shapes v.name)) ^ ".t"))]
-            -> t]]
+      [ [%sigi: val of_headers :  Aws.Headers.Assoc.t -> t]]
     else
       [ ]
   in
@@ -195,7 +212,7 @@ let build_module_signature protocol ~shapes v =
   in
   base @ protocol_specific @ parse_payload
 
-let build_module_structure protocol ~shapes v =
+let build_module_structure ?(include_payload=false) protocol ~shapes v =
   let is_ec2 = protocol = "ec2" in
   let open Syntax in
   let mkrecty fs =
@@ -217,9 +234,20 @@ let build_module_structure protocol ~shapes v =
       (* Hack for a unit type since empty records aren't yet valid *)
       [%stri type t = unit]
     | Shape.Structure members ->
-      mkrecty (List.map (fun m ->
-        (m.Structure.field_name, (String.capitalize_ascii m.Structure.shape) ^ ".t", m.Structure.required || is_list ~shapes ~shp:m.Structure.shape, m.doc))
-        members)
+      let members = List.filter_map (fun m ->
+       if m.Structure.payload && not include_payload then
+        None
+       else
+         Some
+          (m.Structure.field_name
+          , (String.capitalize_ascii m.Structure.shape) ^ ".t"
+          , m.Structure.required || is_list ~shapes ~shp:m.Structure.shape, m.doc))
+        members
+      in
+      if members == [] then
+       [%stri type t = unit]
+      else
+        mkrecty members
     | Shape.List (shp, _, _flatten) ->
       [%stri type t = [%t tname (shp ^ ".t") ] list]
     | Shape.Map ((kshp, _loc), (vshp, _)) ->
@@ -231,6 +259,10 @@ let build_module_structure protocol ~shapes v =
     | Shape.Structure [ ] ->
       [%stri let make () = ()]
     | Shape.Structure members ->
+      let members = List.filter (fun { Structure.payload; _ } ->
+        not payload || include_payload)
+        members
+      in
       let rec mkfun (args : Structure.member list) body = match args with
         | [ ] -> body
         | (x::xs) ->
@@ -239,9 +271,12 @@ let build_module_structure protocol ~shapes v =
       let body =
         fununit
           (record
-             (List.map (fun a -> (a.Structure.field_name, ident a.Structure.field_name)) members)) in
-
-      [%stri let make = [%e (mkfun members body)]]
+             (List.map (fun a -> (a.Structure.field_name, ident a.Structure.field_name)) members))
+      in
+      if members == [] then
+       [%stri let make () = ()]
+      else
+       [%stri let make = [%e (mkfun members body)]]
     | Shape.List _ -> [%stri let make elems () = elems]
     | Shape.Enum _ -> [%stri let make v () = v]
     | Shape.Map _ ->
@@ -260,29 +295,33 @@ let build_module_structure protocol ~shapes v =
     | Shape.Structure [ ] ->
       [%stri let parse xml = Some ()]
     | Shape.Structure s ->
-      let fields = List.map (fun (mem : Structure.member) ->
-          let loc_name =
-            match mem.Structure.loc_name with
-            | Some name -> name
-            | None      -> mem.Structure.name
-          in
-          let b = if is_flat_list ~shapes ~shp:mem.Structure.shape then
-            [%expr [%e ident (mem.Structure.shape ^ ".parse")] xml]
-          else
-            [%expr Util.option_bind (Xml.member [%e str loc_name] xml) [%e ident ((String.capitalize_ascii mem.Structure.shape) ^ ".parse")]]
-          in
-          let op =
-            if mem.Structure.required then
-              [%expr Xml.required [%e str loc_name] [%e b]]
-            else if is_list ~shapes ~shp:mem.Structure.shape then
-              [%expr Util.of_option [] [%e b]]
-            else
-              b
-          in
-          (mem.Structure.field_name, op))
-          s
-      in
-      [%stri let parse xml = Some [%e record fields]]
+      let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
+      if s == [] then
+        [%stri let parse xml = Some ()]
+      else
+       let fields = List.map (fun (mem : Structure.member) ->
+           let loc_name =
+             match mem.Structure.loc_name with
+             | Some name -> name
+             | None      -> mem.Structure.name
+           in
+           let b = if is_flat_list ~shapes ~shp:mem.Structure.shape then
+             [%expr [%e ident (mem.Structure.shape ^ ".parse")] xml]
+           else
+             [%expr Util.option_bind (Xml.member [%e str loc_name] xml) [%e ident ((String.capitalize_ascii mem.Structure.shape) ^ ".parse")]]
+           in
+           let op =
+             if mem.Structure.required then
+               [%expr Xml.required [%e str loc_name] [%e b]]
+             else if is_list ~shapes ~shp:mem.Structure.shape then
+               [%expr Util.of_option [] [%e b]]
+             else
+               b
+           in
+           (mem.Structure.field_name, op))
+           s
+       in
+       [%stri let parse xml = Some [%e record fields]]
     | Shape.Map ((_shp, _loc_name), _) ->
       [%stri let parse xml = None]
     | Shape.List (shp, loc_name, flattened) ->
@@ -348,6 +387,7 @@ let build_module_structure protocol ~shapes v =
   let to_json =
     let exp = match v.Shape.content with
       | Shape.Structure s ->
+        let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
         let lst = list
           (List.map (fun mem ->
             (* TODO: confirm this *)
@@ -441,6 +481,7 @@ let build_module_structure protocol ~shapes v =
   let to_xml =
     let exp = match v.Shape.content with
       | Shape.Structure s ->
+        let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
         let arg = List.fold_left (fun acc mem ->
           let location = match mem.Structure.loc_name with
             | Some name -> name
@@ -477,14 +518,14 @@ let build_module_structure protocol ~shapes v =
       in
     [%stri let to_xml v = [%e exp]]
   in
-  let of_headers =
+  let of_headers () =
     let exp = match v.Shape.content with
       | Shape.Structure [ ] ->
         [%expr ()]
       | Shape.Structure s ->
-        let fields = List.map (fun (mem : Structure.member) ->
-          if mem.Structure.payload then
-            mem.field_name, if mem.Structure.required then [%expr body] else [%expr Some body]
+        let fields = List.filter_map (fun (mem : Structure.member) ->
+          if mem.Structure.payload && not include_payload then
+           None
           else match mem.location with
           | Some ("header" | "headers") ->
             let loc_name =
@@ -514,17 +555,28 @@ let build_module_structure protocol ~shapes v =
               else
                 b
             in
-            mem.Structure.field_name, op
-          | _ -> mem.Structure.field_name, [%expr assert false])
+            Some (mem.Structure.field_name, op)
+          | _ ->
+            (* TODO: payload *)
+            failwith
+              (Format.asprintf "of_headers (op: %s, field: %s)@."
+                mem.Structure.field_name
+                v.name))
             s
         in
-        record fields
+        if fields == [] then
+         [%expr ()]
+        else
+         record fields
       | Shape.List (shp, _, _) ->
         [%expr List.map (fun x -> [%e ident (shp ^ ".of_headers")] x) v]
       | Shape.Map ((_shp,_),_) -> [%expr []]
       | Shape.Enum _opts -> [%expr assert false]
     in
-    [%stri let of_headers headers body = [%e exp]]
+    if has_payload ~shapes v.name && Util.is_prim (get_payload_shape ~shapes v.name) then
+     [%stri let of_headers headers = [%e exp]]
+    else
+     [%stri let of_headers headers body = [%e exp]]
   in
   (* Don't emit to_headers / to_query if the op doesn't need them. *)
   let base = [ty] @ extra @ [ make; to_query; to_headers; to_json ] in
@@ -535,17 +587,17 @@ let build_module_structure protocol ~shapes v =
   in
   (* Force capitalize the module name, because some shapes may have uncapitalized names *)
   ( String.capitalize_ascii v.Shape.name
-  , base @ protocol_specific @ (if has_payload ~shapes v.name then [ of_headers ] else [])
+  , base @ protocol_specific @ (if has_payload ~shapes v.name then [ of_headers () ] else [])
   , v.doc
   )
 
-let build_module protocol ~shapes v =
-  let name, itms, doc = build_module_structure protocol ~shapes v in
+let build_module protocol ~include_payload ~shapes v =
+  let name, itms, doc = build_module_structure ~include_payload protocol ~shapes v in
   match v.Shape.depends_on with
   | Some dshp, false ->
-    let oname, oitms, odoc = build_module_structure protocol ~shapes dshp in
-    let sigs = build_module_signature protocol ~shapes v in
-    let osigs = build_module_signature protocol ~shapes dshp in
+    let oname, oitms, odoc = build_module_structure ~include_payload protocol ~shapes dshp in
+    let sigs = build_module_signature ~include_payload protocol ~shapes v in
+    let osigs = build_module_signature ~include_payload protocol ~shapes dshp in
     dshp.depends_on <- fst dshp.depends_on, true;
     Some (Syntax.rec_module [ name, itms, sigs, doc; oname, oitms, osigs, odoc ])
   | _, true -> None
@@ -562,7 +614,7 @@ let types protocol (input_op_name_map, _output_op_name_map) shapes =
       * modules *)
      None
     else
-     (build_module protocol ~shapes v))
+     (build_module ~include_payload:false protocol ~shapes v))
    (toposort shapes)
   in
   let imports =
@@ -652,6 +704,7 @@ let mk_of_body op shapes protocol =
         [%expr Util.option_bind [%e r] (Xml.member [%e str w])]
     in
     [%expr
+let[@ocaml.warning "-8"] ((`String body): [ `String of string | `Streaming of Piaf.Body.t  ]) = body in
      try
        let xml = Ezxmlm.from_string body in
        let resp = [%e resp] in
@@ -674,6 +727,7 @@ let mk_of_body op shapes protocol =
     match protocol with
     | "json" | "rest-json" ->
       [%expr
+        let[@ocaml.warning "-8"] ((`String body): [ `String of string | `Streaming of Piaf.Body.t  ]) = body in
         try
           let json = Yojson.Basic.from_string body in
           `Ok ([%e ident (shp ^ ".of_json")] json )
@@ -688,9 +742,11 @@ let mk_of_body op shapes protocol =
         (* If the output shape has a payload, the rest of the structure is in
          * headers. *)
         let payload_shp = get_payload_shape ~shapes shp in
-        if Util.is_prim payload_shp then
-          [%expr `Ok ([%e ident (shp ^ ".of_headers")] headers body)]
-        else begin
+        if Util.is_prim payload_shp then begin
+          [%expr
+let[@ocaml.warning "-8"] ((`Streaming body) : [ `String of string | `Streaming of Piaf.Body.t ]) = body in
+            `Ok ([%e ident (shp ^ ".of_headers")] headers, body)]
+        end else begin
           (* parse the payload shape from the body *)
           [%expr
             match [%e (read_xml payload_shp)] with
@@ -898,16 +954,26 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
    | None | Some "Aws.BaseTypes.Unit" -> smodalias nm "Aws.BaseTypes.Unit"
    | Some shp ->
      let shape = StringTable.find shp shapes in
-     modsig shp (build_module_signature protocol ~shapes shape)
+     modsig shp (build_module_signature ~include_payload:true protocol ~shapes shape)
   in
   let mk_modstr nm = function
    | None | Some "Aws.BaseTypes.Unit" ->
      [ modalias nm "Aws.BaseTypes.Unit" ]
    | Some shp ->
      let shape = StringTable.find shp shapes in
-     match build_module protocol ~shapes shape with
+     match build_module ~include_payload:true protocol ~shapes shape with
      | None -> []
      | Some x -> [ x ]
+  in
+  let is_streaming_output =
+    Option.is_some op.Operation.output_shape &&
+    has_payload ~shapes Option.(get op.output_shape) &&
+    Util.is_prim (get_payload_shape ~shapes Option.(get op.output_shape))
+  in
+  let output = if is_streaming_output then
+   Syntax.tytup "output" [ mkty op.Operation.output_shape; Syntax.ty0 "Piaf.Body.t" ]
+  else
+   mkty op.Operation.output_shape
   in
   (** Tuple corresponding to (doc, mli, ml) *)
   (op.Operation.doc,
@@ -925,7 +991,7 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
    [ mk_modsig "Input" op.Operation.input_shape
    ; mk_smodalias "Output" op.Operation.output_shape
    ; [%sigi: type input = [%t mkty op.Operation.input_shape]]
-   ; [%sigi: type output = [%t mkty op.Operation.output_shape]]
+   ; [%sigi: type output = [%t output]]
    ; [%sigi: type error = Errors_internal.t]
    ; [%sigi: include Aws.Call
                 with type input := input
@@ -942,11 +1008,12 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
     ]
    @
    [ [%stri type input = [%t mkty op.Operation.input_shape ]]
-   ; [%stri type output = [%t mkty op.Operation.output_shape]]
+   ; [%stri type output = [%t output]]
    ; [%stri type error = Errors_internal.t]
+   ; [%stri let streaming = [%e (if is_streaming_output then [%expr true ] else [%expr false ]) ]]
    ; [%stri let service = [%e (str service)]]
    ; [%stri let to_http service region req = [%e to_body]]
-   ; [%stri let of_http headers body = [%e of_body]]
+   ; [%stri let of_http headers (body : [ `String of string | `Streaming of Piaf.Body.t ]) = [%e of_body]]
    ; op_error_parse
    ])
 
