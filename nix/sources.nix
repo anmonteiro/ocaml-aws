@@ -4,7 +4,7 @@ let
   # overlays = /Users/anmonteiro/Documents/github/nix-overlays;
   overlays =
     builtins.fetchTarball
-      https://github.com/anmonteiro/nix-overlays/archive/8ed8963.tar.gz;
+      https://github.com/anmonteiro/nix-overlays/archive/964a4cb.tar.gz;
 
 in
 

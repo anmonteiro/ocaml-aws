@@ -58,15 +58,31 @@ let is_map ~shapes ~shp =
     | _            -> false
   with Not_found -> false
 
+let has_required_fields ~shapes shape =
+  match (StringTable.find shape shapes).Shape.content with
+  | Shape.Structure members ->
+    List.exists (fun { Structure.payload; required; _ } ->
+      not payload && required) members
+  | _            -> false
+
 let has_payload ~shapes shape =
   try
     match (StringTable.find shape shapes).Shape.content with
     | Shape.Structure members ->
-      List.exists (fun { Structure.payload; _ } -> payload) members &&
-      List.for_all (function {Structure.location = Some ("headers" | "header") ; _} -> true | _ -> false)
+      List.exists (fun { Structure.payload; shape; _ } -> payload && Util.is_prim shape) members &&
+      List.for_all (function
+        | {Structure.location = Some
+            ( "headers"
+            | "header"
+            | "uri"
+            | "querystring") ; _} -> true
+        | _ -> false)
       (List.filter (fun { Structure.payload; _ } -> not payload) members)
     | _            -> false
   with Not_found -> false
+
+let is_prim_payload m =
+  m.Structure.payload && Util.is_prim m.shape
 
 let get_payload_shape ~shapes shape =
   match (StringTable.find shape shapes).Shape.content with
@@ -114,11 +130,7 @@ let toposort (shapes : Shape.t StringTable.t) =
   T.iter (fun shape -> out := shape :: !out) graph;
   !out
 
-(* XXX(anmonteiro): `include_payload` dictates whether the payload type should
- * be included as part of the module. This is used for request types because
- * we need to calculate the content hash for those to include in the signature.
- * We, however, support streaming output payloads. *)
-let build_module_signature ?(include_payload=false) protocol ~shapes v =
+let build_module_signature protocol ~shapes v =
   let open Syntax in
   let mkrecsty fs =
     styreclet "t" (List.map (fun (nm,shp,req) ->
@@ -140,7 +152,7 @@ let build_module_signature ?(include_payload=false) protocol ~shapes v =
       [%sigi: type t = unit]
     | Shape.Structure members ->
       let members = List.filter_map (fun m ->
-       if m.Structure.payload && not include_payload then begin
+       if is_prim_payload m then begin
         None
        end else
         Some
@@ -163,10 +175,7 @@ let build_module_signature ?(include_payload=false) protocol ~shapes v =
   let make = match v.Shape.content with
     | Shape.Structure [ ] -> [%sigi: val make: unit -> t]
     | Shape.Structure members ->
-      let members =
-       List.filter (fun { Structure.payload; _ } ->
-        not payload || include_payload)
-        members
+      let members = List.filter (fun m -> not (is_prim_payload m)) members
       in
       let rec mkarrow (args : Structure.member list) ret = match args with
         | [ ] -> ret
@@ -212,7 +221,7 @@ let build_module_signature ?(include_payload=false) protocol ~shapes v =
   in
   base @ protocol_specific @ parse_payload
 
-let build_module_structure ?(include_payload=false) protocol ~shapes v =
+let build_module_structure protocol ~shapes v =
   let is_ec2 = protocol = "ec2" in
   let open Syntax in
   let mkrecty fs =
@@ -235,7 +244,7 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
       [%stri type t = unit]
     | Shape.Structure members ->
       let members = List.filter_map (fun m ->
-       if m.Structure.payload && not include_payload then
+       if is_prim_payload m then
         None
        else
          Some
@@ -259,10 +268,7 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
     | Shape.Structure [ ] ->
       [%stri let make () = ()]
     | Shape.Structure members ->
-      let members = List.filter (fun { Structure.payload; _ } ->
-        not payload || include_payload)
-        members
-      in
+      let members = List.filter (fun m -> not (is_prim_payload m)) members in
       let rec mkfun (args : Structure.member list) body = match args with
         | [ ] -> body
         | (x::xs) ->
@@ -295,7 +301,7 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
     | Shape.Structure [ ] ->
       [%stri let parse xml = Some ()]
     | Shape.Structure s ->
-      let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
+      let s = List.filter (fun m -> not (is_prim_payload m)) s in
       if s == [] then
         [%stri let parse xml = Some ()]
       else
@@ -387,7 +393,7 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
   let to_json =
     let exp = match v.Shape.content with
       | Shape.Structure s ->
-        let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
+        let s = List.filter (fun m -> not (is_prim_payload m)) s in
         let lst = list
           (List.map (fun mem ->
             (* TODO: confirm this *)
@@ -481,7 +487,7 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
   let to_xml =
     let exp = match v.Shape.content with
       | Shape.Structure s ->
-        let s = List.filter (fun { Structure.payload; _ } -> not payload || include_payload) s in
+        let s = List.filter (fun m -> not (is_prim_payload m)) s in
         let arg = List.fold_left (fun acc mem ->
           let location = match mem.Structure.loc_name with
             | Some name -> name
@@ -524,10 +530,10 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
         [%expr ()]
       | Shape.Structure s ->
         let fields = List.filter_map (fun (mem : Structure.member) ->
-          if mem.Structure.payload && not include_payload then
+          if is_prim_payload mem then
            None
           else match mem.location with
-          | Some ("header" | "headers") ->
+          | Some ("header" | "headers" | "uri" | "querystring") ->
             let loc_name =
               match mem.Structure.loc_name with
               | Some name -> name
@@ -591,13 +597,13 @@ let build_module_structure ?(include_payload=false) protocol ~shapes v =
   , v.doc
   )
 
-let build_module protocol ~include_payload ~shapes v =
-  let name, itms, doc = build_module_structure ~include_payload protocol ~shapes v in
+let build_module protocol ~shapes v =
+  let name, itms, doc = build_module_structure protocol ~shapes v in
   match v.Shape.depends_on with
   | Some dshp, false ->
-    let oname, oitms, odoc = build_module_structure ~include_payload protocol ~shapes dshp in
-    let sigs = build_module_signature ~include_payload protocol ~shapes v in
-    let osigs = build_module_signature ~include_payload protocol ~shapes dshp in
+    let oname, oitms, odoc = build_module_structure protocol ~shapes dshp in
+    let sigs = build_module_signature protocol ~shapes v in
+    let osigs = build_module_signature protocol ~shapes dshp in
     dshp.depends_on <- fst dshp.depends_on, true;
     Some (Syntax.rec_module [ name, itms, sigs, doc; oname, oitms, osigs, odoc ])
   | _, true -> None
@@ -614,7 +620,7 @@ let types protocol (input_op_name_map, _output_op_name_map) shapes =
       * modules *)
      None
     else
-     (build_module ~include_payload:false protocol ~shapes v))
+     build_module protocol ~shapes v)
    (toposort shapes)
   in
   let imports =
@@ -624,7 +630,7 @@ let types protocol (input_op_name_map, _output_op_name_map) shapes =
   imports, modules
 
 
-let op_to_uri shapes op =
+let op_to_uri ~req_name shapes op =
   let replace_shape loc_name =
     (* Some S3 APIs specify `Key+` but the shape name is `Key` *)
     let loc_name = if String.get loc_name ((String.length loc_name) - 1) = '+' then
@@ -656,7 +662,10 @@ let op_to_uri shapes op =
              begin match op.Operation.input_shape with
              | Some input_shape when !is_shape ->
                let { Structure.field_name; shape; _ } = replace_shape s in
-               let segment = (Syntax.ident ("req." ^ input_shape ^ "." ^ field_name))
+               let segment =
+                 Ast_helper.Exp.field
+                   req_name
+                   (Syntax.lid (input_shape ^ "." ^ field_name))
                in
                let segment = match shape with
                | "String" | "Blob" ->
@@ -703,23 +712,49 @@ let mk_of_body op shapes protocol =
       | Some w ->
         [%expr Util.option_bind [%e r] (Xml.member [%e str w])]
     in
-    [%expr
-let[@ocaml.warning "-8"] ((`String body): [ `String of string | `Streaming of Piaf.Body.t  ]) = body in
-     try
-       let xml = Ezxmlm.from_string body in
-       let resp = [%e resp] in
+    let read_xml_body read_expr =
+      let expr =
+        if has_required_fields ~shapes shape then
+          read_expr
+        else
+         (* `of_http` should only be called on successful responses. If the
+          * response body is empty, surely all fields for the output object are
+          * optional. Just call `make ()` in that case. *)
+          [%expr
+           if body = "" then begin
+             `Ok ([%e ident (shape ^ ".make")] ())
+           end else [%e read_expr]
+          ]
+      in
+      [%expr
+       let[@ocaml.warning "-8"] (`String body: [ `String of string | `Streaming of Piaf.Body.t  ]) =
+         body
+       in
+       [%e expr]
+      ]
+    in
+    read_xml_body
+      [%expr
        try
+         let xml = Ezxmlm.from_string body in
+         let resp = [%e resp] in
+         try
+           let open Error in
+           Util.or_error
+            (Util.option_bind resp [%e ident (shape ^ ".parse")])
+            (BadResponse { body; message = [%e str ("Could not find well formed " ^ shape ^ ".")]})
+         with | Xml.RequiredFieldMissing msg ->
+           let open Error in
+           `Error
+             (BadResponse
+               { body
+               ; message =
+                 [%e (str ("Error parsing " ^ shape ^ " - missing field in body or children: "))] ^ msg
+               })
+       with
+       | Failure msg ->
          let open Error in
-         Util.or_error
-          (Util.option_bind resp [%e ident (shape ^ ".parse")])
-          (BadResponse { body; message = [%e str ("Could not find well formed " ^ shape ^ ".")]})
-       with | Xml.RequiredFieldMissing msg ->
-         let open Error in
-         `Error (BadResponse { body; message = [%e (str ("Error parsing " ^ shape ^ " - missing field in body or children: "))] ^ msg })
-    with
-    | Failure msg ->
-      let open Error in
-      `Error (BadResponse {body; message = "Error parsing xml: " ^ msg})]
+         `Error (BadResponse {body; message = "Error parsing xml: " ^ msg})]
   in
   match op.Operation.output_shape with
   | None -> [%expr `Ok ()]
@@ -775,40 +810,44 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
   let to_body =
     match protocol with
     | "json" | "rest-json" | "rest-xml" ->
+      let is_streaming_input =
+        Option.is_some op.Operation.input_shape &&
+        has_payload ~shapes Option.(get op.input_shape) &&
+        Util.is_prim (get_payload_shape ~shapes Option.(get op.input_shape))
+      in
       let payload =
        match op.Operation.input_shape with
        | None | Some "Aws.BaseTypes.Unit" ->
-         [%expr ""]
+         [%expr Piaf.Body.empty]
        | Some input_shape ->
           let shp = StringTable.find input_shape shapes in
           match shp.Shape.content with
           | Shape.Structure members ->
             begin match List.find_opt (fun member -> member.Structure.payload) members with
-            | None -> [%expr ""]
+            | None -> [%expr Piaf.Body.empty]
             | Some found ->
               let field_access =
                 (ident ("req." ^ input_shape ^ "." ^ found.Structure.field_name))
               in
               begin match found.Structure.shape with
               | "Blob" | "String" ->
-                if found.Structure.required then
-                  field_access
-                else
-                  [%expr
-                    match [%e field_access] with
-                    | Some v -> v
-                    | None -> "" ]
+                [%expr (snd req)]
               | _ ->
                 begin match protocol with
                 | "json" | "rest-json" ->
                   if found.Structure.required then
-                    [%expr Yojson.Basic.to_string ([%e ident (found.Structure.shape ^ ".to_json")] [%e field_access])]
+                    [%expr
+                      Piaf.Body.of_string
+                        (Yojson.Basic.to_string
+                          ([%e ident (found.Structure.shape ^ ".to_json")] [%e field_access]))]
                   else
                     [%expr
                       match [%e field_access] with
                       | Some v ->
-                        Yojson.Basic.to_string ([%e ident (found.Structure.shape ^ ".to_json")] v)
-                      | None -> "" ]
+                        Piaf.Body.of_string
+                          (Yojson.Basic.to_string
+                            ([%e ident (found.Structure.shape ^ ".to_json")] v))
+                      | None -> Piaf.Body.empty ]
                 | "rest-xml" ->
                   let location = match found.Structure.loc_name with
                     | None -> found.Structure.name
@@ -816,45 +855,57 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
                   in
                   if found.Structure.required then
                     [%expr
-                      Ezxmlm.to_string
-                        [Ezxmlm.make_tag
-                          [%e str location]
-                          ([], [%e ident (found.Structure.shape ^ ".to_xml")] [%e field_access])
-                        ]
-                    ]
-                  else
-                    [%expr match [%e field_access] with
-                      | Some v ->
-                        Ezxmlm.to_string
+                      Piaf.Body.of_string
+                        (Ezxmlm.to_string
                           [Ezxmlm.make_tag
                             [%e str location]
-                            ([], [%e ident (found.Structure.shape ^ ".to_xml")] v)
-                          ]
-                      | None -> ""
+                            ([], [%e ident (found.Structure.shape ^ ".to_xml")] [%e field_access])
+                            ])
+                    ]
+                  else
+                    [%expr
+                      match [%e field_access] with
+                      | Some v ->
+                        Piaf.Body.of_string
+                          (Ezxmlm.to_string
+                            [Ezxmlm.make_tag
+                              [%e str location]
+                              ([], [%e ident (found.Structure.shape ^ ".to_xml")] v)
+                            ])
+                      | None -> Piaf.Body.empty
                     ]
                 | _ -> raise Not_found
                 end
               end
             end
-          | _ -> [%expr ""]
+          | _ -> [%expr Piaf.Body.empty]
+      in
+      let req_name = if is_streaming_input then
+        [%expr (fst req)]
+      else
+        [%expr req]
       in
       let query_params = match op.Operation.input_shape with
         | None ->
           (* TODO: I seriously doubt this is correct for these protocols. Should be empty. *)
           defaults
         | Some input_shape ->
-          [%expr Util.drop_empty (Uri.query_of_encoded (Query.render ([%e ident (input_shape ^ ".to_query")] req)))]
+          [%expr
+            Util.drop_empty
+              (Uri.query_of_encoded
+                (Query.render ([%e ident (input_shape ^ ".to_query")] [%e req_name])))]
       in
       let headers = match op.Operation.input_shape with
         | None -> [%expr Headers.List []]
         | Some input_shape ->
-          [%expr [%e ident (input_shape ^ ".to_headers")] req]
+          [%expr [%e ident (input_shape ^ ".to_headers")] [%e req_name]]
       in
       [%expr
         let uri =
           Uri.add_query_params
             (Uri.of_string
-              ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ [%e op_to_uri shapes op]))
+              ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+               [%e op_to_uri ~req_name shapes op]))
             [%e query_params]
         in
         ( [%e variant op.Operation.http_meth ]
@@ -884,13 +935,14 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
         let uri =
           Uri.add_query_params
             (Uri.of_string
-              ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^ [%e op_to_uri shapes op]))
+              ((Aws.Util.of_option_exn (Endpoints.url_of service region)) ^
+               [%e op_to_uri ~req_name:(Syntax.ident "req") shapes op]))
             [%e query_params]
         in
         ( [%e variant op.Operation.http_meth]
         , uri
         , Headers.render [%e headers]
-        , "")]
+        , Piaf.Body.empty)]
     | _ -> raise Not_found
   in
   let of_body = mk_of_body op shapes protocol in
@@ -954,16 +1006,26 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
    | None | Some "Aws.BaseTypes.Unit" -> smodalias nm "Aws.BaseTypes.Unit"
    | Some shp ->
      let shape = StringTable.find shp shapes in
-     modsig shp (build_module_signature ~include_payload:true protocol ~shapes shape)
+     modsig shp (build_module_signature protocol ~shapes shape)
   in
   let mk_modstr nm = function
    | None | Some "Aws.BaseTypes.Unit" ->
      [ modalias nm "Aws.BaseTypes.Unit" ]
    | Some shp ->
      let shape = StringTable.find shp shapes in
-     match build_module ~include_payload:true protocol ~shapes shape with
+     match build_module protocol ~shapes shape with
      | None -> []
      | Some x -> [ x ]
+  in
+  let is_streaming_input =
+    Option.is_some op.Operation.input_shape &&
+    has_payload ~shapes Option.(get op.input_shape) &&
+    Util.is_prim (get_payload_shape ~shapes Option.(get op.input_shape))
+  in
+  let input = if is_streaming_input then
+   Syntax.tytup [ mkty op.Operation.input_shape; Syntax.ty0 "Piaf.Body.t" ]
+  else
+   mkty op.Operation.input_shape
   in
   let is_streaming_output =
     Option.is_some op.Operation.output_shape &&
@@ -971,7 +1033,7 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
     Util.is_prim (get_payload_shape ~shapes Option.(get op.output_shape))
   in
   let output = if is_streaming_output then
-   Syntax.tytup "output" [ mkty op.Operation.output_shape; Syntax.ty0 "Piaf.Body.t" ]
+   Syntax.tytup [ mkty op.Operation.output_shape; Syntax.ty0 "Piaf.Body.t" ]
   else
    mkty op.Operation.output_shape
   in
@@ -990,7 +1052,7 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
     * an alias to the types module. *)
    [ mk_modsig "Input" op.Operation.input_shape
    ; mk_smodalias "Output" op.Operation.output_shape
-   ; [%sigi: type input = [%t mkty op.Operation.input_shape]]
+   ; [%sigi: type input = [%t input]]
    ; [%sigi: type output = [%t output]]
    ; [%sigi: type error = Errors_internal.t]
    ; [%sigi: include Aws.Call
@@ -1007,7 +1069,7 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
     ; [ mk_modalias "Output" op.Operation.output_shape ]
     ]
    @
-   [ [%stri type input = [%t mkty op.Operation.input_shape ]]
+   [ [%stri type input = [%t input ]]
    ; [%stri type output = [%t output]]
    ; [%stri type error = Errors_internal.t]
    ; [%stri let streaming = [%e (if is_streaming_output then [%expr true ] else [%expr false ]) ]]

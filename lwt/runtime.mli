@@ -50,6 +50,7 @@ val shutdown : t -> unit Lwt.t
 
 module Oneshot : sig
   val run_request :
+    ?config:Piaf.Config.t ->
     region:string ->
     access_key:string ->
     secret_key: string ->
