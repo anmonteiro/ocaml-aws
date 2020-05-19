@@ -142,6 +142,15 @@ let prim_type_map =
    away as strings).
 *)
 let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t) =
+  let shape_type name =
+   if List.exists (fun { Operation.input_shape; _ } ->
+    Option.is_some input_shape && Option.get input_shape = name) ops
+   then Input
+   else if List.exists (fun { Operation.output_shape; _ } ->
+    Option.is_some output_shape && Option.get output_shape = name) ops
+   then Output
+   else Type
+  in
   let replace_shape default =
     try
       let _, shptyp, _, _ = StringTable.find default shapes in
@@ -166,7 +175,15 @@ let inline_shapes (ops : Operation.t list) (shapes : Shape.parsed StringTable.t)
             Shape.Map ((replace_shape kshp, kln), (replace_shape vshp, vln))
           | Some (Shape.Enum opts) -> Shape.Enum opts
         in
-        StringTable.add key { Shape.name = nm; content; depends_on = None, false; doc } acc)
+        StringTable.add
+         key
+         { Shape.name = nm
+         ; content
+         ; depends_on = None, false
+         ; doc
+         ; type_ = shape_type nm
+         }
+         acc)
     shapes StringTable.empty
   in
   let is_empty_struct shp =

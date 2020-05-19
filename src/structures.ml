@@ -1,3 +1,5 @@
+type type_ = | Input | Output | Type
+
 module Structure = struct
   type member =
     { name : string
@@ -27,6 +29,7 @@ module Shape = struct
    ; doc : string option
      (* generate a recursive module; bool is if already generated both *)
    ; mutable depends_on: t option * bool
+   ; type_: type_
    }
 
   type parsed = string * string * contents option * string option

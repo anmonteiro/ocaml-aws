@@ -31,6 +31,8 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
+type type_ = | Input | Output | Type
+
 module Structure : sig
 
   (** Most shapes are structs (the rest are primitive, lists, maps or
@@ -99,7 +101,9 @@ module Shape : sig
    ; content : contents
      (* generate a recursive module; bool is if already generated both *)
    ; doc : string option
-   ; mutable depends_on: t option * bool }
+   ; mutable depends_on: t option * bool
+   ; type_: type_
+   }
 
   (** We parse all shapes, but after inlining/filtering, the base
       types (Boolean, Double, et) no longer exist, so the bulk of the

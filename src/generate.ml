@@ -65,6 +65,19 @@ let has_required_fields ~shapes shape =
       not payload && required) members
   | _            -> false
 
+let has_headers ~shapes shape =
+  try
+    match (StringTable.find shape shapes).Shape.content with
+    | Shape.Structure members ->
+      List.exists (function
+        | {Structure.location = Some
+            ( "headers"
+            | "header") ; _} -> true
+        | _ -> false)
+      members
+    | _            -> false
+  with Not_found -> false
+
 let has_payload ~shapes shape =
   try
     match (StringTable.find shape shapes).Shape.content with
@@ -208,7 +221,7 @@ let build_module_signature protocol ~shapes v =
   let to_headers = [%sigi: val to_headers: t -> Aws.Headers.t] in
   let to_xml = [%sigi: val to_xml: t -> Ezxmlm.nodes] in
   let parse_payload =
-    if has_payload ~shapes v.name then
+    if v.type_ = Output && has_headers ~shapes v.name then
       [ [%sigi: val of_headers :  Aws.Headers.Assoc.t -> t]]
     else
       [ ]
@@ -562,12 +575,19 @@ let build_module_structure protocol ~shapes v =
                 b
             in
             Some (mem.Structure.field_name, op)
-          | _ ->
+          | Some _ ->
             (* TODO: payload *)
             failwith
               (Format.asprintf "of_headers (op: %s, field: %s)@."
                 mem.Structure.field_name
-                v.name))
+                v.name)
+          | None ->
+            (* no `location`, must be in the payload *)
+            let op = Ast_helper.Exp.field
+                   (Syntax.ident "body")
+                   (Syntax.lid mem.Structure.field_name)
+            in
+            Some (mem.Structure.field_name, op))
             s
         in
         if fields == [] then
@@ -593,7 +613,9 @@ let build_module_structure protocol ~shapes v =
   in
   (* Force capitalize the module name, because some shapes may have uncapitalized names *)
   ( String.capitalize_ascii v.Shape.name
-  , base @ protocol_specific @ (if has_payload ~shapes v.name then [ of_headers () ] else [])
+  , base @ protocol_specific @
+    (* Only generate `of_headers` for output types *)
+    (if v.type_ = Output && has_headers ~shapes v.name then [ of_headers () ] else [])
   , v.doc
   )
 
@@ -609,13 +631,12 @@ let build_module protocol ~shapes v =
   | _, true -> None
   | None, _ -> Some (Syntax.module_ ?doc name itms)
 
-let types protocol (input_op_name_map, _output_op_name_map) shapes =
+let types protocol shapes =
   (* Only generate types for the output shapes, input shapes are written inline
    * in the op specific module. See comment at the end of the `op` function
     * below. *)
-  let op_names = StringTable.bindings input_op_name_map |> List.map fst in
   let modules = List.filter_map (fun v ->
-    if List.mem v.Shape.name op_names then
+    if v.Shape.type_ = Input then
      (* Operation-specific input / output Shapes are inlined in the operation
       * modules *)
      None
@@ -780,8 +801,13 @@ let mk_of_body op shapes protocol =
         if Util.is_prim payload_shp then begin
           [%expr
 let[@ocaml.warning "-8"] ((`Streaming body) : [ `String of string | `Streaming of Piaf.Body.t ]) = body in
-            `Ok ([%e ident (shp ^ ".of_headers")] headers, body)]
+            `Ok
+              ( [%e (if has_headers ~shapes shp
+                     then app1 (shp ^ ".of_headers") (ident "headers")
+                     else app1 (shp ^ ".make") (ident "()"))]
+              , body)]
         end else begin
+          (* XXX(anmonteiro): This is probably dead code. *)
           (* parse the payload shape from the body *)
           [%expr
             match [%e (read_xml payload_shp)] with
@@ -790,11 +816,19 @@ let[@ocaml.warning "-8"] ((`Streaming body) : [ `String of string | `Streaming o
             | `Error err -> `Error err
           ]
         end
-      end else
+      end else if has_headers ~shapes shp then begin
+        [%expr
+          match [%e (read_xml shp)] with
+          | `Ok payload ->
+            `Ok [%e (app2 (shp ^ ".of_headers") (ident "headers") (ident "payload")) ]
+          | `Error err -> `Error err
+        ]
+      end
+      else
         read_xml shp
     | _other -> raise Not_found
 
-let op service version protocol shapes (input_op_name_map, _output_op_name_map) op =
+let op service version protocol shapes op =
   let open Syntax in
   let mkty = function
     | None -> ty0 "unit"
@@ -983,9 +1017,10 @@ let op service version protocol shapes (input_op_name_map, _output_op_name_map) 
     * is an input / output type of another op, we need to open those other ops
     *)
    List.fold_left (fun acc shape ->
-    match StringTable.find shape input_op_name_map with
-    | op -> op :: acc
-    | exception Not_found -> acc)
+    match StringTable.find shape shapes with
+    | { Shape.type_ = Input; _ } -> shape :: acc
+    | exception Not_found -> acc
+    | _ -> acc)
    [] to_check
   in
   if extra_opens != [] then
