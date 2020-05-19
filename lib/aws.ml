@@ -175,7 +175,7 @@ module Request = struct
 
   type headers = (string * string) list
 
-  type t = meth * Uri.t * headers * string
+  type t = meth * Uri.t * headers * Piaf.Body.t
 
 end
 
@@ -503,8 +503,6 @@ module Signing = struct
       let get_signature_key key date region service =
         sign (sign (sign (sign ("AWS4" ^ key) date) region) service) "aws4_request" in
       let now = Time.now_utc () in
-      (* TODO: only append Content-Length header when body is empty *)
-      let headers = ("content-length", String.length body |> string_of_int) :: headers in
       let amzdate = Time.date_time now in
       let datestamp = Time.date_yymmdd now in
       let canonical_uri = Uri.path uri in
@@ -523,7 +521,7 @@ module Signing = struct
         ((List.map (fun (k,v) -> k ^ ":" ^ v) canonical_headers) @ [ "" ])
       in
       let signed_headers = String.concat ";" (List.map fst canonical_headers) in
-      let payload_hash = Hash.sha256_hex body in
+      let payload_hash = "UNSIGNED-PAYLOAD" in
       let canonical_request =
         String.concat
           "\n"

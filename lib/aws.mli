@@ -102,7 +102,7 @@ module Request : sig
   type headers = (string * string) list
 
   (** A request is a method, a uri, a list of headers and the body (payload). *)
-  type t = (meth * Uri.t * headers * string)
+  type t = (meth * Uri.t * headers * Piaf.Body.t)
 
 end
 

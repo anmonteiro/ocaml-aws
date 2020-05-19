@@ -53,7 +53,7 @@ let create_connection ?config ~region ~access_key ~secret_key service =
     | Ok conn ->
       Ok { conn; uri; region; access_key; secret_key }
     | Error msg ->
-      Error (Aws.Error.TransportError msg)
+      Error (Aws.Error.TransportError (Piaf.Error.to_string msg))
 
 let shutdown t =
   Piaf.Client.shutdown t.conn
@@ -70,38 +70,45 @@ let run_request_generic
   Lwt.catch (fun () ->
     req_fn
       ~headers
-      ~body:(Body.of_string body)
+      ~body
       ~meth:(to_meth meth)
       path
     >>= function
-      | Ok resp ->
-        let body = Response.body resp in
-        let code = Status.to_code (Response.status resp) in
+      | Ok { Piaf.Response.body; status; headers;_ } ->
+        let code = Status.to_code status in
         if code >= 300 then begin
           let open Aws.Error in
-          Body.to_string body >|= fun body ->
-          let aws_error =
-            match parse_aws_error body with
-            | `Error message -> BadResponse { body; message }
-            | `Ok ers ->
-              AwsError (List.map (fun (aws_code, message) ->
-                match M.parse_error code aws_code with
-                | None   -> (Unknown aws_code, message)
-                | Some e -> (Understood e    , message))
-                ers)
-          in
-          Error (HttpError (code, aws_error))
+          Body.to_string body
+          >|= (function
+            | Ok body ->
+              let aws_error =
+                match parse_aws_error body with
+                | `Error message -> BadResponse { body; message }
+                | `Ok ers ->
+                  AwsError (List.map (fun (aws_code, message) ->
+                    match M.parse_error code aws_code with
+                    | None   -> (Unknown aws_code, message)
+                    | Some e -> (Understood e    , message))
+                    ers)
+              in
+              Error (HttpError (code, aws_error))
+            | Error err ->
+              Error (TransportError (Piaf.Error.to_string err)))
         end else begin
-         let header_list = Headers.to_list (Response.headers resp) in
+         let header_list = Headers.to_list headers in
          let body = if M.streaming then
-           Lwt.return (`Streaming body)
+           Lwt_result.return (`Streaming body)
           else
-           Body.to_string body >|= fun body -> `String body
+           Lwt_result.map (fun body -> `String body) (Body.to_string body)
          in
-         body >|= fun body ->
-          match M.of_http header_list body with
-          | `Ok v -> Ok v
-          | `Error t -> Error (Aws.Error.HttpError (code, t))
+         body >|= function
+           | Ok body ->
+             begin match M.of_http header_list body with
+             | `Ok v -> Ok v
+             | `Error t -> Error (Aws.Error.HttpError (code, t))
+             end
+           | Error error ->
+             Error (TransportError (Piaf.Error.to_string error))
         end
       | Error _ -> assert false)
   (function
@@ -120,7 +127,12 @@ let run_request
   =
   let { conn; region; access_key; secret_key; _ } = t in
   let meth, uri, headers, body =
-    Aws.Signing.sign_request ~access_key ~secret_key ~service:M.service ~region (M.to_http M.service region inp)
+    Aws.Signing.sign_request
+      ~access_key
+      ~secret_key
+      ~service:M.service
+      ~region
+      (M.to_http M.service region inp)
   in
   run_request_generic
     (module M)
@@ -133,6 +145,7 @@ module Oneshot = struct
       (type input)
       (type output)
       (type error)
+      ?config
       ~region
       ~access_key
       ~secret_key
@@ -142,11 +155,16 @@ module Oneshot = struct
       (inp : M.input)
     =
     let meth, uri, headers, body =
-      Aws.Signing.sign_request ~access_key ~secret_key ~service:M.service ~region (M.to_http M.service region inp)
+      Aws.Signing.sign_request
+        ~access_key
+        ~secret_key
+        ~service:M.service
+        ~region
+        (M.to_http M.service region inp)
     in
     run_request_generic
       (module M)
       (fun ~headers ~body ~meth uri ->
-        Piaf.Client.Oneshot.request ~headers ~body ~meth uri)
+        Piaf.Client.Oneshot.request ?config ~headers ~body ~meth uri)
       ~headers ~body ~meth uri
 end

@@ -91,7 +91,7 @@ let styvariantlet nm variants =
        (strloc nm)]
 
 (* type nm = nm0 * nm1 *)
-let tytup _nm elts =
+let tytup elts =
  Typ.tuple elts
 
 (* fun ~arg -> body *)
