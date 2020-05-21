@@ -1,8 +1,31 @@
-open Types
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
 open Aws
+module GetInsightSelectorsRequest =
+  struct
+    type t =
+      {
+      trail_name: String.t
+        [@ocaml.doc
+          "<p>Specifies the name of the trail or trail ARN. If you specify a trail name, the string must meet the following requirements:</p> <ul> <li> <p>Contain only ASCII letters (a-z, A-Z), numbers (0-9), periods (.), underscores (_), or dashes (-)</p> </li> <li> <p>Start with a letter or number, and end with a letter or number</p> </li> <li> <p>Be between 3 and 128 characters</p> </li> <li> <p>Have no adjacent periods, underscores or dashes. Names like <code>my-_namespace</code> and <code>my--namespace</code> are not valid.</p> </li> <li> <p>Not be in IP address format (for example, 192.168.5.4)</p> </li> </ul> <p>If you specify a trail ARN, it must be in the format:</p> <p> <code>arn:aws:cloudtrail:us-east-2:123456789012:trail/MyTrail</code> </p>"]}
+    let make ~trail_name  () = { trail_name }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("trail_name", (String.to_json v.trail_name))])
+    let of_json j =
+      {
+        trail_name =
+          (String.of_json (Util.of_option_exn (Json.lookup j "trail_name")))
+      }
+  end
+module GetInsightSelectorsResponse = GetInsightSelectorsResponse
 type input = GetInsightSelectorsRequest.t
 type output = GetInsightSelectorsResponse.t
 type error = Errors_internal.t
+let streaming = false
 let service = "cloudtrail"
 let to_http service region req =
   let uri =
@@ -14,24 +37,27 @@ let to_http service region req =
             (Query.render (GetInsightSelectorsRequest.to_query req)))) in
   (`POST, uri, (Headers.render (GetInsightSelectorsRequest.to_headers req)),
     "")
-let of_http body =
+let of_http headers
+  (body : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+  let ((`String body) : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+    body[@@ocaml.warning "-8"] in
   try
     let json = Yojson.Basic.from_string body in
     `Ok (GetInsightSelectorsResponse.of_json json)
   with
   | Yojson.Json_error msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
+      let open Error in
+        `Error
+          (BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
-  | Some var ->
+  | Some v ->
       if
-        (List.mem var errors) &&
-          ((match Errors_internal.to_http_code var with
-            | Some var -> var = code
+        (List.mem v errors) &&
+          ((match Errors_internal.to_http_code v with
+            | Some x -> x = code
             | None -> true))
-      then Some var
+      then Some v
       else None
   | None -> None

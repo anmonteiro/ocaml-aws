@@ -1,4 +1,23 @@
-open Types
+(** "<p>Deletes an egress-only internet gateway.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DeleteEgressOnlyInternetGatewayRequest :
+sig
+  type t =
+    {
+    dry_run: Boolean.t option ;
+    egress_only_internet_gateway_id: String.t }
+  val make :
+    ?dry_run:Boolean.t ->
+      egress_only_internet_gateway_id:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DeleteEgressOnlyInternetGatewayResult =
+DeleteEgressOnlyInternetGatewayResult
 type input = DeleteEgressOnlyInternetGatewayRequest.t
 type output = DeleteEgressOnlyInternetGatewayResult.t
 type error = Errors_internal.t

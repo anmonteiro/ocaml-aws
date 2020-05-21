@@ -1,8 +1,12 @@
 type t =
   | AuthFailure 
   | Blocked 
-  | BucketAlreadyExists 
-  | BucketAlreadyOwnedByYou 
+  | BucketAlreadyExists
+  [@ocaml.doc
+    "<p>The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.</p>"]
+  | BucketAlreadyOwnedByYou
+  [@ocaml.doc
+    "<p>The bucket you tried to create already exists, and you own it. Amazon S3 returns this error in all AWS Regions except in the North Virginia Region. For legacy compatibility, if you re-create an existing bucket that you already own in the North Virginia Region, Amazon S3 returns 200 OK and resets the bucket access control lists (ACLs).</p>"]
   | DryRunOperation 
   | IdempotentParameterMismatch 
   | IncompleteSignature 
@@ -17,11 +21,16 @@ type t =
   | MissingAction 
   | MissingAuthenticationToken 
   | MissingParameter 
-  | NoSuchBucket 
-  | NoSuchKey 
-  | NoSuchUpload 
-  | ObjectAlreadyInActiveTierError 
-  | ObjectNotInActiveTierError 
+  | NoSuchBucket [@ocaml.doc "<p>The specified bucket does not exist.</p>"]
+  | NoSuchKey [@ocaml.doc "<p>The specified key does not exist.</p>"]
+  | NoSuchUpload
+  [@ocaml.doc "<p>The specified multipart upload does not exist.</p>"]
+  | ObjectAlreadyInActiveTierError
+  [@ocaml.doc
+    "<p>This operation is not allowed against this storage tier.</p>"]
+  | ObjectNotInActiveTierError
+  [@ocaml.doc
+    "<p>The source object of the COPY operation is not in the active tier and is only stored in Amazon S3 Glacier.</p>"]
   | OptInRequired 
   | PendingVerification 
   | RequestExpired 

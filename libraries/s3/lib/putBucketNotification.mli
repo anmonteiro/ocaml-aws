@@ -1,4 +1,25 @@
-open Types
+(** "<p> No longer used, see the <a>PutBucketNotificationConfiguration</a> operation.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module PutBucketNotificationRequest :
+sig
+  type t =
+    {
+    bucket: String.t ;
+    content_m_d5: String.t option ;
+    notification_configuration: NotificationConfigurationDeprecated.t }
+  val make :
+    bucket:String.t ->
+      ?content_m_d5:String.t ->
+        notification_configuration:NotificationConfigurationDeprecated.t ->
+          unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module Output = Aws.BaseTypes.Unit
 type input = PutBucketNotificationRequest.t
 type output = unit
 type error = Errors_internal.t

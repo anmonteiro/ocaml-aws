@@ -1,130 +1,312 @@
 type t =
   | AuthFailure 
-  | AuthorizationAlreadyExists 
-  | AuthorizationNotFound 
-  | AuthorizationQuotaExceeded 
+  | AuthorizationAlreadyExists
+  [@ocaml.doc
+    "<p>The specified CIDR IP range or Amazon EC2 security group is already authorized for the specified DB security group.</p>"]
+  | AuthorizationNotFound
+  [@ocaml.doc
+    "<p>The specified CIDR IP range or Amazon EC2 security group might not be authorized for the specified DB security group.</p> <p>Or, RDS might not be authorized to perform necessary actions using IAM on your behalf.</p>"]
+  | AuthorizationQuotaExceeded
+  [@ocaml.doc
+    "<p>The DB security group authorization quota has been reached.</p>"]
   | BackupPolicyNotFoundFault 
   | Blocked 
-  | CertificateNotFound 
-  | CustomAvailabilityZoneAlreadyExists 
-  | CustomAvailabilityZoneNotFound 
-  | CustomAvailabilityZoneQuotaExceeded 
-  | DBClusterAlreadyExistsFault 
-  | DBClusterBacktrackNotFoundFault 
-  | DBClusterEndpointAlreadyExistsFault 
-  | DBClusterEndpointNotFoundFault 
-  | DBClusterEndpointQuotaExceededFault 
-  | DBClusterNotFoundFault 
-  | DBClusterParameterGroupNotFound 
-  | DBClusterQuotaExceededFault 
-  | DBClusterRoleAlreadyExists 
-  | DBClusterRoleNotFound 
-  | DBClusterRoleQuotaExceeded 
-  | DBClusterSnapshotAlreadyExistsFault 
-  | DBClusterSnapshotNotFoundFault 
-  | DBInstanceAlreadyExists 
-  | DBInstanceAutomatedBackupNotFound 
-  | DBInstanceAutomatedBackupQuotaExceeded 
-  | DBInstanceNotFound 
-  | DBInstanceRoleAlreadyExists 
-  | DBInstanceRoleNotFound 
-  | DBInstanceRoleQuotaExceeded 
-  | DBLogFileNotFoundFault 
-  | DBParameterGroupAlreadyExists 
-  | DBParameterGroupNotFound 
-  | DBParameterGroupQuotaExceeded 
-  | DBProxyAlreadyExistsFault 
-  | DBProxyNotFoundFault 
-  | DBProxyQuotaExceededFault 
-  | DBProxyTargetAlreadyRegisteredFault 
-  | DBProxyTargetGroupNotFoundFault 
-  | DBProxyTargetNotFoundFault 
-  | DBSecurityGroupAlreadyExists 
-  | DBSecurityGroupNotFound 
-  | DBSecurityGroupNotSupported 
-  | DBSnapshotAlreadyExists 
-  | DBSnapshotNotFound 
-  | DBSubnetGroupAlreadyExists 
-  | DBSubnetGroupDoesNotCoverEnoughAZs 
-  | DBSubnetGroupNotAllowedFault 
-  | DBSubnetGroupNotFoundFault 
-  | DBSubnetGroupQuotaExceeded 
-  | DBSubnetQuotaExceededFault 
-  | DBUpgradeDependencyFailure 
-  | DomainNotFoundFault 
+  | CertificateNotFound
+  [@ocaml.doc
+    "<p> <code>CertificateIdentifier</code> doesn't refer to an existing certificate. </p>"]
+  | CustomAvailabilityZoneAlreadyExists
+  [@ocaml.doc
+    "<p> <code>CustomAvailabilityZoneName</code> is already used by an existing custom Availability Zone.</p>"]
+  | CustomAvailabilityZoneNotFound
+  [@ocaml.doc
+    "<p> <code>CustomAvailabilityZoneId</code> doesn't refer to an existing custom Availability Zone identifier.</p>"]
+  | CustomAvailabilityZoneQuotaExceeded
+  [@ocaml.doc
+    "<p>You have exceeded the maximum number of custom Availability Zones.</p>"]
+  | DBClusterAlreadyExistsFault
+  [@ocaml.doc
+    "<p>The user already has a DB cluster with the given identifier.</p>"]
+  | DBClusterBacktrackNotFoundFault
+  [@ocaml.doc
+    "<p> <code>BacktrackIdentifier</code> doesn't refer to an existing backtrack. </p>"]
+  | DBClusterEndpointAlreadyExistsFault
+  [@ocaml.doc
+    "<p>The specified custom endpoint can't be created because it already exists.</p>"]
+  | DBClusterEndpointNotFoundFault
+  [@ocaml.doc "<p>The specified custom endpoint doesn't exist.</p>"]
+  | DBClusterEndpointQuotaExceededFault
+  [@ocaml.doc
+    "<p>The cluster already has the maximum number of custom endpoints.</p>"]
+  | DBClusterNotFoundFault
+  [@ocaml.doc
+    "<p> <code>DBClusterIdentifier</code> doesn't refer to an existing DB cluster. </p>"]
+  | DBClusterParameterGroupNotFound
+  [@ocaml.doc
+    "<p> <code>DBClusterParameterGroupName</code> doesn't refer to an existing DB cluster parameter group. </p>"]
+  | DBClusterQuotaExceededFault
+  [@ocaml.doc
+    "<p>The user attempted to create a new DB cluster and the user has already reached the maximum allowed DB cluster quota.</p>"]
+  | DBClusterRoleAlreadyExists
+  [@ocaml.doc
+    "<p>The specified IAM role Amazon Resource Name (ARN) is already associated with the specified DB cluster.</p>"]
+  | DBClusterRoleNotFound
+  [@ocaml.doc
+    "<p>The specified IAM role Amazon Resource Name (ARN) isn't associated with the specified DB cluster.</p>"]
+  | DBClusterRoleQuotaExceeded
+  [@ocaml.doc
+    "<p>You have exceeded the maximum number of IAM roles that can be associated with the specified DB cluster.</p>"]
+  | DBClusterSnapshotAlreadyExistsFault
+  [@ocaml.doc
+    "<p>The user already has a DB cluster snapshot with the given identifier.</p>"]
+  | DBClusterSnapshotNotFoundFault
+  [@ocaml.doc
+    "<p> <code>DBClusterSnapshotIdentifier</code> doesn't refer to an existing DB cluster snapshot. </p>"]
+  | DBInstanceAlreadyExists
+  [@ocaml.doc
+    "<p>The user already has a DB instance with the given identifier.</p>"]
+  | DBInstanceAutomatedBackupNotFound
+  [@ocaml.doc "<p>No automated backup for this DB instance was found.</p>"]
+  | DBInstanceAutomatedBackupQuotaExceeded
+  [@ocaml.doc
+    "<p>The quota for retained automated backups was exceeded. This prevents you from retaining any additional automated backups. The retained automated backups quota is the same as your DB Instance quota.</p>"]
+  | DBInstanceNotFound
+  [@ocaml.doc
+    "<p> <code>DBInstanceIdentifier</code> doesn't refer to an existing DB instance. </p>"]
+  | DBInstanceRoleAlreadyExists
+  [@ocaml.doc
+    "<p>The specified <code>RoleArn</code> or <code>FeatureName</code> value is already associated with the DB instance.</p>"]
+  | DBInstanceRoleNotFound
+  [@ocaml.doc
+    "<p>The specified <code>RoleArn</code> value doesn't match the specified feature for the DB instance.</p>"]
+  | DBInstanceRoleQuotaExceeded
+  [@ocaml.doc
+    "<p>You can't associate any more AWS Identity and Access Management (IAM) roles with the DB instance because the quota has been reached.</p>"]
+  | DBLogFileNotFoundFault
+  [@ocaml.doc
+    "<p> <code>LogFileName</code> doesn't refer to an existing DB log file.</p>"]
+  | DBParameterGroupAlreadyExists
+  [@ocaml.doc "<p>A DB parameter group with the same name exists.</p>"]
+  | DBParameterGroupNotFound
+  [@ocaml.doc
+    "<p> <code>DBParameterGroupName</code> doesn't refer to an existing DB parameter group. </p>"]
+  | DBParameterGroupQuotaExceeded
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of DB parameter groups.</p>"]
+  | DBProxyAlreadyExistsFault
+  [@ocaml.doc
+    "<p>The specified proxy name must be unique for all proxies owned by your AWS account in the specified AWS Region.</p>"]
+  | DBProxyNotFoundFault
+  [@ocaml.doc
+    "<p>The specified proxy name doesn't correspond to a proxy owned by your AWS accoutn in the specified AWS Region.</p>"]
+  | DBProxyQuotaExceededFault
+  [@ocaml.doc
+    "<p>Your AWS account already has the maximum number of proxies in the specified AWS Region.</p>"]
+  | DBProxyTargetAlreadyRegisteredFault
+  [@ocaml.doc
+    "<p>The proxy is already associated with the specified RDS DB instance or Aurora DB cluster.</p>"]
+  | DBProxyTargetGroupNotFoundFault
+  [@ocaml.doc
+    "<p>The specified target group isn't available for a proxy owned by your AWS account in the specified AWS Region.</p>"]
+  | DBProxyTargetNotFoundFault
+  [@ocaml.doc
+    "<p>The specified RDS DB instance or Aurora DB cluster isn't available for a proxy owned by your AWS account in the specified AWS Region.</p>"]
+  | DBSecurityGroupAlreadyExists
+  [@ocaml.doc
+    "<p> A DB security group with the name specified in <code>DBSecurityGroupName</code> already exists. </p>"]
+  | DBSecurityGroupNotFound
+  [@ocaml.doc
+    "<p> <code>DBSecurityGroupName</code> doesn't refer to an existing DB security group. </p>"]
+  | DBSecurityGroupNotSupported
+  [@ocaml.doc "<p>A DB security group isn't allowed for this action.</p>"]
+  | DBSnapshotAlreadyExists
+  [@ocaml.doc
+    "<p> <code>DBSnapshotIdentifier</code> is already used by an existing snapshot. </p>"]
+  | DBSnapshotNotFound
+  [@ocaml.doc
+    "<p> <code>DBSnapshotIdentifier</code> doesn't refer to an existing DB snapshot. </p>"]
+  | DBSubnetGroupAlreadyExists
+  [@ocaml.doc
+    "<p> <code>DBSubnetGroupName</code> is already used by an existing DB subnet group. </p>"]
+  | DBSubnetGroupDoesNotCoverEnoughAZs
+  [@ocaml.doc
+    "<p>Subnets in the DB subnet group should cover at least two Availability Zones unless there is only one Availability Zone.</p>"]
+  | DBSubnetGroupNotAllowedFault
+  [@ocaml.doc
+    "<p>The DBSubnetGroup shouldn't be specified while creating read replicas that lie in the same region as the source instance.</p>"]
+  | DBSubnetGroupNotFoundFault
+  [@ocaml.doc
+    "<p> <code>DBSubnetGroupName</code> doesn't refer to an existing DB subnet group. </p>"]
+  | DBSubnetGroupQuotaExceeded
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of DB subnet groups.</p>"]
+  | DBSubnetQuotaExceededFault
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of subnets in a DB subnet groups.</p>"]
+  | DBUpgradeDependencyFailure
+  [@ocaml.doc
+    "<p>The DB upgrade failed because a resource the DB depends on can't be modified.</p>"]
+  | DomainNotFoundFault
+  [@ocaml.doc
+    "<p> <code>Domain</code> doesn't refer to an existing Active Directory domain. </p>"]
   | DryRunOperation 
-  | EventSubscriptionQuotaExceeded 
-  | GlobalClusterAlreadyExistsFault 
-  | GlobalClusterNotFoundFault 
-  | GlobalClusterQuotaExceededFault 
+  | EventSubscriptionQuotaExceeded
+  [@ocaml.doc
+    "<p>You have reached the maximum number of event subscriptions.</p>"]
+  | GlobalClusterAlreadyExistsFault [@ocaml.doc "<p/>"]
+  | GlobalClusterNotFoundFault [@ocaml.doc "<p/>"]
+  | GlobalClusterQuotaExceededFault [@ocaml.doc "<p/>"]
   | IdempotentParameterMismatch 
   | IncompleteSignature 
-  | InstallationMediaAlreadyExists 
-  | InstallationMediaNotFound 
-  | InstanceQuotaExceeded 
-  | InsufficientDBClusterCapacityFault 
-  | InsufficientDBInstanceCapacity 
-  | InsufficientStorageClusterCapacity 
+  | InstallationMediaAlreadyExists
+  [@ocaml.doc
+    "<p>The specified installation medium has already been imported.</p>"]
+  | InstallationMediaNotFound
+  [@ocaml.doc
+    "<p> <code>InstallationMediaID</code> doesn't refer to an existing installation medium.</p>"]
+  | InstanceQuotaExceeded
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of DB instances.</p>"]
+  | InsufficientDBClusterCapacityFault
+  [@ocaml.doc
+    "<p>The DB cluster doesn't have enough capacity for the current operation.</p>"]
+  | InsufficientDBInstanceCapacity
+  [@ocaml.doc
+    "<p>The specified DB instance class isn't available in the specified Availability Zone.</p>"]
+  | InsufficientStorageClusterCapacity
+  [@ocaml.doc
+    "<p>There is insufficient storage available for the current action. You might be able to resolve this error by updating your subnet group to use different Availability Zones that have more storage available.</p>"]
   | InternalFailure 
   | InvalidAction 
   | InvalidClientTokenId 
-  | InvalidDBClusterCapacityFault 
-  | InvalidDBClusterEndpointStateFault 
-  | InvalidDBClusterSnapshotStateFault 
-  | InvalidDBClusterStateFault 
-  | InvalidDBInstanceAutomatedBackupState 
-  | InvalidDBInstanceState 
-  | InvalidDBParameterGroupState 
-  | InvalidDBProxyStateFault 
-  | InvalidDBSecurityGroupState 
-  | InvalidDBSnapshotState 
-  | InvalidDBSubnetGroupFault 
-  | InvalidDBSubnetGroupStateFault 
-  | InvalidDBSubnetStateFault 
-  | InvalidEventSubscriptionState 
-  | InvalidGlobalClusterStateFault 
-  | InvalidOptionGroupStateFault 
+  | InvalidDBClusterCapacityFault
+  [@ocaml.doc
+    "<p> <code>Capacity</code> isn't a valid Aurora Serverless DB cluster capacity. Valid capacity values are <code>2</code>, <code>4</code>, <code>8</code>, <code>16</code>, <code>32</code>, <code>64</code>, <code>128</code>, and <code>256</code>.</p>"]
+  | InvalidDBClusterEndpointStateFault
+  [@ocaml.doc
+    "<p>The requested operation can't be performed on the endpoint while the endpoint is in this state.</p>"]
+  | InvalidDBClusterSnapshotStateFault
+  [@ocaml.doc
+    "<p>The supplied value isn't a valid DB cluster snapshot state.</p>"]
+  | InvalidDBClusterStateFault
+  [@ocaml.doc
+    "<p>The requested operation can't be performed while the cluster is in this state.</p>"]
+  | InvalidDBInstanceAutomatedBackupState
+  [@ocaml.doc
+    "<p>The automated backup is in an invalid state. For example, this automated backup is associated with an active instance. </p>"]
+  | InvalidDBInstanceState
+  [@ocaml.doc "<p>The DB instance isn't in a valid state.</p>"]
+  | InvalidDBParameterGroupState
+  [@ocaml.doc
+    "<p>The DB parameter group is in use or is in an invalid state. If you are attempting to delete the parameter group, you can't delete it when the parameter group is in this state.</p>"]
+  | InvalidDBProxyStateFault
+  [@ocaml.doc
+    "<p>The requested operation can't be performed while the proxy is in this state.</p>"]
+  | InvalidDBSecurityGroupState
+  [@ocaml.doc
+    "<p>The state of the DB security group doesn't allow deletion.</p>"]
+  | InvalidDBSnapshotState
+  [@ocaml.doc "<p>The state of the DB snapshot doesn't allow deletion.</p>"]
+  | InvalidDBSubnetGroupFault
+  [@ocaml.doc
+    "<p>The DBSubnetGroup doesn't belong to the same VPC as that of an existing cross-region read replica of the same source instance.</p>"]
+  | InvalidDBSubnetGroupStateFault
+  [@ocaml.doc
+    "<p>The DB subnet group cannot be deleted because it's in use.</p>"]
+  | InvalidDBSubnetStateFault
+  [@ocaml.doc "<p> The DB subnet isn't in the <i>available</i> state. </p>"]
+  | InvalidEventSubscriptionState
+  [@ocaml.doc
+    "<p>This error can occur if someone else is modifying a subscription. You should retry the action.</p>"]
+  | InvalidGlobalClusterStateFault [@ocaml.doc "<p/>"]
+  | InvalidOptionGroupStateFault
+  [@ocaml.doc
+    "<p> The option group isn't in the <i>available</i> state. </p>"]
   | InvalidParameter 
   | InvalidParameterCombination 
   | InvalidParameterValue 
   | InvalidQueryParameter 
-  | InvalidRestoreFault 
-  | InvalidS3BucketFault 
-  | InvalidSubnet 
-  | InvalidVPCNetworkStateFault 
-  | KMSKeyNotAccessibleFault 
+  | InvalidRestoreFault
+  [@ocaml.doc
+    "<p>Cannot restore from VPC backup to non-VPC DB instance.</p>"]
+  | InvalidS3BucketFault
+  [@ocaml.doc
+    "<p>The specified Amazon S3 bucket name can't be found or Amazon RDS isn't authorized to access the specified Amazon S3 bucket. Verify the <b>SourceS3BucketName</b> and <b>S3IngestionRoleArn</b> values and try again.</p>"]
+  | InvalidSubnet
+  [@ocaml.doc
+    "<p>The requested subnet is invalid, or multiple subnets were requested that are not all in a common VPC.</p>"]
+  | InvalidVPCNetworkStateFault
+  [@ocaml.doc
+    "<p>The DB subnet group doesn't cover all Availability Zones after it's created because of users' change.</p>"]
+  | KMSKeyNotAccessibleFault
+  [@ocaml.doc "<p>An error occurred accessing an AWS KMS key.</p>"]
   | MalformedQueryString 
   | MissingAction 
   | MissingAuthenticationToken 
   | MissingParameter 
   | OptInRequired 
-  | OptionGroupAlreadyExistsFault 
-  | OptionGroupNotFoundFault 
-  | OptionGroupQuotaExceededFault 
+  | OptionGroupAlreadyExistsFault
+  [@ocaml.doc
+    "<p>The option group you are trying to create already exists.</p>"]
+  | OptionGroupNotFoundFault
+  [@ocaml.doc "<p>The specified option group could not be found.</p>"]
+  | OptionGroupQuotaExceededFault
+  [@ocaml.doc
+    "<p>The quota of 20 option groups was exceeded for this AWS account.</p>"]
   | PendingVerification 
-  | PointInTimeRestoreNotEnabled 
-  | ProvisionedIopsNotAvailableInAZFault 
-  | QuotaExceeded_DBSecurityGroup 
+  | PointInTimeRestoreNotEnabled
+  [@ocaml.doc
+    "<p> <code>SourceDBInstanceIdentifier</code> refers to a DB instance with <code>BackupRetentionPeriod</code> equal to 0. </p>"]
+  | ProvisionedIopsNotAvailableInAZFault
+  [@ocaml.doc
+    "<p>Provisioned IOPS not available in the specified Availability Zone.</p>"]
+  | QuotaExceeded_DBSecurityGroup
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of DB security groups.</p>"]
   | RequestExpired 
   | RequestLimitExceeded 
-  | ReservedDBInstanceAlreadyExists 
-  | ReservedDBInstanceNotFound 
-  | ReservedDBInstanceQuotaExceeded 
-  | ReservedDBInstancesOfferingNotFound 
-  | ResourceNotFoundFault 
-  | SNSInvalidTopic 
-  | SNSNoAuthorization 
-  | SNSTopicArnNotFound 
+  | ReservedDBInstanceAlreadyExists
+  [@ocaml.doc
+    "<p>User already has a reservation with the given identifier.</p>"]
+  | ReservedDBInstanceNotFound
+  [@ocaml.doc "<p>The specified reserved DB Instance not found.</p>"]
+  | ReservedDBInstanceQuotaExceeded
+  [@ocaml.doc "<p>Request would exceed the user's DB Instance quota.</p>"]
+  | ReservedDBInstancesOfferingNotFound
+  [@ocaml.doc "<p>Specified offering does not exist.</p>"]
+  | ResourceNotFoundFault
+  [@ocaml.doc "<p>The specified resource ID was not found.</p>"]
+  | SNSInvalidTopic
+  [@ocaml.doc
+    "<p>SNS has responded that there is a problem with the SND topic specified.</p>"]
+  | SNSNoAuthorization
+  [@ocaml.doc
+    "<p>You do not have permission to publish to the SNS topic ARN.</p>"]
+  | SNSTopicArnNotFound
+  [@ocaml.doc "<p>The SNS topic ARN does not exist.</p>"]
   | ServiceUnavailable 
-  | SharedSnapshotQuotaExceeded 
-  | SnapshotQuotaExceeded 
-  | SourceNotFound 
-  | StorageQuotaExceeded 
-  | StorageTypeNotSupported 
-  | SubnetAlreadyInUse 
-  | SubscriptionAlreadyExist 
-  | SubscriptionCategoryNotFound 
-  | SubscriptionNotFound 
+  | SharedSnapshotQuotaExceeded
+  [@ocaml.doc
+    "<p>You have exceeded the maximum number of accounts that you can share a manual DB snapshot with.</p>"]
+  | SnapshotQuotaExceeded
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed number of DB snapshots.</p>"]
+  | SourceNotFound
+  [@ocaml.doc "<p>The requested source could not be found.</p>"]
+  | StorageQuotaExceeded
+  [@ocaml.doc
+    "<p>The request would result in the user exceeding the allowed amount of storage available across all DB instances.</p>"]
+  | StorageTypeNotSupported
+  [@ocaml.doc
+    "<p>Storage of the <code>StorageType</code> specified can't be associated with the DB instance. </p>"]
+  | SubnetAlreadyInUse
+  [@ocaml.doc
+    "<p>The DB subnet is already in use in the Availability Zone.</p>"]
+  | SubscriptionAlreadyExist
+  [@ocaml.doc "<p>The supplied subscription name already exists.</p>"]
+  | SubscriptionCategoryNotFound
+  [@ocaml.doc "<p>The supplied category does not exist.</p>"]
+  | SubscriptionNotFound
+  [@ocaml.doc "<p>The subscription name does not exist.</p>"]
   | Throttling 
   | UnauthorizedOperation 
   | UnknownParameter 

@@ -1,8 +1,38 @@
-open Types
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
 open Aws
+module DeregisterPatchBaselineForPatchGroupRequest =
+  struct
+    type t =
+      {
+      baseline_id: String.t
+        [@ocaml.doc
+          "<p>The ID of the patch baseline to deregister the patch group from.</p>"];
+      patch_group: String.t
+        [@ocaml.doc
+          "<p>The name of the patch group that should be deregistered from the patch baseline.</p>"]}
+    let make ~baseline_id  ~patch_group  () = { baseline_id; patch_group }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("patch_group", (String.to_json v.patch_group));
+           Some ("baseline_id", (String.to_json v.baseline_id))])
+    let of_json j =
+      {
+        baseline_id =
+          (String.of_json (Util.of_option_exn (Json.lookup j "baseline_id")));
+        patch_group =
+          (String.of_json (Util.of_option_exn (Json.lookup j "patch_group")))
+      }
+  end
+module DeregisterPatchBaselineForPatchGroupResult =
+  DeregisterPatchBaselineForPatchGroupResult
 type input = DeregisterPatchBaselineForPatchGroupRequest.t
 type output = DeregisterPatchBaselineForPatchGroupResult.t
 type error = Errors_internal.t
+let streaming = false
 let service = "ssm"
 let to_http service region req =
   let uri =
@@ -16,24 +46,27 @@ let to_http service region req =
   (`POST, uri,
     (Headers.render
        (DeregisterPatchBaselineForPatchGroupRequest.to_headers req)), "")
-let of_http body =
+let of_http headers
+  (body : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+  let ((`String body) : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+    body[@@ocaml.warning "-8"] in
   try
     let json = Yojson.Basic.from_string body in
     `Ok (DeregisterPatchBaselineForPatchGroupResult.of_json json)
   with
   | Yojson.Json_error msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
+      let open Error in
+        `Error
+          (BadResponse { body; message = ("Error parsing JSON: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
-  | Some var ->
+  | Some v ->
       if
-        (List.mem var errors) &&
-          ((match Errors_internal.to_http_code var with
-            | Some var -> var = code
+        (List.mem v errors) &&
+          ((match Errors_internal.to_http_code v with
+            | Some x -> x = code
             | None -> true))
-      then Some var
+      then Some v
       else None
   | None -> None

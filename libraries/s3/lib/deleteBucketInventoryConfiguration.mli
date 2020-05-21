@@ -1,4 +1,19 @@
-open Types
+(** "<p>Deletes an inventory configuration (identified by the inventory ID) from the bucket.</p> <p>To use this operation, you must have permissions to perform the <code>s3:PutInventoryConfiguration</code> action. The bucket owner has this permission by default. The bucket owner can grant this permission to others. For more information about permissions, see <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/dev/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources\">Permissions Related to Bucket Subresource Operations</a> and <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-access-control.html\">Managing Access Permissions to Your Amazon S3 Resources</a>.</p> <p>For information about the Amazon S3 inventory feature, see <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/dev/storage-inventory.html\">Amazon S3 Inventory</a>.</p> <p>Operations related to <code>DeleteBucketInventoryConfiguration</code> include: </p> <ul> <li> <p> <a>GetBucketInventoryConfiguration</a> </p> </li> <li> <p> <a>PutBucketInventoryConfiguration</a> </p> </li> <li> <p> <a>ListBucketInventoryConfigurations</a> </p> </li> </ul>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DeleteBucketInventoryConfigurationRequest :
+sig
+  type t = {
+    bucket: String.t ;
+    id: String.t }
+  val make : bucket:String.t -> id:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module Output = Aws.BaseTypes.Unit
 type input = DeleteBucketInventoryConfigurationRequest.t
 type output = unit
 type error = Errors_internal.t

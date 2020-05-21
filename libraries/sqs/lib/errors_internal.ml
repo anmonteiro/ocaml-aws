@@ -1,14 +1,30 @@
 type t =
-  | AWS_SimpleQueueService_BatchEntryIdsNotDistinct 
-  | AWS_SimpleQueueService_BatchRequestTooLong 
-  | AWS_SimpleQueueService_EmptyBatchRequest 
-  | AWS_SimpleQueueService_InvalidBatchEntryId 
-  | AWS_SimpleQueueService_MessageNotInflight 
-  | AWS_SimpleQueueService_NonExistentQueue 
-  | AWS_SimpleQueueService_PurgeQueueInProgress 
-  | AWS_SimpleQueueService_QueueDeletedRecently 
-  | AWS_SimpleQueueService_TooManyEntriesInBatchRequest 
-  | AWS_SimpleQueueService_UnsupportedOperation 
+  | AWS_SimpleQueueService_BatchEntryIdsNotDistinct
+  [@ocaml.doc
+    "<p>Two or more batch entries in the request have the same <code>Id</code>.</p>"]
+  | AWS_SimpleQueueService_BatchRequestTooLong
+  [@ocaml.doc
+    "<p>The length of all the messages put together is more than the limit.</p>"]
+  | AWS_SimpleQueueService_EmptyBatchRequest
+  [@ocaml.doc "<p>The batch request doesn't contain any entries.</p>"]
+  | AWS_SimpleQueueService_InvalidBatchEntryId
+  [@ocaml.doc
+    "<p>The <code>Id</code> of a batch entry in a batch request doesn't abide by the specification.</p>"]
+  | AWS_SimpleQueueService_MessageNotInflight
+  [@ocaml.doc "<p>The specified message isn't in flight.</p>"]
+  | AWS_SimpleQueueService_NonExistentQueue
+  [@ocaml.doc "<p>The specified queue doesn't exist.</p>"]
+  | AWS_SimpleQueueService_PurgeQueueInProgress
+  [@ocaml.doc
+    "<p>Indicates that the specified queue previously received a <code>PurgeQueue</code> request within the last 60 seconds (the time it can take to delete the messages in the queue).</p>"]
+  | AWS_SimpleQueueService_QueueDeletedRecently
+  [@ocaml.doc
+    "<p>You must wait 60 seconds after deleting a queue before you can create another queue with the same name.</p>"]
+  | AWS_SimpleQueueService_TooManyEntriesInBatchRequest
+  [@ocaml.doc
+    "<p>The batch request contains more entries than permissible.</p>"]
+  | AWS_SimpleQueueService_UnsupportedOperation
+  [@ocaml.doc "<p>Error code 400. Unsupported operation.</p>"]
   | AuthFailure 
   | Blocked 
   | DryRunOperation 
@@ -16,10 +32,15 @@ type t =
   | IncompleteSignature 
   | InternalFailure 
   | InvalidAction 
-  | InvalidAttributeName 
+  | InvalidAttributeName
+  [@ocaml.doc "<p>The specified attribute doesn't exist.</p>"]
   | InvalidClientTokenId 
-  | InvalidIdFormat 
-  | InvalidMessageContents 
+  | InvalidIdFormat
+  [@ocaml.doc
+    "<p>The specified receipt handle isn't valid for the current version.</p>"]
+  | InvalidMessageContents
+  [@ocaml.doc
+    "<p>The message contains characters outside the allowed set.</p>"]
   | InvalidParameter 
   | InvalidParameterCombination 
   | InvalidParameterValue 
@@ -29,10 +50,15 @@ type t =
   | MissingAuthenticationToken 
   | MissingParameter 
   | OptInRequired 
-  | OverLimit 
+  | OverLimit
+  [@ocaml.doc
+    "<p>The specified action violates a limit. For example, <code>ReceiveMessage</code> returns this error if the maximum number of inflight messages is reached and <code>AddPermission</code> returns this error if the maximum number of permissions for the queue is reached.</p>"]
   | PendingVerification 
-  | QueueAlreadyExists 
-  | ReceiptHandleIsInvalid 
+  | QueueAlreadyExists
+  [@ocaml.doc
+    "<p>A queue with this name already exists. Amazon SQS returns this error only if the request includes attributes whose values differ from those of the existing queue.</p>"]
+  | ReceiptHandleIsInvalid
+  [@ocaml.doc "<p>The specified receipt handle isn't valid.</p>"]
   | RequestExpired 
   | RequestLimitExceeded 
   | ServiceUnavailable 

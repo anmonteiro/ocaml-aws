@@ -1,44 +1,50 @@
 open Aws
 open Aws.BaseTypes
-open CalendarLib
-type calendar = Calendar.t
 module BinaryList =
   struct
     type t = Blob.t list
     let make elems () = elems
+    let to_query v = Query.to_query_list Blob.to_query v
+    let to_headers v = Headers.to_headers_list Blob.to_headers v
+    let to_json v = `List (List.map Blob.to_json v)
     let parse xml =
       Util.option_all
         (List.map Blob.parse (Xml.members "BinaryListValue" xml))
-    let to_query v = Query.to_query_list Blob.to_query v
-    let to_headers v = Headers.to_headers_list Blob.to_headers v
     let to_xml v =
       List.map (fun x -> Ezxmlm.make_tag "member" ([], (Blob.to_xml x))) v
-    let to_json v = `List (List.map Blob.to_json v)
-    let of_json j = Json.to_list Blob.of_json j
   end
 module StringList =
   struct
     type t = String.t list
     let make elems () = elems
+    let to_query v = Query.to_query_list String.to_query v
+    let to_headers v = Headers.to_headers_list String.to_headers v
+    let to_json v = `List (List.map String.to_json v)
     let parse xml =
       Util.option_all
         (List.map String.parse (Xml.members "StringListValue" xml))
-    let to_query v = Query.to_query_list String.to_query v
-    let to_headers v = Headers.to_headers_list String.to_headers v
     let to_xml v =
       List.map (fun x -> Ezxmlm.make_tag "member" ([], (String.to_xml x))) v
-    let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
   end
 module MessageAttributeValue =
   struct
     type t =
       {
-      string_value: String.t option ;
-      binary_value: Blob.t option ;
-      string_list_values: StringList.t ;
-      binary_list_values: BinaryList.t ;
-      data_type: String.t }
+      string_value: String.t option
+        [@ocaml.doc
+          "<p>Strings are Unicode with UTF-8 binary encoding. For a list of code values, see <a href=\"http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters\">ASCII Printable Characters</a>.</p>"];
+      binary_value: Blob.t option
+        [@ocaml.doc
+          "<p>Binary type attributes can store any binary data, such as compressed data, encrypted data, or images.</p>"];
+      string_list_values: StringList.t
+        [@ocaml.doc "<p>Not implemented. Reserved for future use.</p>"];
+      binary_list_values: BinaryList.t
+        [@ocaml.doc "<p>Not implemented. Reserved for future use.</p>"];
+      data_type: String.t
+        [@ocaml.doc
+          "<p>Amazon SQS supports the following logical data types: <code>String</code>, <code>Number</code>, and <code>Binary</code>. For the <code>Number</code> data type, you must use <code>StringValue</code>.</p> <p>You can also append custom labels. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-message-attributes.html\">Amazon SQS Message Attributes</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"]}
+    [@@ocaml.doc
+      "<p>The user-specified message attribute value. For string data types, the <code>Value</code> attribute has the same restrictions on the content as the message body. For more information, see <code> <a>SendMessage</a>.</code> </p> <p> <code>Name</code>, <code>type</code>, <code>value</code> and the message body must not be empty or null. All parts of the message attribute, including <code>Name</code>, <code>Type</code>, and <code>Value</code>, are part of the message size restriction (256 KB or 262,144 bytes).</p>"]
     let make ?string_value  ?binary_value  ?(string_list_values= []) 
       ?(binary_list_values= [])  ~data_type  () =
       {
@@ -48,6 +54,22 @@ module MessageAttributeValue =
         binary_list_values;
         data_type
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("data_type", (String.to_json v.data_type));
+           Some
+             ("binary_list_values",
+               (BinaryList.to_json v.binary_list_values));
+           Some
+             ("string_list_values",
+               (StringList.to_json v.string_list_values));
+           Util.option_map v.binary_value
+             (fun f -> ("binary_value", (Blob.to_json f)));
+           Util.option_map v.string_value
+             (fun f -> ("string_value", (String.to_json f)))])
     let parse xml =
       Some
         {
@@ -67,8 +89,6 @@ module MessageAttributeValue =
             (Xml.required "DataType"
                (Util.option_bind (Xml.member "DataType" xml) String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((((([] @
@@ -94,36 +114,8 @@ module MessageAttributeValue =
            @
            [Some
               (Ezxmlm.make_tag "DataType" ([], (String.to_xml v.data_type)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("data_type", (String.to_json v.data_type));
-           Some
-             ("binary_list_values",
-               (BinaryList.to_json v.binary_list_values));
-           Some
-             ("string_list_values",
-               (StringList.to_json v.string_list_values));
-           Util.option_map v.binary_value
-             (fun f -> ("binary_value", (Blob.to_json f)));
-           Util.option_map v.string_value
-             (fun f -> ("string_value", (String.to_json f)))])
-    let of_json j =
-      {
-        string_value =
-          (Util.option_map (Json.lookup j "string_value") String.of_json);
-        binary_value =
-          (Util.option_map (Json.lookup j "binary_value") Blob.of_json);
-        string_list_values =
-          (StringList.of_json
-             (Util.of_option_exn (Json.lookup j "string_list_values")));
-        binary_list_values =
-          (BinaryList.of_json
-             (Util.of_option_exn (Json.lookup j "binary_list_values")));
-        data_type =
-          (String.of_json (Util.of_option_exn (Json.lookup j "data_type")))
-      }
-  end
+  end[@@ocaml.doc
+       "<p>The user-specified message attribute value. For string data types, the <code>Value</code> attribute has the same restrictions on the content as the message body. For more information, see <code> <a>SendMessage</a>.</code> </p> <p> <code>Name</code>, <code>type</code>, <code>value</code> and the message body must not be empty or null. All parts of the message attribute, including <code>Name</code>, <code>Type</code>, and <code>Value</code>, are part of the message size restriction (256 KB or 262,144 bytes).</p>"]
 module MessageSystemAttributeNameForSends =
   struct
     type t =
@@ -133,29 +125,37 @@ module MessageSystemAttributeNameForSends =
     let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
     let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
     let make v () = v
-    let parse xml =
-      Util.option_bind (String.parse xml)
-        (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
     let to_headers v =
       Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
-    let to_xml v =
-      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
-    let of_json j =
-      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
   end
 module MessageSystemAttributeValue =
   struct
     type t =
       {
-      string_value: String.t option ;
-      binary_value: Blob.t option ;
-      string_list_values: StringList.t ;
-      binary_list_values: BinaryList.t ;
-      data_type: String.t }
+      string_value: String.t option
+        [@ocaml.doc
+          "<p>Strings are Unicode with UTF-8 binary encoding. For a list of code values, see <a href=\"http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters\">ASCII Printable Characters</a>.</p>"];
+      binary_value: Blob.t option
+        [@ocaml.doc
+          "<p>Binary type attributes can store any binary data, such as compressed data, encrypted data, or images.</p>"];
+      string_list_values: StringList.t
+        [@ocaml.doc "<p>Not implemented. Reserved for future use.</p>"];
+      binary_list_values: BinaryList.t
+        [@ocaml.doc "<p>Not implemented. Reserved for future use.</p>"];
+      data_type: String.t
+        [@ocaml.doc
+          "<p>Amazon SQS supports the following logical data types: <code>String</code>, <code>Number</code>, and <code>Binary</code>. For the <code>Number</code> data type, you must use <code>StringValue</code>.</p> <p>You can also append custom labels. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-message-attributes.html\">Amazon SQS Message Attributes</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"]}
+    [@@ocaml.doc
+      "<p>The user-specified message system attribute value. For string data types, the <code>Value</code> attribute has the same restrictions on the content as the message body. For more information, see <code> <a>SendMessage</a>.</code> </p> <p> <code>Name</code>, <code>type</code>, <code>value</code> and the message body must not be empty or null.</p>"]
     let make ?string_value  ?binary_value  ?(string_list_values= []) 
       ?(binary_list_values= [])  ~data_type  () =
       {
@@ -165,6 +165,22 @@ module MessageSystemAttributeValue =
         binary_list_values;
         data_type
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("data_type", (String.to_json v.data_type));
+           Some
+             ("binary_list_values",
+               (BinaryList.to_json v.binary_list_values));
+           Some
+             ("string_list_values",
+               (StringList.to_json v.string_list_values));
+           Util.option_map v.binary_value
+             (fun f -> ("binary_value", (Blob.to_json f)));
+           Util.option_map v.string_value
+             (fun f -> ("string_value", (String.to_json f)))])
     let parse xml =
       Some
         {
@@ -184,8 +200,6 @@ module MessageSystemAttributeValue =
             (Xml.required "DataType"
                (Util.option_bind (Xml.member "DataType" xml) String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((((([] @
@@ -211,36 +225,8 @@ module MessageSystemAttributeValue =
            @
            [Some
               (Ezxmlm.make_tag "DataType" ([], (String.to_xml v.data_type)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("data_type", (String.to_json v.data_type));
-           Some
-             ("binary_list_values",
-               (BinaryList.to_json v.binary_list_values));
-           Some
-             ("string_list_values",
-               (StringList.to_json v.string_list_values));
-           Util.option_map v.binary_value
-             (fun f -> ("binary_value", (Blob.to_json f)));
-           Util.option_map v.string_value
-             (fun f -> ("string_value", (String.to_json f)))])
-    let of_json j =
-      {
-        string_value =
-          (Util.option_map (Json.lookup j "string_value") String.of_json);
-        binary_value =
-          (Util.option_map (Json.lookup j "binary_value") Blob.of_json);
-        string_list_values =
-          (StringList.of_json
-             (Util.of_option_exn (Json.lookup j "string_list_values")));
-        binary_list_values =
-          (BinaryList.of_json
-             (Util.of_option_exn (Json.lookup j "binary_list_values")));
-        data_type =
-          (String.of_json (Util.of_option_exn (Json.lookup j "data_type")))
-      }
-  end
+  end[@@ocaml.doc
+       "<p>The user-specified message system attribute value. For string data types, the <code>Value</code> attribute has the same restrictions on the content as the message body. For more information, see <code> <a>SendMessage</a>.</code> </p> <p> <code>Name</code>, <code>type</code>, <code>value</code> and the message body must not be empty or null.</p>"]
 module MessageSystemAttributeName =
   struct
     type t =
@@ -273,30 +259,26 @@ module MessageSystemAttributeName =
     let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
     let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
     let make v () = v
-    let parse xml =
-      Util.option_bind (String.parse xml)
-        (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
     let to_headers v =
       Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
-    let to_xml v =
-      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
-    let of_json j =
-      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
   end
 module MessageBodyAttributeMap =
   struct
     type t = (String.t, MessageAttributeValue.t) Hashtbl.t
     let make elems () = elems
-    let parse xml = None
     let to_query v =
       Query.to_query_hashtbl String.to_string MessageAttributeValue.to_query
         v
     let to_headers v = Headers.to_headers_hashtbl String.to_headers v
-    let to_xml v = []
     let to_json v =
       `Assoc
         (Hashtbl.fold
@@ -305,8 +287,8 @@ module MessageBodyAttributeMap =
                 fun acc ->
                   ((String.to_string k), (MessageAttributeValue.to_json v))
                   :: acc) v [])
-    let of_json j =
-      Json.to_hashtbl String.of_string MessageAttributeValue.of_json j
+    let parse xml = None
+    let to_xml v = []
   end
 module MessageBodySystemAttributeMap =
   struct
@@ -314,14 +296,12 @@ module MessageBodySystemAttributeMap =
       (MessageSystemAttributeNameForSends.t, MessageSystemAttributeValue.t)
         Hashtbl.t
     let make elems () = elems
-    let parse xml = None
     let to_query v =
       Query.to_query_hashtbl MessageSystemAttributeNameForSends.to_string
         MessageSystemAttributeValue.to_query v
     let to_headers v =
       Headers.to_headers_hashtbl
         MessageSystemAttributeNameForSends.to_headers v
-    let to_xml v = []
     let to_json v =
       `Assoc
         (Hashtbl.fold
@@ -331,21 +311,18 @@ module MessageBodySystemAttributeMap =
                   ((MessageSystemAttributeNameForSends.to_string k),
                     (MessageSystemAttributeValue.to_json v))
                   :: acc) v [])
-    let of_json j =
-      Json.to_hashtbl MessageSystemAttributeNameForSends.of_string
-        MessageSystemAttributeValue.of_json j
+    let parse xml = None
+    let to_xml v = []
   end
 module MessageSystemAttributeMap =
   struct
     type t = (MessageSystemAttributeName.t, String.t) Hashtbl.t
     let make elems () = elems
-    let parse xml = None
     let to_query v =
       Query.to_query_hashtbl MessageSystemAttributeName.to_string
         String.to_query v
     let to_headers v =
       Headers.to_headers_hashtbl MessageSystemAttributeName.to_headers v
-    let to_xml v = []
     let to_json v =
       `Assoc
         (Hashtbl.fold
@@ -355,8 +332,8 @@ module MessageSystemAttributeMap =
                   ((MessageSystemAttributeName.to_string k),
                     (String.to_json v))
                   :: acc) v [])
-    let of_json j =
-      Json.to_hashtbl MessageSystemAttributeName.of_string String.of_json j
+    let parse xml = None
+    let to_xml v = []
   end
 module QueueAttributeName =
   struct
@@ -424,29 +401,42 @@ module QueueAttributeName =
     let to_string e = Util.of_option_exn (Util.list_find t_to_str e)
     let of_string s = Util.of_option_exn (Util.list_find str_to_t s)
     let make v () = v
-    let parse xml =
-      Util.option_bind (String.parse xml)
-        (fun s -> Util.list_find str_to_t s)
     let to_query v =
       Query.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
     let to_headers v =
       Headers.Value (Some (Util.of_option_exn (Util.list_find t_to_str v)))
-    let to_xml v =
-      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
     let to_json v =
       String.to_json (Util.of_option_exn (Util.list_find t_to_str v))
-    let of_json j =
-      Util.of_option_exn (Util.list_find str_to_t (String.of_json j))
+    let parse xml =
+      Util.option_bind (String.parse xml)
+        (fun s -> Util.list_find str_to_t s)
+    let to_xml v =
+      String.to_xml (Util.of_option_exn (Util.list_find t_to_str v))
   end
 module ChangeMessageVisibilityBatchRequestEntry =
   struct
     type t =
       {
-      id: String.t ;
-      receipt_handle: String.t ;
-      visibility_timeout: Integer.t option }
+      id: String.t
+        [@ocaml.doc
+          "<p>An identifier for this particular receipt handle used to communicate the result.</p> <note> <p>The <code>Id</code>s of a batch request need to be unique within a request</p> </note>"];
+      receipt_handle: String.t [@ocaml.doc "<p>A receipt handle.</p>"];
+      visibility_timeout: Integer.t option
+        [@ocaml.doc
+          "<p>The new value (in seconds) for the message's visibility timeout.</p>"]}
+    [@@ocaml.doc
+      "<p>Encloses a receipt handle and an entry id for each message in <code> <a>ChangeMessageVisibilityBatch</a>.</code> </p> <important> <p>All of the following list parameters must be prefixed with <code>ChangeMessageVisibilityBatchRequestEntry.n</code>, where <code>n</code> is an integer value starting with <code>1</code>. For example, a parameter list for this action might look like this:</p> </important> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.Id=change_visibility_msg_2</code> </p> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.ReceiptHandle=your_receipt_handle</code> </p> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.VisibilityTimeout=45</code> </p>"]
     let make ~id  ~receipt_handle  ?visibility_timeout  () =
       { id; receipt_handle; visibility_timeout }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.visibility_timeout
+              (fun f -> ("visibility_timeout", (Integer.to_json f)));
+           Some ("receipt_handle", (String.to_json v.receipt_handle));
+           Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -461,8 +451,6 @@ module ChangeMessageVisibilityBatchRequestEntry =
             (Util.option_bind (Xml.member "VisibilityTimeout" xml)
                Integer.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
@@ -473,35 +461,33 @@ module ChangeMessageVisibilityBatchRequestEntry =
            [Util.option_map v.visibility_timeout
               (fun f ->
                  Ezxmlm.make_tag "VisibilityTimeout" ([], (Integer.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.visibility_timeout
-              (fun f -> ("visibility_timeout", (Integer.to_json f)));
-           Some ("receipt_handle", (String.to_json v.receipt_handle));
-           Some ("id", (String.to_json v.id))])
-    let of_json j =
-      {
-        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
-        receipt_handle =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "receipt_handle")));
-        visibility_timeout =
-          (Util.option_map (Json.lookup j "visibility_timeout")
-             Integer.of_json)
-      }
-  end
+  end[@@ocaml.doc
+       "<p>Encloses a receipt handle and an entry id for each message in <code> <a>ChangeMessageVisibilityBatch</a>.</code> </p> <important> <p>All of the following list parameters must be prefixed with <code>ChangeMessageVisibilityBatchRequestEntry.n</code>, where <code>n</code> is an integer value starting with <code>1</code>. For example, a parameter list for this action might look like this:</p> </important> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.Id=change_visibility_msg_2</code> </p> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.ReceiptHandle=your_receipt_handle</code> </p> <p> <code>&amp;ChangeMessageVisibilityBatchRequestEntry.1.VisibilityTimeout=45</code> </p>"]
 module SendMessageBatchRequestEntry =
   struct
     type t =
       {
-      id: String.t ;
-      message_body: String.t ;
-      delay_seconds: Integer.t option ;
-      message_attributes: MessageBodyAttributeMap.t option ;
-      message_system_attributes: MessageBodySystemAttributeMap.t option ;
-      message_deduplication_id: String.t option ;
-      message_group_id: String.t option }
+      id: String.t
+        [@ocaml.doc
+          "<p>An identifier for a message in this batch used to communicate the result.</p> <note> <p>The <code>Id</code>s of a batch request need to be unique within a request</p> <p>This identifier can have up to 80 characters. The following characters are accepted: alphanumeric characters, hyphens(-), and underscores (_).</p> </note>"];
+      message_body: String.t [@ocaml.doc "<p>The body of the message.</p>"];
+      delay_seconds: Integer.t option
+        [@ocaml.doc
+          "<p>The length of time, in seconds, for which a specific message is delayed. Valid values: 0 to 900. Maximum: 15 minutes. Messages with a positive <code>DelaySeconds</code> value become available for processing after the delay period is finished. If you don't specify a value, the default value for the queue is applied. </p> <note> <p>When you set <code>FifoQueue</code>, you can't set <code>DelaySeconds</code> per message. You can set this parameter only on a queue level.</p> </note>"];
+      message_attributes: MessageBodyAttributeMap.t option
+        [@ocaml.doc
+          "<p>Each message attribute consists of a <code>Name</code>, <code>Type</code>, and <code>Value</code>. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-message-attributes.html\">Amazon SQS Message Attributes</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"];
+      message_system_attributes: MessageBodySystemAttributeMap.t option
+        [@ocaml.doc
+          "<p>The message system attribute to send Each message system attribute consists of a <code>Name</code>, <code>Type</code>, and <code>Value</code>.</p> <important> <ul> <li> <p>Currently, the only supported message system attribute is <code>AWSTraceHeader</code>. Its type must be <code>String</code> and its value must be a correctly formatted AWS X-Ray trace string.</p> </li> <li> <p>The size of a message system attribute doesn't count towards the total size of a message.</p> </li> </ul> </important>"];
+      message_deduplication_id: String.t option
+        [@ocaml.doc
+          "<p>This parameter applies only to FIFO (first-in-first-out) queues.</p> <p>The token used for deduplication of messages within a 5-minute minimum deduplication interval. If a message with a particular <code>MessageDeduplicationId</code> is sent successfully, subsequent messages with the same <code>MessageDeduplicationId</code> are accepted successfully but aren't delivered. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html#FIFO-queues-exactly-once-processing\"> Exactly-Once Processing</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p> <ul> <li> <p>Every message must have a unique <code>MessageDeduplicationId</code>,</p> <ul> <li> <p>You may provide a <code>MessageDeduplicationId</code> explicitly.</p> </li> <li> <p>If you aren't able to provide a <code>MessageDeduplicationId</code> and you enable <code>ContentBasedDeduplication</code> for your queue, Amazon SQS uses a SHA-256 hash to generate the <code>MessageDeduplicationId</code> using the body of the message (but not the attributes of the message). </p> </li> <li> <p>If you don't provide a <code>MessageDeduplicationId</code> and the queue doesn't have <code>ContentBasedDeduplication</code> set, the action fails with an error.</p> </li> <li> <p>If the queue has <code>ContentBasedDeduplication</code> set, your <code>MessageDeduplicationId</code> overrides the generated one.</p> </li> </ul> </li> <li> <p>When <code>ContentBasedDeduplication</code> is in effect, messages with identical content sent within the deduplication interval are treated as duplicates and only one copy of the message is delivered.</p> </li> <li> <p>If you send one message with <code>ContentBasedDeduplication</code> enabled and then another message with a <code>MessageDeduplicationId</code> that is the same as the one generated for the first <code>MessageDeduplicationId</code>, the two messages are treated as duplicates and only one copy of the message is delivered. </p> </li> </ul> <note> <p>The <code>MessageDeduplicationId</code> is available to the consumer of the message (this can be useful for troubleshooting delivery issues).</p> <p>If a message is sent successfully but the acknowledgement is lost and the message is resent with the same <code>MessageDeduplicationId</code> after the deduplication interval, Amazon SQS can't detect duplicate messages.</p> <p>Amazon SQS continues to keep track of the message deduplication ID even after the message is received and deleted.</p> </note> <p>The length of <code>MessageDeduplicationId</code> is 128 characters. <code>MessageDeduplicationId</code> can contain alphanumeric characters (<code>a-z</code>, <code>A-Z</code>, <code>0-9</code>) and punctuation (<code>!\"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~</code>).</p> <p>For best practices of using <code>MessageDeduplicationId</code>, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/using-messagededuplicationid-property.html\">Using the MessageDeduplicationId Property</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"];
+      message_group_id: String.t option
+        [@ocaml.doc
+          "<p>This parameter applies only to FIFO (first-in-first-out) queues.</p> <p>The tag that specifies that a message belongs to a specific message group. Messages that belong to the same message group are processed in a FIFO manner (however, messages in different message groups might be processed out of order). To interleave multiple ordered streams within a single queue, use <code>MessageGroupId</code> values (for example, session data for multiple users). In this scenario, multiple consumers can process the queue, but the session data of each user is processed in a FIFO fashion.</p> <ul> <li> <p>You must associate a non-empty <code>MessageGroupId</code> with a message. If you don't provide a <code>MessageGroupId</code>, the action fails.</p> </li> <li> <p> <code>ReceiveMessage</code> might return messages with multiple <code>MessageGroupId</code> values. For each <code>MessageGroupId</code>, the messages are sorted by time sent. The caller can't specify a <code>MessageGroupId</code>.</p> </li> </ul> <p>The length of <code>MessageGroupId</code> is 128 characters. Valid values: alphanumeric characters and punctuation <code>(!\"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~)</code>.</p> <p>For best practices of using <code>MessageGroupId</code>, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/using-messagegroupid-property.html\">Using the MessageGroupId Property</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p> <important> <p> <code>MessageGroupId</code> is required for FIFO queues. You can't use it for Standard queues.</p> </important>"]}
+    [@@ocaml.doc
+      "<p>Contains the details of a single Amazon SQS message along with an <code>Id</code>.</p>"]
     let make ~id  ~message_body  ?delay_seconds  ?message_attributes 
       ?message_system_attributes  ?message_deduplication_id 
       ?message_group_id  () =
@@ -514,6 +500,26 @@ module SendMessageBatchRequestEntry =
         message_deduplication_id;
         message_group_id
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message_group_id
+              (fun f -> ("message_group_id", (String.to_json f)));
+           Util.option_map v.message_deduplication_id
+             (fun f -> ("message_deduplication_id", (String.to_json f)));
+           Util.option_map v.message_system_attributes
+             (fun f ->
+                ("message_system_attributes",
+                  (MessageBodySystemAttributeMap.to_json f)));
+           Util.option_map v.message_attributes
+             (fun f ->
+                ("message_attributes", (MessageBodyAttributeMap.to_json f)));
+           Util.option_map v.delay_seconds
+             (fun f -> ("delay_seconds", (Integer.to_json f)));
+           Some ("message_body", (String.to_json v.message_body));
+           Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -537,8 +543,6 @@ module SendMessageBatchRequestEntry =
           message_group_id =
             (Util.option_bind (Xml.member "MessageGroupId" xml) String.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
@@ -569,50 +573,26 @@ module SendMessageBatchRequestEntry =
            [Util.option_map v.message_group_id
               (fun f ->
                  Ezxmlm.make_tag "MessageGroupId" ([], (String.to_xml f)))])
+  end[@@ocaml.doc
+       "<p>Contains the details of a single Amazon SQS message along with an <code>Id</code>.</p>"]
+module DeleteMessageBatchRequestEntry =
+  struct
+    type t =
+      {
+      id: String.t
+        [@ocaml.doc
+          "<p>An identifier for this particular receipt handle. This is used to communicate the result.</p> <note> <p>The <code>Id</code>s of a batch request need to be unique within a request</p> </note>"];
+      receipt_handle: String.t [@ocaml.doc "<p>A receipt handle.</p>"]}
+    [@@ocaml.doc
+      "<p>Encloses a receipt handle and an identifier for it.</p>"]
+    let make ~id  ~receipt_handle  () = { id; receipt_handle }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.message_group_id
-              (fun f -> ("message_group_id", (String.to_json f)));
-           Util.option_map v.message_deduplication_id
-             (fun f -> ("message_deduplication_id", (String.to_json f)));
-           Util.option_map v.message_system_attributes
-             (fun f ->
-                ("message_system_attributes",
-                  (MessageBodySystemAttributeMap.to_json f)));
-           Util.option_map v.message_attributes
-             (fun f ->
-                ("message_attributes", (MessageBodyAttributeMap.to_json f)));
-           Util.option_map v.delay_seconds
-             (fun f -> ("delay_seconds", (Integer.to_json f)));
-           Some ("message_body", (String.to_json v.message_body));
+           [Some ("receipt_handle", (String.to_json v.receipt_handle));
            Some ("id", (String.to_json v.id))])
-    let of_json j =
-      {
-        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
-        message_body =
-          (String.of_json (Util.of_option_exn (Json.lookup j "message_body")));
-        delay_seconds =
-          (Util.option_map (Json.lookup j "delay_seconds") Integer.of_json);
-        message_attributes =
-          (Util.option_map (Json.lookup j "message_attributes")
-             MessageBodyAttributeMap.of_json);
-        message_system_attributes =
-          (Util.option_map (Json.lookup j "message_system_attributes")
-             MessageBodySystemAttributeMap.of_json);
-        message_deduplication_id =
-          (Util.option_map (Json.lookup j "message_deduplication_id")
-             String.of_json);
-        message_group_id =
-          (Util.option_map (Json.lookup j "message_group_id") String.of_json)
-      }
-  end
-module DeleteMessageBatchRequestEntry =
-  struct
-    type t = {
-      id: String.t ;
-      receipt_handle: String.t }
-    let make ~id  ~receipt_handle  () = { id; receipt_handle }
     let parse xml =
       Some
         {
@@ -624,37 +604,44 @@ module DeleteMessageBatchRequestEntry =
                (Util.option_bind (Xml.member "ReceiptHandle" xml)
                   String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
            [Some
               (Ezxmlm.make_tag "ReceiptHandle"
                  ([], (String.to_xml v.receipt_handle)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("receipt_handle", (String.to_json v.receipt_handle));
-           Some ("id", (String.to_json v.id))])
-    let of_json j =
-      {
-        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
-        receipt_handle =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "receipt_handle")))
-      }
-  end
+  end[@@ocaml.doc
+       "<p>Encloses a receipt handle and an identifier for it.</p>"]
 module BatchResultErrorEntry =
   struct
     type t =
       {
-      id: String.t ;
-      sender_fault: Boolean.t ;
-      code: String.t ;
-      message: String.t option }
+      id: String.t
+        [@ocaml.doc
+          "<p>The <code>Id</code> of an entry in a batch request.</p>"];
+      sender_fault: Boolean.t
+        [@ocaml.doc
+          "<p>Specifies whether the error happened due to the producer.</p>"];
+      code: String.t
+        [@ocaml.doc
+          "<p>An error code representing why the action failed on this entry.</p>"];
+      message: String.t option
+        [@ocaml.doc
+          "<p>A message explaining why the action failed on this entry.</p>"]}
+    [@@ocaml.doc
+      "<p>Gives a detailed description of the result of an action on each entry in the request.</p>"]
     let make ~id  ~sender_fault  ~code  ?message  () =
       { id; sender_fault; code; message }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message
+              (fun f -> ("message", (String.to_json f)));
+           Some ("code", (String.to_json v.code));
+           Some ("sender_fault", (Boolean.to_json v.sender_fault));
+           Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -670,8 +657,6 @@ module BatchResultErrorEntry =
           message =
             (Util.option_bind (Xml.member "Message" xml) String.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))]) @
@@ -682,29 +667,22 @@ module BatchResultErrorEntry =
            @
            [Util.option_map v.message
               (fun f -> Ezxmlm.make_tag "Message" ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.message
-              (fun f -> ("message", (String.to_json f)));
-           Some ("code", (String.to_json v.code));
-           Some ("sender_fault", (Boolean.to_json v.sender_fault));
-           Some ("id", (String.to_json v.id))])
-    let of_json j =
-      {
-        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
-        sender_fault =
-          (Boolean.of_json
-             (Util.of_option_exn (Json.lookup j "sender_fault")));
-        code = (String.of_json (Util.of_option_exn (Json.lookup j "code")));
-        message = (Util.option_map (Json.lookup j "message") String.of_json)
-      }
-  end
+  end[@@ocaml.doc
+       "<p>Gives a detailed description of the result of an action on each entry in the request.</p>"]
 module ChangeMessageVisibilityBatchResultEntry =
   struct
-    type t = {
-      id: String.t }
+    type t =
+      {
+      id: String.t
+        [@ocaml.doc
+          "<p>Represents a message whose visibility timeout has been changed successfully.</p>"]}
+    [@@ocaml.doc
+      "<p>Encloses the <code>Id</code> of an entry in <code> <a>ChangeMessageVisibilityBatch</a>.</code> </p>"]
     let make ~id  () = { id }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -712,26 +690,33 @@ module ChangeMessageVisibilityBatchResultEntry =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
-    let to_json v =
-      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
-    let of_json j =
-      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
-  end
+  end[@@ocaml.doc
+       "<p>Encloses the <code>Id</code> of an entry in <code> <a>ChangeMessageVisibilityBatch</a>.</code> </p>"]
 module SendMessageBatchResultEntry =
   struct
     type t =
       {
-      id: String.t ;
-      message_id: String.t ;
-      m_d5_of_message_body: String.t ;
-      m_d5_of_message_attributes: String.t option ;
-      m_d5_of_message_system_attributes: String.t option ;
-      sequence_number: String.t option }
+      id: String.t
+        [@ocaml.doc "<p>An identifier for the message in this batch.</p>"];
+      message_id: String.t
+        [@ocaml.doc "<p>An identifier for the message.</p>"];
+      m_d5_of_message_body: String.t
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      m_d5_of_message_attributes: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      m_d5_of_message_system_attributes: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message system attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      sequence_number: String.t option
+        [@ocaml.doc
+          "<p>This parameter applies only to FIFO (first-in-first-out) queues.</p> <p>The large, non-consecutive number that Amazon SQS assigns to each message.</p> <p>The length of <code>SequenceNumber</code> is 128 bits. As <code>SequenceNumber</code> continues to increase for a particular <code>MessageGroupId</code>.</p>"]}
+    [@@ocaml.doc
+      "<p>Encloses a <code>MessageId</code> for a successfully-enqueued message in a <code> <a>SendMessageBatch</a>.</code> </p>"]
     let make ~id  ~message_id  ~m_d5_of_message_body 
       ?m_d5_of_message_attributes  ?m_d5_of_message_system_attributes 
       ?sequence_number  () =
@@ -743,6 +728,23 @@ module SendMessageBatchResultEntry =
         m_d5_of_message_system_attributes;
         sequence_number
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.sequence_number
+              (fun f -> ("sequence_number", (String.to_json f)));
+           Util.option_map v.m_d5_of_message_system_attributes
+             (fun f ->
+                ("m_d5_of_message_system_attributes", (String.to_json f)));
+           Util.option_map v.m_d5_of_message_attributes
+             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
+           Some
+             ("m_d5_of_message_body",
+               (String.to_json v.m_d5_of_message_body));
+           Some ("message_id", (String.to_json v.message_id));
+           Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -765,8 +767,6 @@ module SendMessageBatchResultEntry =
           sequence_number =
             (Util.option_bind (Xml.member "SequenceNumber" xml) String.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (((((([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
@@ -792,51 +792,33 @@ module SendMessageBatchResultEntry =
            [Util.option_map v.sequence_number
               (fun f ->
                  Ezxmlm.make_tag "SequenceNumber" ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.sequence_number
-              (fun f -> ("sequence_number", (String.to_json f)));
-           Util.option_map v.m_d5_of_message_system_attributes
-             (fun f ->
-                ("m_d5_of_message_system_attributes", (String.to_json f)));
-           Util.option_map v.m_d5_of_message_attributes
-             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
-           Some
-             ("m_d5_of_message_body",
-               (String.to_json v.m_d5_of_message_body));
-           Some ("message_id", (String.to_json v.message_id));
-           Some ("id", (String.to_json v.id))])
-    let of_json j =
-      {
-        id = (String.of_json (Util.of_option_exn (Json.lookup j "id")));
-        message_id =
-          (String.of_json (Util.of_option_exn (Json.lookup j "message_id")));
-        m_d5_of_message_body =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "m_d5_of_message_body")));
-        m_d5_of_message_attributes =
-          (Util.option_map (Json.lookup j "m_d5_of_message_attributes")
-             String.of_json);
-        m_d5_of_message_system_attributes =
-          (Util.option_map
-             (Json.lookup j "m_d5_of_message_system_attributes")
-             String.of_json);
-        sequence_number =
-          (Util.option_map (Json.lookup j "sequence_number") String.of_json)
-      }
-  end
+  end[@@ocaml.doc
+       "<p>Encloses a <code>MessageId</code> for a successfully-enqueued message in a <code> <a>SendMessageBatch</a>.</code> </p>"]
 module Message =
   struct
     type t =
       {
-      message_id: String.t option ;
-      receipt_handle: String.t option ;
-      m_d5_of_body: String.t option ;
-      body: String.t option ;
-      attributes: MessageSystemAttributeMap.t option ;
-      m_d5_of_message_attributes: String.t option ;
-      message_attributes: MessageBodyAttributeMap.t option }
+      message_id: String.t option
+        [@ocaml.doc
+          "<p>A unique identifier for the message. A <code>MessageId</code>is considered unique across all AWS accounts for an extended period of time.</p>"];
+      receipt_handle: String.t option
+        [@ocaml.doc
+          "<p>An identifier associated with the act of receiving the message. A new receipt handle is returned every time you receive a message. When deleting a message, you provide the last received receipt handle to delete the message.</p>"];
+      m_d5_of_body: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message body string.</p>"];
+      body: String.t option
+        [@ocaml.doc "<p>The message's contents (not URL-encoded).</p>"];
+      attributes: MessageSystemAttributeMap.t option
+        [@ocaml.doc
+          "<p>A map of the attributes requested in <code> <a>ReceiveMessage</a> </code> to their respective values. Supported attributes:</p> <ul> <li> <p> <code>ApproximateReceiveCount</code> </p> </li> <li> <p> <code>ApproximateFirstReceiveTimestamp</code> </p> </li> <li> <p> <code>MessageDeduplicationId</code> </p> </li> <li> <p> <code>MessageGroupId</code> </p> </li> <li> <p> <code>SenderId</code> </p> </li> <li> <p> <code>SentTimestamp</code> </p> </li> <li> <p> <code>SequenceNumber</code> </p> </li> </ul> <p> <code>ApproximateFirstReceiveTimestamp</code> and <code>SentTimestamp</code> are each returned as an integer representing the <a href=\"http://en.wikipedia.org/wiki/Unix_time\">epoch time</a> in milliseconds.</p>"];
+      m_d5_of_message_attributes: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      message_attributes: MessageBodyAttributeMap.t option
+        [@ocaml.doc
+          "<p>Each message attribute consists of a <code>Name</code>, <code>Type</code>, and <code>Value</code>. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-message-attributes.html\">Amazon SQS Message Attributes</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"]}
+    [@@ocaml.doc "<p>An Amazon SQS message.</p>"]
     let make ?message_id  ?receipt_handle  ?m_d5_of_body  ?body  ?attributes 
       ?m_d5_of_message_attributes  ?message_attributes  () =
       {
@@ -848,6 +830,25 @@ module Message =
         m_d5_of_message_attributes;
         message_attributes
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.message_attributes
+              (fun f ->
+                 ("message_attributes", (MessageBodyAttributeMap.to_json f)));
+           Util.option_map v.m_d5_of_message_attributes
+             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
+           Util.option_map v.attributes
+             (fun f -> ("attributes", (MessageSystemAttributeMap.to_json f)));
+           Util.option_map v.body (fun f -> ("body", (String.to_json f)));
+           Util.option_map v.m_d5_of_body
+             (fun f -> ("m_d5_of_body", (String.to_json f)));
+           Util.option_map v.receipt_handle
+             (fun f -> ("receipt_handle", (String.to_json f)));
+           Util.option_map v.message_id
+             (fun f -> ("message_id", (String.to_json f)))])
     let parse xml =
       Some
         {
@@ -868,8 +869,6 @@ module Message =
             (Util.option_bind (Xml.member "MessageAttribute" xml)
                MessageBodyAttributeMap.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((((((([] @
@@ -902,48 +901,20 @@ module Message =
               (fun f ->
                  Ezxmlm.make_tag "MessageAttribute"
                    ([], (MessageBodyAttributeMap.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.message_attributes
-              (fun f ->
-                 ("message_attributes", (MessageBodyAttributeMap.to_json f)));
-           Util.option_map v.m_d5_of_message_attributes
-             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
-           Util.option_map v.attributes
-             (fun f -> ("attributes", (MessageSystemAttributeMap.to_json f)));
-           Util.option_map v.body (fun f -> ("body", (String.to_json f)));
-           Util.option_map v.m_d5_of_body
-             (fun f -> ("m_d5_of_body", (String.to_json f)));
-           Util.option_map v.receipt_handle
-             (fun f -> ("receipt_handle", (String.to_json f)));
-           Util.option_map v.message_id
-             (fun f -> ("message_id", (String.to_json f)))])
-    let of_json j =
-      {
-        message_id =
-          (Util.option_map (Json.lookup j "message_id") String.of_json);
-        receipt_handle =
-          (Util.option_map (Json.lookup j "receipt_handle") String.of_json);
-        m_d5_of_body =
-          (Util.option_map (Json.lookup j "m_d5_of_body") String.of_json);
-        body = (Util.option_map (Json.lookup j "body") String.of_json);
-        attributes =
-          (Util.option_map (Json.lookup j "attributes")
-             MessageSystemAttributeMap.of_json);
-        m_d5_of_message_attributes =
-          (Util.option_map (Json.lookup j "m_d5_of_message_attributes")
-             String.of_json);
-        message_attributes =
-          (Util.option_map (Json.lookup j "message_attributes")
-             MessageBodyAttributeMap.of_json)
-      }
-  end
+  end[@@ocaml.doc "<p>An Amazon SQS message.</p>"]
 module DeleteMessageBatchResultEntry =
   struct
-    type t = {
-      id: String.t }
+    type t =
+      {
+      id: String.t
+        [@ocaml.doc "<p>Represents a successfully deleted message.</p>"]}
+    [@@ocaml.doc
+      "<p>Encloses the <code>Id</code> of an entry in <code> <a>DeleteMessageBatch</a>.</code> </p>"]
     let make ~id  () = { id }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
     let parse xml =
       Some
         {
@@ -951,26 +922,19 @@ module DeleteMessageBatchResultEntry =
             (Xml.required "Id"
                (Util.option_bind (Xml.member "Id" xml) String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @ [Some (Ezxmlm.make_tag "Id" ([], (String.to_xml v.id)))])
-    let to_json v =
-      `Assoc (Util.list_filter_opt [Some ("id", (String.to_json v.id))])
-    let of_json j =
-      { id = (String.of_json (Util.of_option_exn (Json.lookup j "id"))) }
-  end
+  end[@@ocaml.doc
+       "<p>Encloses the <code>Id</code> of an entry in <code> <a>DeleteMessageBatch</a>.</code> </p>"]
 module QueueAttributeMap =
   struct
     type t = (QueueAttributeName.t, String.t) Hashtbl.t
     let make elems () = elems
-    let parse xml = None
     let to_query v =
       Query.to_query_hashtbl QueueAttributeName.to_string String.to_query v
     let to_headers v =
       Headers.to_headers_hashtbl QueueAttributeName.to_headers v
-    let to_xml v = []
     let to_json v =
       `Assoc
         (Hashtbl.fold
@@ -979,171 +943,156 @@ module QueueAttributeMap =
                 fun acc ->
                   ((QueueAttributeName.to_string k), (String.to_json v)) ::
                   acc) v [])
-    let of_json j =
-      Json.to_hashtbl QueueAttributeName.of_string String.of_json j
+    let parse xml = None
+    let to_xml v = []
   end
 module ChangeMessageVisibilityBatchRequestEntryList =
   struct
     type t = ChangeMessageVisibilityBatchRequestEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all
-        (List.map ChangeMessageVisibilityBatchRequestEntry.parse [xml])
     let to_query v =
       Query.to_query_list ChangeMessageVisibilityBatchRequestEntry.to_query v
     let to_headers v =
       Headers.to_headers_list
         ChangeMessageVisibilityBatchRequestEntry.to_headers v
+    let to_json v =
+      `List (List.map ChangeMessageVisibilityBatchRequestEntry.to_json v)
+    let parse xml =
+      Util.option_all
+        (List.map ChangeMessageVisibilityBatchRequestEntry.parse [xml])
     let to_xml v =
       List.concat
         (List.map ChangeMessageVisibilityBatchRequestEntry.to_xml v)
-    let to_json v =
-      `List (List.map ChangeMessageVisibilityBatchRequestEntry.to_json v)
-    let of_json j =
-      Json.to_list ChangeMessageVisibilityBatchRequestEntry.of_json j
   end
 module SendMessageBatchRequestEntryList =
   struct
     type t = SendMessageBatchRequestEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map SendMessageBatchRequestEntry.parse [xml])
     let to_query v =
       Query.to_query_list SendMessageBatchRequestEntry.to_query v
     let to_headers v =
       Headers.to_headers_list SendMessageBatchRequestEntry.to_headers v
+    let to_json v = `List (List.map SendMessageBatchRequestEntry.to_json v)
+    let parse xml =
+      Util.option_all (List.map SendMessageBatchRequestEntry.parse [xml])
     let to_xml v =
       List.concat (List.map SendMessageBatchRequestEntry.to_xml v)
-    let to_json v = `List (List.map SendMessageBatchRequestEntry.to_json v)
-    let of_json j = Json.to_list SendMessageBatchRequestEntry.of_json j
   end
 module DeleteMessageBatchRequestEntryList =
   struct
     type t = DeleteMessageBatchRequestEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map DeleteMessageBatchRequestEntry.parse [xml])
     let to_query v =
       Query.to_query_list DeleteMessageBatchRequestEntry.to_query v
     let to_headers v =
       Headers.to_headers_list DeleteMessageBatchRequestEntry.to_headers v
+    let to_json v = `List (List.map DeleteMessageBatchRequestEntry.to_json v)
+    let parse xml =
+      Util.option_all (List.map DeleteMessageBatchRequestEntry.parse [xml])
     let to_xml v =
       List.concat (List.map DeleteMessageBatchRequestEntry.to_xml v)
-    let to_json v = `List (List.map DeleteMessageBatchRequestEntry.to_json v)
-    let of_json j = Json.to_list DeleteMessageBatchRequestEntry.of_json j
   end
 module BatchResultErrorEntryList =
   struct
     type t = BatchResultErrorEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map BatchResultErrorEntry.parse [xml])
     let to_query v = Query.to_query_list BatchResultErrorEntry.to_query v
     let to_headers v =
       Headers.to_headers_list BatchResultErrorEntry.to_headers v
-    let to_xml v = List.concat (List.map BatchResultErrorEntry.to_xml v)
     let to_json v = `List (List.map BatchResultErrorEntry.to_json v)
-    let of_json j = Json.to_list BatchResultErrorEntry.of_json j
+    let parse xml =
+      Util.option_all (List.map BatchResultErrorEntry.parse [xml])
+    let to_xml v = List.concat (List.map BatchResultErrorEntry.to_xml v)
   end
 module ChangeMessageVisibilityBatchResultEntryList =
   struct
     type t = ChangeMessageVisibilityBatchResultEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all
-        (List.map ChangeMessageVisibilityBatchResultEntry.parse [xml])
     let to_query v =
       Query.to_query_list ChangeMessageVisibilityBatchResultEntry.to_query v
     let to_headers v =
       Headers.to_headers_list
         ChangeMessageVisibilityBatchResultEntry.to_headers v
-    let to_xml v =
-      List.concat (List.map ChangeMessageVisibilityBatchResultEntry.to_xml v)
     let to_json v =
       `List (List.map ChangeMessageVisibilityBatchResultEntry.to_json v)
-    let of_json j =
-      Json.to_list ChangeMessageVisibilityBatchResultEntry.of_json j
+    let parse xml =
+      Util.option_all
+        (List.map ChangeMessageVisibilityBatchResultEntry.parse [xml])
+    let to_xml v =
+      List.concat (List.map ChangeMessageVisibilityBatchResultEntry.to_xml v)
   end
 module SendMessageBatchResultEntryList =
   struct
     type t = SendMessageBatchResultEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map SendMessageBatchResultEntry.parse [xml])
     let to_query v =
       Query.to_query_list SendMessageBatchResultEntry.to_query v
     let to_headers v =
       Headers.to_headers_list SendMessageBatchResultEntry.to_headers v
+    let to_json v = `List (List.map SendMessageBatchResultEntry.to_json v)
+    let parse xml =
+      Util.option_all (List.map SendMessageBatchResultEntry.parse [xml])
     let to_xml v =
       List.concat (List.map SendMessageBatchResultEntry.to_xml v)
-    let to_json v = `List (List.map SendMessageBatchResultEntry.to_json v)
-    let of_json j = Json.to_list SendMessageBatchResultEntry.of_json j
   end
 module AWSAccountIdList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
     let to_headers v = Headers.to_headers_list String.to_headers v
-    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
+    let parse xml = Util.option_all (List.map String.parse [xml])
+    let to_xml v = List.concat (List.map String.to_xml v)
   end
 module ActionNameList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
     let to_headers v = Headers.to_headers_list String.to_headers v
-    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
+    let parse xml = Util.option_all (List.map String.parse [xml])
+    let to_xml v = List.concat (List.map String.to_xml v)
   end
 module AttributeNameList =
   struct
     type t = QueueAttributeName.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map QueueAttributeName.parse [xml])
     let to_query v = Query.to_query_list QueueAttributeName.to_query v
     let to_headers v =
       Headers.to_headers_list QueueAttributeName.to_headers v
-    let to_xml v = List.concat (List.map QueueAttributeName.to_xml v)
     let to_json v = `List (List.map QueueAttributeName.to_json v)
-    let of_json j = Json.to_list QueueAttributeName.of_json j
+    let parse xml = Util.option_all (List.map QueueAttributeName.parse [xml])
+    let to_xml v = List.concat (List.map QueueAttributeName.to_xml v)
   end
 module MessageAttributeNameList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
     let to_headers v = Headers.to_headers_list String.to_headers v
-    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
+    let parse xml = Util.option_all (List.map String.parse [xml])
+    let to_xml v = List.concat (List.map String.to_xml v)
   end
 module QueueUrlList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
     let to_headers v = Headers.to_headers_list String.to_headers v
-    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
+    let parse xml = Util.option_all (List.map String.parse [xml])
+    let to_xml v = List.concat (List.map String.to_xml v)
   end
 module TagMap =
   struct
     type t = (String.t, String.t) Hashtbl.t
     let make elems () = elems
-    let parse xml = None
     let to_query v =
       Query.to_query_hashtbl String.to_string String.to_query v
     let to_headers v = Headers.to_headers_hashtbl String.to_headers v
-    let to_xml v = []
     let to_json v =
       `Assoc
         (Hashtbl.fold
@@ -1151,147 +1100,58 @@ module TagMap =
               fun v ->
                 fun acc -> ((String.to_string k), (String.to_json v)) :: acc)
            v [])
-    let of_json j = Json.to_hashtbl String.of_string String.of_json j
+    let parse xml = None
+    let to_xml v = []
   end
 module MessageList =
   struct
     type t = Message.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map Message.parse [xml])
     let to_query v = Query.to_query_list Message.to_query v
     let to_headers v = Headers.to_headers_list Message.to_headers v
-    let to_xml v = List.concat (List.map Message.to_xml v)
     let to_json v = `List (List.map Message.to_json v)
-    let of_json j = Json.to_list Message.of_json j
+    let parse xml = Util.option_all (List.map Message.parse [xml])
+    let to_xml v = List.concat (List.map Message.to_xml v)
   end
 module DeleteMessageBatchResultEntryList =
   struct
     type t = DeleteMessageBatchResultEntry.t list
     let make elems () = elems
-    let parse xml =
-      Util.option_all (List.map DeleteMessageBatchResultEntry.parse [xml])
     let to_query v =
       Query.to_query_list DeleteMessageBatchResultEntry.to_query v
     let to_headers v =
       Headers.to_headers_list DeleteMessageBatchResultEntry.to_headers v
+    let to_json v = `List (List.map DeleteMessageBatchResultEntry.to_json v)
+    let parse xml =
+      Util.option_all (List.map DeleteMessageBatchResultEntry.parse [xml])
     let to_xml v =
       List.concat (List.map DeleteMessageBatchResultEntry.to_xml v)
-    let to_json v = `List (List.map DeleteMessageBatchResultEntry.to_json v)
-    let of_json j = Json.to_list DeleteMessageBatchResultEntry.of_json j
   end
 module TagKeyList =
   struct
     type t = String.t list
     let make elems () = elems
-    let parse xml = Util.option_all (List.map String.parse [xml])
     let to_query v = Query.to_query_list String.to_query v
     let to_headers v = Headers.to_headers_list String.to_headers v
-    let to_xml v = List.concat (List.map String.to_xml v)
     let to_json v = `List (List.map String.to_json v)
-    let of_json j = Json.to_list String.of_json j
-  end
-module MessageNotInflight =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module DeleteQueueRequest =
-  struct
-    type t = {
-      queue_url: String.t }
-    let make ~queue_url  () = { queue_url }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ([] @
-           [Some
-              (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")))
-      }
-  end
-module InvalidIdFormat =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module GetQueueUrlRequest =
-  struct
-    type t =
-      {
-      queue_name: String.t ;
-      queue_owner_a_w_s_account_id: String.t option }
-    let make ~queue_name  ?queue_owner_a_w_s_account_id  () =
-      { queue_name; queue_owner_a_w_s_account_id }
-    let parse xml =
-      Some
-        {
-          queue_name =
-            (Xml.required "QueueName"
-               (Util.option_bind (Xml.member "QueueName" xml) String.parse));
-          queue_owner_a_w_s_account_id =
-            (Util.option_bind (Xml.member "QueueOwnerAWSAccountId" xml)
-               String.parse)
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueName"
-                  ([], (String.to_xml v.queue_name)))])
-           @
-           [Util.option_map v.queue_owner_a_w_s_account_id
-              (fun f ->
-                 Ezxmlm.make_tag "QueueOwnerAWSAccountId"
-                   ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.queue_owner_a_w_s_account_id
-              (fun f -> ("queue_owner_a_w_s_account_id", (String.to_json f)));
-           Some ("queue_name", (String.to_json v.queue_name))])
-    let of_json j =
-      {
-        queue_name =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_name")));
-        queue_owner_a_w_s_account_id =
-          (Util.option_map (Json.lookup j "queue_owner_a_w_s_account_id")
-             String.of_json)
-      }
+    let parse xml = Util.option_all (List.map String.parse [xml])
+    let to_xml v = List.concat (List.map String.to_xml v)
   end
 module GetQueueAttributesResult =
   struct
-    type t = {
-      attributes: QueueAttributeMap.t option }
+    type t =
+      {
+      attributes: QueueAttributeMap.t option
+        [@ocaml.doc "<p>A map of attributes to their respective values.</p>"]}
+    [@@ocaml.doc "<p>A list of returned queue attributes.</p>"]
     let make ?attributes  () = { attributes }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.attributes
+              (fun f -> ("attributes", (QueueAttributeMap.to_json f)))])
     let parse xml =
       Some
         {
@@ -1299,8 +1159,6 @@ module GetQueueAttributesResult =
             (Util.option_bind (Xml.member "Attribute" xml)
                QueueAttributeMap.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @
@@ -1308,190 +1166,30 @@ module GetQueueAttributesResult =
               (fun f ->
                  Ezxmlm.make_tag "Attribute"
                    ([], (QueueAttributeMap.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.attributes
-              (fun f -> ("attributes", (QueueAttributeMap.to_json f)))])
-    let of_json j =
-      {
-        attributes =
-          (Util.option_map (Json.lookup j "attributes")
-             QueueAttributeMap.of_json)
-      }
-  end
-module PurgeQueueInProgress =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module EmptyBatchRequest =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module ChangeMessageVisibilityBatchRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      entries: ChangeMessageVisibilityBatchRequestEntryList.t }
-    let make ~queue_url  ~entries  () = { queue_url; entries }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          entries =
-            (Xml.required "Entries"
-               (ChangeMessageVisibilityBatchRequestEntryList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "Entries"
-                      ([],
-                        (ChangeMessageVisibilityBatchRequestEntryList.to_xml
-                           [x])))) v.entries))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some
-              ("entries",
-                (ChangeMessageVisibilityBatchRequestEntryList.to_json
-                   v.entries));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        entries =
-          (ChangeMessageVisibilityBatchRequestEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "entries")))
-      }
-  end
-module SendMessageBatchRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      entries: SendMessageBatchRequestEntryList.t }
-    let make ~queue_url  ~entries  () = { queue_url; entries }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          entries =
-            (Xml.required "Entries"
-               (SendMessageBatchRequestEntryList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "Entries"
-                      ([], (SendMessageBatchRequestEntryList.to_xml [x]))))
-              v.entries))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some
-              ("entries",
-                (SendMessageBatchRequestEntryList.to_json v.entries));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        entries =
-          (SendMessageBatchRequestEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "entries")))
-      }
-  end
-module DeleteMessageBatchRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      entries: DeleteMessageBatchRequestEntryList.t }
-    let make ~queue_url  ~entries  () = { queue_url; entries }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          entries =
-            (Xml.required "Entries"
-               (DeleteMessageBatchRequestEntryList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "Entries"
-                      ([], (DeleteMessageBatchRequestEntryList.to_xml [x]))))
-              v.entries))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some
-              ("entries",
-                (DeleteMessageBatchRequestEntryList.to_json v.entries));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        entries =
-          (DeleteMessageBatchRequestEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "entries")))
-      }
-  end
+  end[@@ocaml.doc "<p>A list of returned queue attributes.</p>"]
 module ChangeMessageVisibilityBatchResult =
   struct
     type t =
       {
-      successful: ChangeMessageVisibilityBatchResultEntryList.t ;
-      failed: BatchResultErrorEntryList.t }
+      successful: ChangeMessageVisibilityBatchResultEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>ChangeMessageVisibilityBatchResultEntry</a> </code> items.</p>"];
+      failed: BatchResultErrorEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>BatchResultErrorEntry</a> </code> items.</p>"]}
+    [@@ocaml.doc
+      "<p>For each message in the batch, the response contains a <code> <a>ChangeMessageVisibilityBatchResultEntry</a> </code> tag if the message succeeds or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message fails.</p>"]
     let make ~successful  ~failed  () = { successful; failed }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("failed", (BatchResultErrorEntryList.to_json v.failed));
+           Some
+             ("successful",
+               (ChangeMessageVisibilityBatchResultEntryList.to_json
+                  v.successful))])
     let parse xml =
       Some
         {
@@ -1501,8 +1199,6 @@ module ChangeMessageVisibilityBatchResult =
           failed =
             (Xml.required "Failed" (BatchResultErrorEntryList.parse xml))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (([] @
@@ -1519,67 +1215,30 @@ module ChangeMessageVisibilityBatchResult =
                  Some
                    (Ezxmlm.make_tag "Failed"
                       ([], (BatchResultErrorEntryList.to_xml [x])))) v.failed))
+  end[@@ocaml.doc
+       "<p>For each message in the batch, the response contains a <code> <a>ChangeMessageVisibilityBatchResultEntry</a> </code> tag if the message succeeds or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message fails.</p>"]
+module SendMessageBatchResult =
+  struct
+    type t =
+      {
+      successful: SendMessageBatchResultEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>SendMessageBatchResultEntry</a> </code> items.</p>"];
+      failed: BatchResultErrorEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>BatchResultErrorEntry</a> </code> items with error details about each message that can't be enqueued.</p>"]}
+    [@@ocaml.doc
+      "<p>For each message in the batch, the response contains a <code> <a>SendMessageBatchResultEntry</a> </code> tag if the message succeeds or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message fails.</p>"]
+    let make ~successful  ~failed  () = { successful; failed }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
            [Some ("failed", (BatchResultErrorEntryList.to_json v.failed));
            Some
              ("successful",
-               (ChangeMessageVisibilityBatchResultEntryList.to_json
-                  v.successful))])
-    let of_json j =
-      {
-        successful =
-          (ChangeMessageVisibilityBatchResultEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "successful")));
-        failed =
-          (BatchResultErrorEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "failed")))
-      }
-  end
-module RemovePermissionRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      label: String.t }
-    let make ~queue_url  ~label  () = { queue_url; label }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          label =
-            (Xml.required "Label"
-               (Util.option_bind (Xml.member "Label" xml) String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @ [Some (Ezxmlm.make_tag "Label" ([], (String.to_xml v.label)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("label", (String.to_json v.label));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        label = (String.of_json (Util.of_option_exn (Json.lookup j "label")))
-      }
-  end
-module SendMessageBatchResult =
-  struct
-    type t =
-      {
-      successful: SendMessageBatchResultEntryList.t ;
-      failed: BatchResultErrorEntryList.t }
-    let make ~successful  ~failed  () = { successful; failed }
+               (SendMessageBatchResultEntryList.to_json v.successful))])
     let parse xml =
       Some
         {
@@ -1589,8 +1248,6 @@ module SendMessageBatchResult =
           failed =
             (Xml.required "Failed" (BatchResultErrorEntryList.parse xml))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (([] @
@@ -1606,296 +1263,29 @@ module SendMessageBatchResult =
                  Some
                    (Ezxmlm.make_tag "Failed"
                       ([], (BatchResultErrorEntryList.to_xml [x])))) v.failed))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("failed", (BatchResultErrorEntryList.to_json v.failed));
-           Some
-             ("successful",
-               (SendMessageBatchResultEntryList.to_json v.successful))])
-    let of_json j =
-      {
-        successful =
-          (SendMessageBatchResultEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "successful")));
-        failed =
-          (BatchResultErrorEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "failed")))
-      }
-  end
-module AddPermissionRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      label: String.t ;
-      a_w_s_account_ids: AWSAccountIdList.t ;
-      actions: ActionNameList.t }
-    let make ~queue_url  ~label  ~a_w_s_account_ids  ~actions  () =
-      { queue_url; label; a_w_s_account_ids; actions }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          label =
-            (Xml.required "Label"
-               (Util.option_bind (Xml.member "Label" xml) String.parse));
-          a_w_s_account_ids =
-            (Xml.required "AWSAccountIds" (AWSAccountIdList.parse xml));
-          actions = (Xml.required "Actions" (ActionNameList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (((([] @
-              [Some
-                 (Ezxmlm.make_tag "QueueUrl"
-                    ([], (String.to_xml v.queue_url)))])
-             @ [Some (Ezxmlm.make_tag "Label" ([], (String.to_xml v.label)))])
-            @
-            (List.map
-               (fun x ->
-                  Some
-                    (Ezxmlm.make_tag "AWSAccountIds"
-                       ([], (AWSAccountIdList.to_xml [x]))))
-               v.a_w_s_account_ids))
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "Actions"
-                      ([], (ActionNameList.to_xml [x])))) v.actions))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("actions", (ActionNameList.to_json v.actions));
-           Some
-             ("a_w_s_account_ids",
-               (AWSAccountIdList.to_json v.a_w_s_account_ids));
-           Some ("label", (String.to_json v.label));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        label = (String.of_json (Util.of_option_exn (Json.lookup j "label")));
-        a_w_s_account_ids =
-          (AWSAccountIdList.of_json
-             (Util.of_option_exn (Json.lookup j "a_w_s_account_ids")));
-        actions =
-          (ActionNameList.of_json
-             (Util.of_option_exn (Json.lookup j "actions")))
-      }
-  end
-module ChangeMessageVisibilityRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      receipt_handle: String.t ;
-      visibility_timeout: Integer.t }
-    let make ~queue_url  ~receipt_handle  ~visibility_timeout  () =
-      { queue_url; receipt_handle; visibility_timeout }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          receipt_handle =
-            (Xml.required "ReceiptHandle"
-               (Util.option_bind (Xml.member "ReceiptHandle" xml)
-                  String.parse));
-          visibility_timeout =
-            (Xml.required "VisibilityTimeout"
-               (Util.option_bind (Xml.member "VisibilityTimeout" xml)
-                  Integer.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ((([] @
-             [Some
-                (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-            @
-            [Some
-               (Ezxmlm.make_tag "ReceiptHandle"
-                  ([], (String.to_xml v.receipt_handle)))])
-           @
-           [Some
-              (Ezxmlm.make_tag "VisibilityTimeout"
-                 ([], (Integer.to_xml v.visibility_timeout)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some
-              ("visibility_timeout", (Integer.to_json v.visibility_timeout));
-           Some ("receipt_handle", (String.to_json v.receipt_handle));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        receipt_handle =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "receipt_handle")));
-        visibility_timeout =
-          (Integer.of_json
-             (Util.of_option_exn (Json.lookup j "visibility_timeout")))
-      }
-  end
-module ReceiptHandleIsInvalid =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module ReceiveMessageRequest =
-  struct
-    type t =
-      {
-      queue_url: String.t ;
-      attribute_names: AttributeNameList.t ;
-      message_attribute_names: MessageAttributeNameList.t ;
-      max_number_of_messages: Integer.t option ;
-      visibility_timeout: Integer.t option ;
-      wait_time_seconds: Integer.t option ;
-      receive_request_attempt_id: String.t option }
-    let make ~queue_url  ?(attribute_names= [])  ?(message_attribute_names=
-      [])  ?max_number_of_messages  ?visibility_timeout  ?wait_time_seconds 
-      ?receive_request_attempt_id  () =
-      {
-        queue_url;
-        attribute_names;
-        message_attribute_names;
-        max_number_of_messages;
-        visibility_timeout;
-        wait_time_seconds;
-        receive_request_attempt_id
-      }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          attribute_names = (Util.of_option [] (AttributeNameList.parse xml));
-          message_attribute_names =
-            (Util.of_option [] (MessageAttributeNameList.parse xml));
-          max_number_of_messages =
-            (Util.option_bind (Xml.member "MaxNumberOfMessages" xml)
-               Integer.parse);
-          visibility_timeout =
-            (Util.option_bind (Xml.member "VisibilityTimeout" xml)
-               Integer.parse);
-          wait_time_seconds =
-            (Util.option_bind (Xml.member "WaitTimeSeconds" xml)
-               Integer.parse);
-          receive_request_attempt_id =
-            (Util.option_bind (Xml.member "ReceiveRequestAttemptId" xml)
-               String.parse)
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ((((((([] @
-                 [Some
-                    (Ezxmlm.make_tag "QueueUrl"
-                       ([], (String.to_xml v.queue_url)))])
-                @
-                (List.map
-                   (fun x ->
-                      Some
-                        (Ezxmlm.make_tag "AttributeNames"
-                           ([], (AttributeNameList.to_xml [x]))))
-                   v.attribute_names))
-               @
-               (List.map
-                  (fun x ->
-                     Some
-                       (Ezxmlm.make_tag "MessageAttributeNames"
-                          ([], (MessageAttributeNameList.to_xml [x]))))
-                  v.message_attribute_names))
-              @
-              [Util.option_map v.max_number_of_messages
-                 (fun f ->
-                    Ezxmlm.make_tag "MaxNumberOfMessages"
-                      ([], (Integer.to_xml f)))])
-             @
-             [Util.option_map v.visibility_timeout
-                (fun f ->
-                   Ezxmlm.make_tag "VisibilityTimeout"
-                     ([], (Integer.to_xml f)))])
-            @
-            [Util.option_map v.wait_time_seconds
-               (fun f ->
-                  Ezxmlm.make_tag "WaitTimeSeconds" ([], (Integer.to_xml f)))])
-           @
-           [Util.option_map v.receive_request_attempt_id
-              (fun f ->
-                 Ezxmlm.make_tag "ReceiveRequestAttemptId"
-                   ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.receive_request_attempt_id
-              (fun f -> ("receive_request_attempt_id", (String.to_json f)));
-           Util.option_map v.wait_time_seconds
-             (fun f -> ("wait_time_seconds", (Integer.to_json f)));
-           Util.option_map v.visibility_timeout
-             (fun f -> ("visibility_timeout", (Integer.to_json f)));
-           Util.option_map v.max_number_of_messages
-             (fun f -> ("max_number_of_messages", (Integer.to_json f)));
-           Some
-             ("message_attribute_names",
-               (MessageAttributeNameList.to_json v.message_attribute_names));
-           Some
-             ("attribute_names",
-               (AttributeNameList.to_json v.attribute_names));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        attribute_names =
-          (AttributeNameList.of_json
-             (Util.of_option_exn (Json.lookup j "attribute_names")));
-        message_attribute_names =
-          (MessageAttributeNameList.of_json
-             (Util.of_option_exn (Json.lookup j "message_attribute_names")));
-        max_number_of_messages =
-          (Util.option_map (Json.lookup j "max_number_of_messages")
-             Integer.of_json);
-        visibility_timeout =
-          (Util.option_map (Json.lookup j "visibility_timeout")
-             Integer.of_json);
-        wait_time_seconds =
-          (Util.option_map (Json.lookup j "wait_time_seconds")
-             Integer.of_json);
-        receive_request_attempt_id =
-          (Util.option_map (Json.lookup j "receive_request_attempt_id")
-             String.of_json)
-      }
-  end
+  end[@@ocaml.doc
+       "<p>For each message in the batch, the response contains a <code> <a>SendMessageBatchResultEntry</a> </code> tag if the message succeeds or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message fails.</p>"]
 module SendMessageResult =
   struct
     type t =
       {
-      m_d5_of_message_body: String.t option ;
-      m_d5_of_message_attributes: String.t option ;
-      m_d5_of_message_system_attributes: String.t option ;
-      message_id: String.t option ;
-      sequence_number: String.t option }
+      m_d5_of_message_body: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      m_d5_of_message_attributes: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest. For information about MD5, see <a href=\"https://www.ietf.org/rfc/rfc1321.txt\">RFC1321</a>.</p>"];
+      m_d5_of_message_system_attributes: String.t option
+        [@ocaml.doc
+          "<p>An MD5 digest of the non-URL-encoded message system attribute string. You can use this attribute to verify that Amazon SQS received the message correctly. Amazon SQS URL-decodes the message before creating the MD5 digest.</p>"];
+      message_id: String.t option
+        [@ocaml.doc
+          "<p>An attribute containing the <code>MessageId</code> of the message sent to the queue. For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-message-identifiers.html\">Queue and Message Identifiers</a> in the <i>Amazon Simple Queue Service Developer Guide</i>. </p>"];
+      sequence_number: String.t option
+        [@ocaml.doc
+          "<p>This parameter applies only to FIFO (first-in-first-out) queues.</p> <p>The large, non-consecutive number that Amazon SQS assigns to each message.</p> <p>The length of <code>SequenceNumber</code> is 128 bits. <code>SequenceNumber</code> continues to increase for a particular <code>MessageGroupId</code>.</p>"]}
+    [@@ocaml.doc
+      "<p>The <code>MD5OfMessageBody</code> and <code>MessageId</code> elements.</p>"]
     let make ?m_d5_of_message_body  ?m_d5_of_message_attributes 
       ?m_d5_of_message_system_attributes  ?message_id  ?sequence_number  () =
       {
@@ -1905,6 +1295,22 @@ module SendMessageResult =
         message_id;
         sequence_number
       }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.sequence_number
+              (fun f -> ("sequence_number", (String.to_json f)));
+           Util.option_map v.message_id
+             (fun f -> ("message_id", (String.to_json f)));
+           Util.option_map v.m_d5_of_message_system_attributes
+             (fun f ->
+                ("m_d5_of_message_system_attributes", (String.to_json f)));
+           Util.option_map v.m_d5_of_message_attributes
+             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
+           Util.option_map v.m_d5_of_message_body
+             (fun f -> ("m_d5_of_message_body", (String.to_json f)))])
     let parse xml =
       Some
         {
@@ -1922,8 +1328,6 @@ module SendMessageResult =
           sequence_number =
             (Util.option_bind (Xml.member "SequenceNumber" xml) String.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ((((([] @
@@ -1948,261 +1352,26 @@ module SendMessageResult =
            [Util.option_map v.sequence_number
               (fun f ->
                  Ezxmlm.make_tag "SequenceNumber" ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.sequence_number
-              (fun f -> ("sequence_number", (String.to_json f)));
-           Util.option_map v.message_id
-             (fun f -> ("message_id", (String.to_json f)));
-           Util.option_map v.m_d5_of_message_system_attributes
-             (fun f ->
-                ("m_d5_of_message_system_attributes", (String.to_json f)));
-           Util.option_map v.m_d5_of_message_attributes
-             (fun f -> ("m_d5_of_message_attributes", (String.to_json f)));
-           Util.option_map v.m_d5_of_message_body
-             (fun f -> ("m_d5_of_message_body", (String.to_json f)))])
-    let of_json j =
-      {
-        m_d5_of_message_body =
-          (Util.option_map (Json.lookup j "m_d5_of_message_body")
-             String.of_json);
-        m_d5_of_message_attributes =
-          (Util.option_map (Json.lookup j "m_d5_of_message_attributes")
-             String.of_json);
-        m_d5_of_message_system_attributes =
-          (Util.option_map
-             (Json.lookup j "m_d5_of_message_system_attributes")
-             String.of_json);
-        message_id =
-          (Util.option_map (Json.lookup j "message_id") String.of_json);
-        sequence_number =
-          (Util.option_map (Json.lookup j "sequence_number") String.of_json)
-      }
-  end
-module DeleteMessageRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      receipt_handle: String.t }
-    let make ~queue_url  ~receipt_handle  () = { queue_url; receipt_handle }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          receipt_handle =
-            (Xml.required "ReceiptHandle"
-               (Util.option_bind (Xml.member "ReceiptHandle" xml)
-                  String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           [Some
-              (Ezxmlm.make_tag "ReceiptHandle"
-                 ([], (String.to_xml v.receipt_handle)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("receipt_handle", (String.to_json v.receipt_handle));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        receipt_handle =
-          (String.of_json
-             (Util.of_option_exn (Json.lookup j "receipt_handle")))
-      }
-  end
-module ListDeadLetterSourceQueuesRequest =
-  struct
-    type t = {
-      queue_url: String.t }
-    let make ~queue_url  () = { queue_url }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ([] @
-           [Some
-              (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")))
-      }
-  end
-module QueueDeletedRecently =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module SendMessageRequest =
+  end[@@ocaml.doc
+       "<p>The <code>MD5OfMessageBody</code> and <code>MessageId</code> elements.</p>"]
+module ListDeadLetterSourceQueuesResult =
   struct
     type t =
       {
-      queue_url: String.t ;
-      message_body: String.t ;
-      delay_seconds: Integer.t option ;
-      message_attributes: MessageBodyAttributeMap.t option ;
-      message_system_attributes: MessageBodySystemAttributeMap.t option ;
-      message_deduplication_id: String.t option ;
-      message_group_id: String.t option }
-    let make ~queue_url  ~message_body  ?delay_seconds  ?message_attributes 
-      ?message_system_attributes  ?message_deduplication_id 
-      ?message_group_id  () =
-      {
-        queue_url;
-        message_body;
-        delay_seconds;
-        message_attributes;
-        message_system_attributes;
-        message_deduplication_id;
-        message_group_id
-      }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          message_body =
-            (Xml.required "MessageBody"
-               (Util.option_bind (Xml.member "MessageBody" xml) String.parse));
-          delay_seconds =
-            (Util.option_bind (Xml.member "DelaySeconds" xml) Integer.parse);
-          message_attributes =
-            (Util.option_bind (Xml.member "MessageAttribute" xml)
-               MessageBodyAttributeMap.parse);
-          message_system_attributes =
-            (Util.option_bind (Xml.member "MessageSystemAttribute" xml)
-               MessageBodySystemAttributeMap.parse);
-          message_deduplication_id =
-            (Util.option_bind (Xml.member "MessageDeduplicationId" xml)
-               String.parse);
-          message_group_id =
-            (Util.option_bind (Xml.member "MessageGroupId" xml) String.parse)
-        }
+      queue_urls: QueueUrlList.t
+        [@ocaml.doc
+          "<p>A list of source queue URLs that have the <code>RedrivePolicy</code> queue attribute configured with a dead-letter queue.</p>"]}
+    [@@ocaml.doc "<p>A list of your dead letter source queues.</p>"]
+    let make ~queue_urls  () = { queue_urls }
     let to_query v = Query.List (Util.list_filter_opt [])
     let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ((((((([] @
-                 [Some
-                    (Ezxmlm.make_tag "QueueUrl"
-                       ([], (String.to_xml v.queue_url)))])
-                @
-                [Some
-                   (Ezxmlm.make_tag "MessageBody"
-                      ([], (String.to_xml v.message_body)))])
-               @
-               [Util.option_map v.delay_seconds
-                  (fun f ->
-                     Ezxmlm.make_tag "DelaySeconds" ([], (Integer.to_xml f)))])
-              @
-              [Util.option_map v.message_attributes
-                 (fun f ->
-                    Ezxmlm.make_tag "MessageAttribute"
-                      ([], (MessageBodyAttributeMap.to_xml f)))])
-             @
-             [Util.option_map v.message_system_attributes
-                (fun f ->
-                   Ezxmlm.make_tag "MessageSystemAttribute"
-                     ([], (MessageBodySystemAttributeMap.to_xml f)))])
-            @
-            [Util.option_map v.message_deduplication_id
-               (fun f ->
-                  Ezxmlm.make_tag "MessageDeduplicationId"
-                    ([], (String.to_xml f)))])
-           @
-           [Util.option_map v.message_group_id
-              (fun f ->
-                 Ezxmlm.make_tag "MessageGroupId" ([], (String.to_xml f)))])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Util.option_map v.message_group_id
-              (fun f -> ("message_group_id", (String.to_json f)));
-           Util.option_map v.message_deduplication_id
-             (fun f -> ("message_deduplication_id", (String.to_json f)));
-           Util.option_map v.message_system_attributes
-             (fun f ->
-                ("message_system_attributes",
-                  (MessageBodySystemAttributeMap.to_json f)));
-           Util.option_map v.message_attributes
-             (fun f ->
-                ("message_attributes", (MessageBodyAttributeMap.to_json f)));
-           Util.option_map v.delay_seconds
-             (fun f -> ("delay_seconds", (Integer.to_json f)));
-           Some ("message_body", (String.to_json v.message_body));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        message_body =
-          (String.of_json (Util.of_option_exn (Json.lookup j "message_body")));
-        delay_seconds =
-          (Util.option_map (Json.lookup j "delay_seconds") Integer.of_json);
-        message_attributes =
-          (Util.option_map (Json.lookup j "message_attributes")
-             MessageBodyAttributeMap.of_json);
-        message_system_attributes =
-          (Util.option_map (Json.lookup j "message_system_attributes")
-             MessageBodySystemAttributeMap.of_json);
-        message_deduplication_id =
-          (Util.option_map (Json.lookup j "message_deduplication_id")
-             String.of_json);
-        message_group_id =
-          (Util.option_map (Json.lookup j "message_group_id") String.of_json)
-      }
-  end
-module BatchRequestTooLong =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module ListDeadLetterSourceQueuesResult =
-  struct
-    type t = {
-      queue_urls: QueueUrlList.t }
-    let make ~queue_urls  () = { queue_urls }
+           [Some ("queue_urls", (QueueUrlList.to_json v.queue_urls))])
     let parse xml =
       Some
         { queue_urls = (Xml.required "queueUrls" (QueueUrlList.parse xml)) }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @
@@ -2211,176 +1380,51 @@ module ListDeadLetterSourceQueuesResult =
                  Some
                    (Ezxmlm.make_tag "queueUrls"
                       ([], (QueueUrlList.to_xml [x])))) v.queue_urls))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_urls", (QueueUrlList.to_json v.queue_urls))])
-    let of_json j =
-      {
-        queue_urls =
-          (QueueUrlList.of_json
-             (Util.of_option_exn (Json.lookup j "queue_urls")))
-      }
-  end
-module QueueDoesNotExist =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module ListQueuesRequest =
-  struct
-    type t = {
-      queue_name_prefix: String.t option }
-    let make ?queue_name_prefix  () = { queue_name_prefix }
-    let parse xml =
-      Some
-        {
-          queue_name_prefix =
-            (Util.option_bind (Xml.member "QueueNamePrefix" xml) String.parse)
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ([] @
-           [Util.option_map v.queue_name_prefix
-              (fun f ->
-                 Ezxmlm.make_tag "QueueNamePrefix" ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.queue_name_prefix
-              (fun f -> ("queue_name_prefix", (String.to_json f)))])
-    let of_json j =
-      {
-        queue_name_prefix =
-          (Util.option_map (Json.lookup j "queue_name_prefix") String.of_json)
-      }
-  end
-module UnsupportedOperation =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module BatchEntryIdsNotDistinct =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
+  end[@@ocaml.doc "<p>A list of your dead letter source queues.</p>"]
 module CreateQueueResult =
   struct
-    type t = {
-      queue_url: String.t option }
+    type t =
+      {
+      queue_url: String.t option
+        [@ocaml.doc "<p>The URL of the created Amazon SQS queue.</p>"]}
+    [@@ocaml.doc
+      "<p>Returns the <code>QueueUrl</code> attribute of the created queue.</p>"]
     let make ?queue_url  () = { queue_url }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.queue_url
+              (fun f -> ("queue_url", (String.to_json f)))])
     let parse xml =
       Some
         {
           queue_url =
             (Util.option_bind (Xml.member "QueueUrl" xml) String.parse)
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @
            [Util.option_map v.queue_url
               (fun f -> Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.queue_url
-              (fun f -> ("queue_url", (String.to_json f)))])
-    let of_json j =
-      {
-        queue_url =
-          (Util.option_map (Json.lookup j "queue_url") String.of_json)
-      }
-  end
-module TagQueueRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      tags: TagMap.t }
-    let make ~queue_url  ~tags  () = { queue_url; tags }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          tags =
-            (Xml.required "Tags"
-               (Util.option_bind (Xml.member "Tags" xml) TagMap.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @ [Some (Ezxmlm.make_tag "Tags" ([], (TagMap.to_xml v.tags)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("tags", (TagMap.to_json v.tags));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        tags = (TagMap.of_json (Util.of_option_exn (Json.lookup j "tags")))
-      }
-  end
-module InvalidAttributeName =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module OverLimit =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
+  end[@@ocaml.doc
+       "<p>Returns the <code>QueueUrl</code> attribute of the created queue.</p>"]
 module ReceiveMessageResult =
   struct
-    type t = {
-      messages: MessageList.t }
+    type t =
+      {
+      messages: MessageList.t [@ocaml.doc "<p>A list of messages.</p>"]}
+    [@@ocaml.doc "<p>A list of received messages.</p>"]
     let make ?(messages= [])  () = { messages }
-    let parse xml =
-      Some { messages = (Util.of_option [] (MessageList.parse xml)) }
     let to_query v = Query.List (Util.list_filter_opt [])
     let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("messages", (MessageList.to_json v.messages))])
+    let parse xml =
+      Some { messages = (Util.of_option [] (MessageList.parse xml)) }
     let to_xml v =
       Util.list_filter_opt
         ([] @
@@ -2389,80 +1433,29 @@ module ReceiveMessageResult =
                  Some
                    (Ezxmlm.make_tag "Messages" ([], (MessageList.to_xml [x]))))
               v.messages))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("messages", (MessageList.to_json v.messages))])
-    let of_json j =
-      {
-        messages =
-          (MessageList.of_json
-             (Util.of_option_exn (Json.lookup j "messages")))
-      }
-  end
-module GetQueueAttributesRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      attribute_names: AttributeNameList.t }
-    let make ~queue_url  ?(attribute_names= [])  () =
-      { queue_url; attribute_names }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          attribute_names = (Util.of_option [] (AttributeNameList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "AttributeNames"
-                      ([], (AttributeNameList.to_xml [x]))))
-              v.attribute_names))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some
-              ("attribute_names",
-                (AttributeNameList.to_json v.attribute_names));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        attribute_names =
-          (AttributeNameList.of_json
-             (Util.of_option_exn (Json.lookup j "attribute_names")))
-      }
-  end
-module InvalidBatchEntryId =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
+  end[@@ocaml.doc "<p>A list of received messages.</p>"]
 module DeleteMessageBatchResult =
   struct
     type t =
       {
-      successful: DeleteMessageBatchResultEntryList.t ;
-      failed: BatchResultErrorEntryList.t }
+      successful: DeleteMessageBatchResultEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>DeleteMessageBatchResultEntry</a> </code> items.</p>"];
+      failed: BatchResultErrorEntryList.t
+        [@ocaml.doc
+          "<p>A list of <code> <a>BatchResultErrorEntry</a> </code> items.</p>"]}
+    [@@ocaml.doc
+      "<p>For each message in the batch, the response contains a <code> <a>DeleteMessageBatchResultEntry</a> </code> tag if the message is deleted or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message can't be deleted.</p>"]
     let make ~successful  ~failed  () = { successful; failed }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("failed", (BatchResultErrorEntryList.to_json v.failed));
+           Some
+             ("successful",
+               (DeleteMessageBatchResultEntryList.to_json v.successful))])
     let parse xml =
       Some
         {
@@ -2472,8 +1465,6 @@ module DeleteMessageBatchResult =
           failed =
             (Xml.required "Failed" (BatchResultErrorEntryList.parse xml))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         (([] @
@@ -2489,104 +1480,46 @@ module DeleteMessageBatchResult =
                  Some
                    (Ezxmlm.make_tag "Failed"
                       ([], (BatchResultErrorEntryList.to_xml [x])))) v.failed))
+  end[@@ocaml.doc
+       "<p>For each message in the batch, the response contains a <code> <a>DeleteMessageBatchResultEntry</a> </code> tag if the message is deleted or a <code> <a>BatchResultErrorEntry</a> </code> tag if the message can't be deleted.</p>"]
+module ListQueueTagsResult =
+  struct
+    type t =
+      {
+      tags: TagMap.t option
+        [@ocaml.doc
+          "<p>The list of all tags added to the specified queue.</p>"]}
+    let make ?tags  () = { tags }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_json v =
       `Assoc
         (Util.list_filter_opt
-           [Some ("failed", (BatchResultErrorEntryList.to_json v.failed));
-           Some
-             ("successful",
-               (DeleteMessageBatchResultEntryList.to_json v.successful))])
-    let of_json j =
-      {
-        successful =
-          (DeleteMessageBatchResultEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "successful")));
-        failed =
-          (BatchResultErrorEntryList.of_json
-             (Util.of_option_exn (Json.lookup j "failed")))
-      }
-  end
-module ListQueueTagsResult =
-  struct
-    type t = {
-      tags: TagMap.t option }
-    let make ?tags  () = { tags }
+           [Util.option_map v.tags (fun f -> ("tags", (TagMap.to_json f)))])
     let parse xml =
       Some { tags = (Util.option_bind (Xml.member "Tag" xml) TagMap.parse) }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @
            [Util.option_map v.tags
               (fun f -> Ezxmlm.make_tag "Tag" ([], (TagMap.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.tags (fun f -> ("tags", (TagMap.to_json f)))])
-    let of_json j =
-      { tags = (Util.option_map (Json.lookup j "tags") TagMap.of_json) }
-  end
-module UntagQueueRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      tag_keys: TagKeyList.t }
-    let make ~queue_url  ~tag_keys  () = { queue_url; tag_keys }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          tag_keys = (Xml.required "TagKeys" (TagKeyList.parse xml))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           (List.map
-              (fun x ->
-                 Some
-                   (Ezxmlm.make_tag "TagKeys" ([], (TagKeyList.to_xml [x]))))
-              v.tag_keys))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("tag_keys", (TagKeyList.to_json v.tag_keys));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        tag_keys =
-          (TagKeyList.of_json (Util.of_option_exn (Json.lookup j "tag_keys")))
-      }
-  end
-module TooManyEntriesInBatchRequest =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
   end
 module ListQueuesResult =
   struct
-    type t = {
-      queue_urls: QueueUrlList.t }
+    type t =
+      {
+      queue_urls: QueueUrlList.t
+        [@ocaml.doc "<p>A list of queue URLs, up to 1,000 entries.</p>"]}
+    [@@ocaml.doc "<p>A list of your queues.</p>"]
     let make ?(queue_urls= [])  () = { queue_urls }
-    let parse xml =
-      Some { queue_urls = (Util.of_option [] (QueueUrlList.parse xml)) }
     let to_query v = Query.List (Util.list_filter_opt [])
     let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("queue_urls", (QueueUrlList.to_json v.queue_urls))])
+    let parse xml =
+      Some { queue_urls = (Util.of_option [] (QueueUrlList.parse xml)) }
     let to_xml v =
       Util.list_filter_opt
         ([] @
@@ -2595,128 +1528,21 @@ module ListQueuesResult =
                  Some
                    (Ezxmlm.make_tag "QueueUrls"
                       ([], (QueueUrlList.to_xml [x])))) v.queue_urls))
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_urls", (QueueUrlList.to_json v.queue_urls))])
-    let of_json j =
-      {
-        queue_urls =
-          (QueueUrlList.of_json
-             (Util.of_option_exn (Json.lookup j "queue_urls")))
-      }
-  end
-module CreateQueueRequest =
+  end[@@ocaml.doc "<p>A list of your queues.</p>"]
+module GetQueueUrlResult =
   struct
     type t =
       {
-      queue_name: String.t ;
-      attributes: QueueAttributeMap.t option ;
-      tags: TagMap.t option }
-    let make ~queue_name  ?attributes  ?tags  () =
-      { queue_name; attributes; tags }
-    let parse xml =
-      Some
-        {
-          queue_name =
-            (Xml.required "QueueName"
-               (Util.option_bind (Xml.member "QueueName" xml) String.parse));
-          attributes =
-            (Util.option_bind (Xml.member "Attribute" xml)
-               QueueAttributeMap.parse);
-          tags = (Util.option_bind (Xml.member "Tag" xml) TagMap.parse)
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ((([] @
-             [Some
-                (Ezxmlm.make_tag "QueueName"
-                   ([], (String.to_xml v.queue_name)))])
-            @
-            [Util.option_map v.attributes
-               (fun f ->
-                  Ezxmlm.make_tag "Attribute"
-                    ([], (QueueAttributeMap.to_xml f)))])
-           @
-           [Util.option_map v.tags
-              (fun f -> Ezxmlm.make_tag "Tag" ([], (TagMap.to_xml f)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Util.option_map v.tags (fun f -> ("tags", (TagMap.to_json f)));
-           Util.option_map v.attributes
-             (fun f -> ("attributes", (QueueAttributeMap.to_json f)));
-           Some ("queue_name", (String.to_json v.queue_name))])
-    let of_json j =
-      {
-        queue_name =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_name")));
-        attributes =
-          (Util.option_map (Json.lookup j "attributes")
-             QueueAttributeMap.of_json);
-        tags = (Util.option_map (Json.lookup j "tags") TagMap.of_json)
-      }
-  end
-module InvalidMessageContents =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module SetQueueAttributesRequest =
-  struct
-    type t = {
-      queue_url: String.t ;
-      attributes: QueueAttributeMap.t }
-    let make ~queue_url  ~attributes  () = { queue_url; attributes }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse));
-          attributes =
-            (Xml.required "Attribute"
-               (Util.option_bind (Xml.member "Attribute" xml)
-                  QueueAttributeMap.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        (([] @
-            [Some
-               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-           @
-           [Some
-              (Ezxmlm.make_tag "Attribute"
-                 ([], (QueueAttributeMap.to_xml v.attributes)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("attributes", (QueueAttributeMap.to_json v.attributes));
-           Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")));
-        attributes =
-          (QueueAttributeMap.of_json
-             (Util.of_option_exn (Json.lookup j "attributes")))
-      }
-  end
-module PurgeQueueRequest =
-  struct
-    type t = {
-      queue_url: String.t }
+      queue_url: String.t [@ocaml.doc "<p>The URL of the queue.</p>"]}
+    [@@ocaml.doc
+      "<p>For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-api-responses.html\">Interpreting Responses</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"]
     let make ~queue_url  () = { queue_url }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("queue_url", (String.to_json v.queue_url))])
     let parse xml =
       Some
         {
@@ -2724,89 +1550,10 @@ module PurgeQueueRequest =
             (Xml.required "QueueUrl"
                (Util.option_bind (Xml.member "QueueUrl" xml) String.parse))
         }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
     let to_xml v =
       Util.list_filter_opt
         ([] @
            [Some
               (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")))
-      }
-  end
-module ListQueueTagsRequest =
-  struct
-    type t = {
-      queue_url: String.t }
-    let make ~queue_url  () = { queue_url }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ([] @
-           [Some
-              (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")))
-      }
-  end
-module QueueNameExists =
-  struct
-    type t = unit
-    let make () = ()
-    let parse xml = Some ()
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v = Util.list_filter_opt []
-    let to_json v = `Assoc (Util.list_filter_opt [])
-    let of_json j = ()
-  end
-module GetQueueUrlResult =
-  struct
-    type t = {
-      queue_url: String.t }
-    let make ~queue_url  () = { queue_url }
-    let parse xml =
-      Some
-        {
-          queue_url =
-            (Xml.required "QueueUrl"
-               (Util.option_bind (Xml.member "QueueUrl" xml) String.parse))
-        }
-    let to_query v = Query.List (Util.list_filter_opt [])
-    let to_headers v = Headers.List (Util.list_filter_opt [])
-    let to_xml v =
-      Util.list_filter_opt
-        ([] @
-           [Some
-              (Ezxmlm.make_tag "QueueUrl" ([], (String.to_xml v.queue_url)))])
-    let to_json v =
-      `Assoc
-        (Util.list_filter_opt
-           [Some ("queue_url", (String.to_json v.queue_url))])
-    let of_json j =
-      {
-        queue_url =
-          (String.of_json (Util.of_option_exn (Json.lookup j "queue_url")))
-      }
-  end
+  end[@@ocaml.doc
+       "<p>For more information, see <a href=\"https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-api-responses.html\">Interpreting Responses</a> in the <i>Amazon Simple Queue Service Developer Guide</i>.</p>"]

@@ -1,33 +1,50 @@
 type t =
   | AuthFailure 
   | Blocked 
-  | ConcurrentModificationException 
+  | ConcurrentModificationException
+  [@ocaml.doc
+    "<p>More than one process tried to modify a resource at the same time.</p>"]
   | DryRunOperation 
   | IdempotentParameterMismatch 
   | IncompleteSignature 
   | InternalFailure 
-  | InternalServiceError 
+  | InternalServiceError
+  [@ocaml.doc
+    "<p>Request processing has failed due to some unknown error, exception, or failure.</p>"]
   | InvalidAction 
   | InvalidClientTokenId 
-  | InvalidFormat 
-  | InvalidNextToken 
+  | InvalidFormat
+  [@ocaml.doc "<p>Data was not syntactically valid JSON.</p>"]
+  | InvalidNextToken
+  [@ocaml.doc "<p>The next token specified is invalid.</p>"]
   | InvalidParameter 
-  | InvalidParameterCombination 
-  | InvalidParameterInput 
-  | InvalidParameterValue 
+  | InvalidParameterCombination
+  [@ocaml.doc
+    "<p>Parameters were used together that cannot be used together.</p>"]
+  | InvalidParameterInput
+  [@ocaml.doc "<p>Some part of the dashboard data is invalid.</p>"]
+  | InvalidParameterValue
+  [@ocaml.doc
+    "<p>The value of an input parameter is bad or out-of-range.</p>"]
   | InvalidQueryParameter 
-  | LimitExceeded 
-  | LimitExceededException 
+  | LimitExceeded
+  [@ocaml.doc
+    "<p>The quota for alarms for this customer has already been reached.</p>"]
+  | LimitExceededException
+  [@ocaml.doc "<p>The operation exceeded one or more limits.</p>"]
   | MalformedQueryString 
   | MissingAction 
   | MissingAuthenticationToken 
-  | MissingParameter 
+  | MissingParameter
+  [@ocaml.doc "<p>An input parameter that is required is missing.</p>"]
   | OptInRequired 
   | PendingVerification 
   | RequestExpired 
   | RequestLimitExceeded 
-  | ResourceNotFound 
-  | ResourceNotFoundException 
+  | ResourceNotFound
+  [@ocaml.doc "<p>The specified dashboard does not exist.</p>"]
+  | ResourceNotFoundException
+  [@ocaml.doc "<p>The named resource does not exist.</p>"]
   | ServiceUnavailable 
   | Throttling 
   | UnauthorizedOperation 

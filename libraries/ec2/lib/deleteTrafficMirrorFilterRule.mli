@@ -1,4 +1,22 @@
-open Types
+(** "<p>Deletes the specified Traffic Mirror rule.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DeleteTrafficMirrorFilterRuleRequest :
+sig
+  type t =
+    {
+    traffic_mirror_filter_rule_id: String.t ;
+    dry_run: Boolean.t option }
+  val make :
+    traffic_mirror_filter_rule_id:String.t -> ?dry_run:Boolean.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DeleteTrafficMirrorFilterRuleResult =
+DeleteTrafficMirrorFilterRuleResult
 type input = DeleteTrafficMirrorFilterRuleRequest.t
 type output = DeleteTrafficMirrorFilterRuleResult.t
 type error = Errors_internal.t

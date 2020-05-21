@@ -1,0 +1,6 @@
+(library
+ (name        aws_auto_scaling)
+ (public_name aws_auto-scaling)
+ (synopsis "aws-Auto Scaling")
+ (flags (:standard -w -27))
+ (libraries aws ))

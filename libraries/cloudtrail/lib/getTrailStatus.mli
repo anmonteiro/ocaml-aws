@@ -1,4 +1,18 @@
-open Types
+(** "<p>Returns a JSON-formatted list of information about the specified trail. Fields include information on delivery errors, Amazon SNS and Amazon S3 errors, and start and stop logging times for each trail. This operation returns trail status from a single region. To return trail status from all regions, you must call the operation on each region.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module GetTrailStatusRequest :
+sig
+  type t = {
+    name: String.t }[@@ocaml.doc
+                      "<p>The name of a trail about which you want the current status.</p>"]
+  val make : name:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val of_json : Aws.Json.t -> t
+end
+module GetTrailStatusResponse = GetTrailStatusResponse
 type input = GetTrailStatusRequest.t
 type output = GetTrailStatusResponse.t
 type error = Errors_internal.t

@@ -1,140 +1,324 @@
 type t =
-  | AlreadyExistsException 
-  | AssociatedInstances 
-  | AssociationAlreadyExists 
-  | AssociationDoesNotExist 
-  | AssociationExecutionDoesNotExist 
-  | AssociationLimitExceeded 
-  | AssociationVersionLimitExceeded 
+  | AlreadyExistsException
+  [@ocaml.doc
+    "<p>Error returned if an attempt is made to register a patch group with a patch baseline that is already registered with a different patch baseline.</p>"]
+  | AssociatedInstances
+  [@ocaml.doc
+    "<p>You must disassociate a document from all instances before you can delete it.</p>"]
+  | AssociationAlreadyExists
+  [@ocaml.doc "<p>The specified association already exists.</p>"]
+  | AssociationDoesNotExist
+  [@ocaml.doc "<p>The specified association does not exist.</p>"]
+  | AssociationExecutionDoesNotExist
+  [@ocaml.doc
+    "<p>The specified execution ID does not exist. Verify the ID number and try again.</p>"]
+  | AssociationLimitExceeded
+  [@ocaml.doc "<p>You can have at most 2,000 active associations.</p>"]
+  | AssociationVersionLimitExceeded
+  [@ocaml.doc
+    "<p>You have reached the maximum number versions allowed for an association. Each association has a limit of 1,000 versions. </p>"]
   | AuthFailure 
-  | AutomationDefinitionNotFoundException 
-  | AutomationDefinitionVersionNotFoundException 
-  | AutomationExecutionLimitExceededException 
-  | AutomationExecutionNotFoundException 
-  | AutomationStepNotFoundException 
+  | AutomationDefinitionNotFoundException
+  [@ocaml.doc
+    "<p>An Automation document with the specified name could not be found.</p>"]
+  | AutomationDefinitionVersionNotFoundException
+  [@ocaml.doc
+    "<p>An Automation document with the specified name and version could not be found.</p>"]
+  | AutomationExecutionLimitExceededException
+  [@ocaml.doc
+    "<p>The number of simultaneously running Automation executions exceeded the allowable limit.</p>"]
+  | AutomationExecutionNotFoundException
+  [@ocaml.doc
+    "<p>There is no automation execution information for the requested automation execution ID.</p>"]
+  | AutomationStepNotFoundException
+  [@ocaml.doc
+    "<p>The specified step name and execution ID don't exist. Verify the information and try again.</p>"]
   | Blocked 
-  | ComplianceTypeCountLimitExceededException 
-  | CustomSchemaCountLimitExceededException 
-  | DocumentAlreadyExists 
-  | DocumentLimitExceeded 
-  | DocumentPermissionLimit 
-  | DocumentVersionLimitExceeded 
-  | DoesNotExistException 
+  | ComplianceTypeCountLimitExceededException
+  [@ocaml.doc
+    "<p>You specified too many custom compliance types. You can specify a maximum of 10 different types. </p>"]
+  | CustomSchemaCountLimitExceededException
+  [@ocaml.doc
+    "<p>You have exceeded the limit for custom schemas. Delete one or more custom schemas and try again.</p>"]
+  | DocumentAlreadyExists
+  [@ocaml.doc "<p>The specified document already exists.</p>"]
+  | DocumentLimitExceeded
+  [@ocaml.doc
+    "<p>You can have at most 500 active Systems Manager documents.</p>"]
+  | DocumentPermissionLimit
+  [@ocaml.doc
+    "<p>The document cannot be shared with more AWS user accounts. You can share a document with a maximum of 20 accounts. You can publicly share up to five documents. If you need to increase this limit, contact AWS Support.</p>"]
+  | DocumentVersionLimitExceeded
+  [@ocaml.doc
+    "<p>The document has too many versions. Delete one or more document versions and try again.</p>"]
+  | DoesNotExistException
+  [@ocaml.doc
+    "<p>Error returned when the ID specified for a resource, such as a maintenance window or Patch baseline, doesn't exist.</p> <p>For information about resource quotas in Systems Manager, see <a href=\"http://docs.aws.amazon.com/general/latest/gr/ssm.html#limits_ssm\">Systems Manager Service Quotas</a> in the <i>AWS General Reference</i>.</p>"]
   | DryRunOperation 
-  | DuplicateDocumentContent 
-  | DuplicateDocumentVersionName 
-  | DuplicateInstanceId 
-  | FeatureNotAvailableException 
-  | HierarchyLevelLimitExceededException 
-  | HierarchyTypeMismatchException 
-  | IdempotentParameterMismatch 
-  | IncompatiblePolicyException 
+  | DuplicateDocumentContent
+  [@ocaml.doc
+    "<p>The content of the association document matches another document. Change the content of the document and try again.</p>"]
+  | DuplicateDocumentVersionName
+  [@ocaml.doc
+    "<p>The version name has already been used in this document. Specify a different version name, and then try again.</p>"]
+  | DuplicateInstanceId
+  [@ocaml.doc
+    "<p>You cannot specify an instance ID in more than one association.</p>"]
+  | FeatureNotAvailableException
+  [@ocaml.doc
+    "<p>You attempted to register a LAMBDA or STEP_FUNCTIONS task in a region where the corresponding service is not available. </p>"]
+  | HierarchyLevelLimitExceededException
+  [@ocaml.doc
+    "<p>A hierarchy can have a maximum of 15 levels. For more information, see <a href=\"http://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-parameter-name-constraints.html\">Requirements and Constraints for Parameter Names</a> in the <i>AWS Systems Manager User Guide</i>. </p>"]
+  | HierarchyTypeMismatchException
+  [@ocaml.doc
+    "<p>Parameter Store does not support changing a parameter type in a hierarchy. For example, you can't change a parameter from a String type to a SecureString type. You must create a new, unique parameter.</p>"]
+  | IdempotentParameterMismatch
+  [@ocaml.doc
+    "<p>Error returned when an idempotent operation is retried and the parameters don't match the original call to the API with the same idempotency token. </p>"]
+  | IncompatiblePolicyException
+  [@ocaml.doc
+    "<p>There is a conflict in the policies specified for this parameter. You can't, for example, specify two Expiration policies for a parameter. Review your policies, and try again.</p>"]
   | IncompleteSignature 
   | InternalFailure 
-  | InternalServerError 
+  | InternalServerError
+  [@ocaml.doc "<p>An error occurred on the server side.</p>"]
   | InvalidAction 
-  | InvalidActivation 
-  | InvalidActivationId 
-  | InvalidAggregatorException 
-  | InvalidAllowedPatternException 
-  | InvalidAssociation 
-  | InvalidAssociationVersion 
-  | InvalidAutomationExecutionParametersException 
-  | InvalidAutomationSignalException 
-  | InvalidAutomationStatusUpdateException 
+  | InvalidActivation
+  [@ocaml.doc
+    "<p>The activation is not valid. The activation might have been deleted, or the ActivationId and the ActivationCode do not match.</p>"]
+  | InvalidActivationId
+  [@ocaml.doc
+    "<p>The activation ID is not valid. Verify the you entered the correct ActivationId or ActivationCode and try again.</p>"]
+  | InvalidAggregatorException
+  [@ocaml.doc
+    "<p>The specified aggregator is not valid for inventory groups. Verify that the aggregator uses a valid inventory type such as <code>AWS:Application</code> or <code>AWS:InstanceInformation</code>.</p>"]
+  | InvalidAllowedPatternException
+  [@ocaml.doc
+    "<p>The request does not meet the regular expression requirement.</p>"]
+  | InvalidAssociation
+  [@ocaml.doc "<p>The association is not valid or does not exist. </p>"]
+  | InvalidAssociationVersion
+  [@ocaml.doc
+    "<p>The version you specified is not valid. Use ListAssociationVersions to view all versions of an association according to the association ID. Or, use the <code>$LATEST</code> parameter to view the latest version of the association.</p>"]
+  | InvalidAutomationExecutionParametersException
+  [@ocaml.doc
+    "<p>The supplied parameters for invoking the specified Automation document are incorrect. For example, they may not match the set of parameters permitted for the specified Automation document.</p>"]
+  | InvalidAutomationSignalException
+  [@ocaml.doc
+    "<p>The signal is not valid for the current Automation execution.</p>"]
+  | InvalidAutomationStatusUpdateException
+  [@ocaml.doc "<p>The specified update status operation is not valid.</p>"]
   | InvalidClientTokenId 
   | InvalidCommandId 
-  | InvalidDeleteInventoryParametersException 
-  | InvalidDeletionIdException 
-  | InvalidDocument 
-  | InvalidDocumentContent 
-  | InvalidDocumentOperation 
-  | InvalidDocumentSchemaVersion 
-  | InvalidDocumentType 
-  | InvalidDocumentVersion 
-  | InvalidFilter 
-  | InvalidFilterKey 
-  | InvalidFilterOption 
-  | InvalidFilterValue 
-  | InvalidInstanceId 
-  | InvalidInstanceInformationFilterValue 
-  | InvalidInventoryGroupException 
-  | InvalidInventoryItemContextException 
-  | InvalidInventoryRequestException 
-  | InvalidItemContentException 
-  | InvalidKeyId 
-  | InvalidNextToken 
-  | InvalidNotificationConfig 
-  | InvalidOptionException 
-  | InvalidOutputFolder 
-  | InvalidOutputLocation 
+  | InvalidDeleteInventoryParametersException
+  [@ocaml.doc
+    "<p>One or more of the parameters specified for the delete operation is not valid. Verify all parameters and try again.</p>"]
+  | InvalidDeletionIdException
+  [@ocaml.doc
+    "<p>The ID specified for the delete operation does not exist or is not valid. Verify the ID and try again.</p>"]
+  | InvalidDocument
+  [@ocaml.doc "<p>The specified document does not exist.</p>"]
+  | InvalidDocumentContent
+  [@ocaml.doc "<p>The content for the document is not valid.</p>"]
+  | InvalidDocumentOperation
+  [@ocaml.doc
+    "<p>You attempted to delete a document while it is still shared. You must stop sharing the document before you can delete it.</p>"]
+  | InvalidDocumentSchemaVersion
+  [@ocaml.doc "<p>The version of the document schema is not supported.</p>"]
+  | InvalidDocumentType
+  [@ocaml.doc
+    "<p>The document type is not valid. Valid document types are described in the <code>DocumentType</code> property.</p>"]
+  | InvalidDocumentVersion
+  [@ocaml.doc "<p>The document version is not valid or does not exist.</p>"]
+  | InvalidFilter
+  [@ocaml.doc
+    "<p>The filter name is not valid. Verify the you entered the correct name and try again.</p>"]
+  | InvalidFilterKey [@ocaml.doc "<p>The specified key is not valid.</p>"]
+  | InvalidFilterOption
+  [@ocaml.doc
+    "<p>The specified filter option is not valid. Valid options are Equals and BeginsWith. For Path filter, valid options are Recursive and OneLevel.</p>"]
+  | InvalidFilterValue
+  [@ocaml.doc
+    "<p>The filter value is not valid. Verify the value and try again.</p>"]
+  | InvalidInstanceId
+  [@ocaml.doc
+    "<p>The following problems can cause this exception:</p> <p>You do not have permission to access the instance.</p> <p>SSM Agent is not running. Verify that SSM Agent is running.</p> <p>SSM Agent is not registered with the SSM endpoint. Try reinstalling SSM Agent.</p> <p>The instance is not in valid state. Valid states are: Running, Pending, Stopped, Stopping. Invalid states are: Shutting-down and Terminated.</p>"]
+  | InvalidInstanceInformationFilterValue
+  [@ocaml.doc "<p>The specified filter value is not valid.</p>"]
+  | InvalidInventoryGroupException
+  [@ocaml.doc "<p>The specified inventory group is not valid.</p>"]
+  | InvalidInventoryItemContextException
+  [@ocaml.doc
+    "<p>You specified invalid keys or values in the <code>Context</code> attribute for <code>InventoryItem</code>. Verify the keys and values, and try again.</p>"]
+  | InvalidInventoryRequestException
+  [@ocaml.doc "<p>The request is not valid.</p>"]
+  | InvalidItemContentException
+  [@ocaml.doc "<p>One or more content items is not valid.</p>"]
+  | InvalidKeyId [@ocaml.doc "<p>The query key ID is not valid.</p>"]
+  | InvalidNextToken [@ocaml.doc "<p>The specified token is not valid.</p>"]
+  | InvalidNotificationConfig
+  [@ocaml.doc
+    "<p>One or more configuration items is not valid. Verify that a valid Amazon Resource Name (ARN) was provided for an Amazon SNS topic.</p>"]
+  | InvalidOptionException
+  [@ocaml.doc
+    "<p>The delete inventory option specified is not valid. Verify the option and try again.</p>"]
+  | InvalidOutputFolder [@ocaml.doc "<p>The S3 bucket does not exist.</p>"]
+  | InvalidOutputLocation
+  [@ocaml.doc "<p>The output location is not valid or does not exist.</p>"]
   | InvalidParameter 
   | InvalidParameterCombination 
   | InvalidParameterValue 
-  | InvalidParameters 
-  | InvalidPermissionType 
-  | InvalidPluginName 
-  | InvalidPolicyAttributeException 
-  | InvalidPolicyTypeException 
+  | InvalidParameters
+  [@ocaml.doc
+    "<p>You must specify values for all required parameters in the Systems Manager document. You can only supply values to parameters defined in the Systems Manager document.</p>"]
+  | InvalidPermissionType
+  [@ocaml.doc
+    "<p>The permission type is not supported. <i>Share</i> is the only supported permission type.</p>"]
+  | InvalidPluginName [@ocaml.doc "<p>The plugin name is not valid.</p>"]
+  | InvalidPolicyAttributeException
+  [@ocaml.doc "<p>A policy attribute or its value is invalid. </p>"]
+  | InvalidPolicyTypeException
+  [@ocaml.doc
+    "<p>The policy type is not supported. Parameter Store supports the following policy types: Expiration, ExpirationNotification, and NoChangeNotification.</p>"]
   | InvalidQueryParameter 
-  | InvalidResourceId 
-  | InvalidResourceType 
-  | InvalidResultAttributeException 
-  | InvalidRole 
-  | InvalidSchedule 
-  | InvalidTarget 
-  | InvalidTypeNameException 
-  | InvalidUpdate 
-  | InvocationDoesNotExist 
-  | ItemContentMismatchException 
-  | ItemSizeLimitExceededException 
+  | InvalidResourceId
+  [@ocaml.doc
+    "<p>The resource ID is not valid. Verify that you entered the correct ID and try again.</p>"]
+  | InvalidResourceType
+  [@ocaml.doc
+    "<p>The resource type is not valid. For example, if you are attempting to tag an instance, the instance must be a registered, managed instance.</p>"]
+  | InvalidResultAttributeException
+  [@ocaml.doc
+    "<p>The specified inventory item result attribute is not valid.</p>"]
+  | InvalidRole
+  [@ocaml.doc
+    "<p>The role name can't contain invalid characters. Also verify that you specified an IAM role for notifications that includes the required trust policy. For information about configuring the IAM role for Run Command notifications, see <a href=\"http://docs.aws.amazon.com/systems-manager/latest/userguide/rc-sns-notifications.html\">Configuring Amazon SNS Notifications for Run Command</a> in the <i>AWS Systems Manager User Guide</i>.</p>"]
+  | InvalidSchedule
+  [@ocaml.doc
+    "<p>The schedule is invalid. Verify your cron or rate expression and try again.</p>"]
+  | InvalidTarget
+  [@ocaml.doc
+    "<p>The target is not valid or does not exist. It might not be configured for EC2 Systems Manager or you might not have permission to perform the operation.</p>"]
+  | InvalidTypeNameException
+  [@ocaml.doc "<p>The parameter type name is not valid.</p>"]
+  | InvalidUpdate [@ocaml.doc "<p>The update is not valid.</p>"]
+  | InvocationDoesNotExist
+  [@ocaml.doc
+    "<p>The command ID and instance ID you specified did not match any invocations. Verify the command ID and the instance ID and try again. </p>"]
+  | ItemContentMismatchException
+  [@ocaml.doc "<p>The inventory item has invalid content. </p>"]
+  | ItemSizeLimitExceededException
+  [@ocaml.doc "<p>The inventory item size has exceeded the size limit.</p>"]
   | MalformedQueryString 
-  | MaxDocumentSizeExceeded 
+  | MaxDocumentSizeExceeded
+  [@ocaml.doc "<p>The size limit of a document is 64 KB.</p>"]
   | MissingAction 
   | MissingAuthenticationToken 
   | MissingParameter 
-  | OpsItemAlreadyExistsException 
-  | OpsItemInvalidParameterException 
-  | OpsItemLimitExceededException 
-  | OpsItemNotFoundException 
+  | OpsItemAlreadyExistsException
+  [@ocaml.doc "<p>The OpsItem already exists.</p>"]
+  | OpsItemInvalidParameterException
+  [@ocaml.doc
+    "<p>A specified parameter argument isn't valid. Verify the available arguments and try again.</p>"]
+  | OpsItemLimitExceededException
+  [@ocaml.doc
+    "<p>The request caused OpsItems to exceed one or more quotas. For information about OpsItem quotas, see <a href=\"http://docs.aws.amazon.com/systems-manager/latest/userguide/OpsCenter-learn-more.html#OpsCenter-learn-more-limits\">What are the resource limits for OpsCenter?</a>.</p>"]
+  | OpsItemNotFoundException
+  [@ocaml.doc
+    "<p>The specified OpsItem ID doesn't exist. Verify the ID and try again.</p>"]
   | OptInRequired 
-  | ParameterAlreadyExists 
-  | ParameterLimitExceeded 
-  | ParameterMaxVersionLimitExceeded 
-  | ParameterNotFound 
-  | ParameterPatternMismatchException 
-  | ParameterVersionLabelLimitExceeded 
-  | ParameterVersionNotFound 
+  | ParameterAlreadyExists
+  [@ocaml.doc
+    "<p>The parameter already exists. You can't create duplicate parameters.</p>"]
+  | ParameterLimitExceeded
+  [@ocaml.doc
+    "<p>You have exceeded the number of parameters for this AWS account. Delete one or more parameters and try again.</p>"]
+  | ParameterMaxVersionLimitExceeded
+  [@ocaml.doc
+    "<p>The parameter exceeded the maximum number of allowed versions.</p>"]
+  | ParameterNotFound
+  [@ocaml.doc
+    "<p>The parameter could not be found. Verify the name and try again.</p>"]
+  | ParameterPatternMismatchException
+  [@ocaml.doc "<p>The parameter name is not valid.</p>"]
+  | ParameterVersionLabelLimitExceeded
+  [@ocaml.doc "<p>A parameter version can have a maximum of ten labels.</p>"]
+  | ParameterVersionNotFound
+  [@ocaml.doc
+    "<p>The specified parameter version was not found. Verify the parameter name and version, and try again.</p>"]
   | PendingVerification 
-  | PoliciesLimitExceededException 
+  | PoliciesLimitExceededException
+  [@ocaml.doc
+    "<p>You specified more than the maximum number of allowed policies for the parameter. The maximum is 10.</p>"]
   | RequestExpired 
   | RequestLimitExceeded 
-  | ResourceDataSyncAlreadyExistsException 
-  | ResourceDataSyncConflictException 
-  | ResourceDataSyncCountExceededException 
-  | ResourceDataSyncInvalidConfigurationException 
-  | ResourceDataSyncNotFoundException 
-  | ResourceInUseException 
-  | ResourceLimitExceededException 
-  | ServiceSettingNotFound 
+  | ResourceDataSyncAlreadyExistsException
+  [@ocaml.doc
+    "<p>A sync configuration with the same name already exists.</p>"]
+  | ResourceDataSyncConflictException
+  [@ocaml.doc
+    "<p>Another <code>UpdateResourceDataSync</code> request is being processed. Wait a few minutes and try again.</p>"]
+  | ResourceDataSyncCountExceededException
+  [@ocaml.doc
+    "<p>You have exceeded the allowed maximum sync configurations.</p>"]
+  | ResourceDataSyncInvalidConfigurationException
+  [@ocaml.doc "<p>The specified sync configuration is invalid.</p>"]
+  | ResourceDataSyncNotFoundException
+  [@ocaml.doc "<p>The specified sync name was not found.</p>"]
+  | ResourceInUseException
+  [@ocaml.doc
+    "<p>Error returned if an attempt is made to delete a patch baseline that is registered for a patch group.</p>"]
+  | ResourceLimitExceededException
+  [@ocaml.doc
+    "<p>Error returned when the caller has exceeded the default resource quotas. For example, too many maintenance windows or patch baselines have been created.</p> <p>For information about resource quotas in Systems Manager, see <a href=\"http://docs.aws.amazon.com/general/latest/gr/ssm.html#limits_ssm\">Systems Manager Service Quotas</a> in the <i>AWS General Reference</i>.</p>"]
+  | ServiceSettingNotFound
+  [@ocaml.doc
+    "<p>The specified service setting was not found. Either the service name or the setting has not been provisioned by the AWS service team.</p>"]
   | ServiceUnavailable 
-  | StatusUnchanged 
-  | SubTypeCountLimitExceededException 
-  | TargetInUseException 
-  | TargetNotConnected 
+  | StatusUnchanged
+  [@ocaml.doc "<p>The updated status is the same as the current status.</p>"]
+  | SubTypeCountLimitExceededException
+  [@ocaml.doc
+    "<p>The sub-type count exceeded the limit for the inventory type.</p>"]
+  | TargetInUseException
+  [@ocaml.doc
+    "<p>You specified the <code>Safe</code> option for the DeregisterTargetFromMaintenanceWindow operation, but the target is still referenced in a task.</p>"]
+  | TargetNotConnected
+  [@ocaml.doc
+    "<p>The specified target instance for the session is not fully configured for use with Session Manager. For more information, see <a href=\"http://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started.html\">Getting Started with Session Manager</a> in the <i>AWS Systems Manager User Guide</i>.</p>"]
   | Throttling 
-  | TooManyTagsError 
-  | TooManyUpdates 
-  | TotalSizeLimitExceededException 
+  | TooManyTagsError
+  [@ocaml.doc
+    "<p>The <code>Targets</code> parameter includes too many tags. Remove one or more tags and try the command again.</p>"]
+  | TooManyUpdates
+  [@ocaml.doc
+    "<p>There are concurrent updates for a resource that supports one update at a time.</p>"]
+  | TotalSizeLimitExceededException
+  [@ocaml.doc
+    "<p>The size of inventory data has exceeded the total size limit for the resource.</p>"]
   | UnauthorizedOperation 
   | UnknownParameter 
-  | UnsupportedCalendarException 
-  | UnsupportedFeatureRequiredException 
-  | UnsupportedInventoryItemContextException 
-  | UnsupportedInventorySchemaVersionException 
-  | UnsupportedOperatingSystem 
-  | UnsupportedParameterType 
-  | UnsupportedPlatformType 
+  | UnsupportedCalendarException
+  [@ocaml.doc
+    "<p>The calendar entry contained in the specified Systems Manager document is not supported.</p>"]
+  | UnsupportedFeatureRequiredException
+  [@ocaml.doc
+    "<p>Microsoft application patching is only available on EC2 instances and Advanced Instances. To patch Microsoft applications on on-premises servers and VMs, you must enable Advanced Instances. For more information, see <a href=\"http://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-managedinstances-advanced.html\">Using the Advanced-Instances Tier</a> in the <i>AWS Systems Manager User Guide</i>.</p>"]
+  | UnsupportedInventoryItemContextException
+  [@ocaml.doc
+    "<p>The <code>Context</code> attribute that you specified for the <code>InventoryItem</code> is not allowed for this inventory type. You can only use the <code>Context</code> attribute with inventory types like <code>AWS:ComplianceItem</code>.</p>"]
+  | UnsupportedInventorySchemaVersionException
+  [@ocaml.doc
+    "<p>Inventory item type schema version has to match supported versions in the service. Check output of GetInventorySchema to see the available schema version for each type.</p>"]
+  | UnsupportedOperatingSystem
+  [@ocaml.doc
+    "<p>The operating systems you specified is not supported, or the operation is not supported for the operating system. Valid operating systems include: Windows, AmazonLinux, RedhatEnterpriseLinux, and Ubuntu.</p>"]
+  | UnsupportedParameterType
+  [@ocaml.doc "<p>The parameter type is not supported.</p>"]
+  | UnsupportedPlatformType
+  [@ocaml.doc
+    "<p>The document does not support the platform type of the given instance ID(s). For example, you sent an document for a Windows instance to a Linux instance.</p>"]
   | UnsupportedProtocol 
   | ValidationError 
   | Uninhabited 

@@ -1,4 +1,24 @@
-open Types
+(** "<p> Modify a setting for an Amazon Aurora global cluster. You can change one or more database configuration parameters by specifying these parameters and the new values in the request. For more information on Amazon Aurora, see <a href=\"https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html\"> What Is Amazon Aurora?</a> in the <i>Amazon Aurora User Guide.</i> </p> <note> <p>This action only applies to Aurora DB clusters.</p> </note>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module ModifyGlobalClusterMessage :
+sig
+  type t =
+    {
+    global_cluster_identifier: String.t option ;
+    new_global_cluster_identifier: String.t option ;
+    deletion_protection: Boolean.t option }
+  val make :
+    ?global_cluster_identifier:String.t ->
+      ?new_global_cluster_identifier:String.t ->
+        ?deletion_protection:Boolean.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module ModifyGlobalClusterResult = ModifyGlobalClusterResult
 type input = ModifyGlobalClusterMessage.t
 type output = ModifyGlobalClusterResult.t
 type error = Errors_internal.t

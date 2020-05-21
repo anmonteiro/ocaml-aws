@@ -1,4 +1,18 @@
-open Types
+(** "<p>Deletes the specified alarms. You can delete up to 50 alarms in one operation. In the event of an error, no alarms are deleted.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DeleteAlarmsInput :
+sig
+  type t = {
+    alarm_names: AlarmNames.t }
+  val make : alarm_names:AlarmNames.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module Output = Aws.BaseTypes.Unit
 type input = DeleteAlarmsInput.t
 type output = unit
 type error = Errors_internal.t

@@ -1,8 +1,68 @@
-open Types
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
 open Aws
+module ReplaceIamInstanceProfileAssociationRequest =
+  struct
+    type t =
+      {
+      iam_instance_profile: IamInstanceProfileSpecification.t
+        [@ocaml.doc "<p>The IAM instance profile.</p>"];
+      association_id: String.t
+        [@ocaml.doc
+          "<p>The ID of the existing IAM instance profile association.</p>"]}
+    let make ~iam_instance_profile  ~association_id  () =
+      { iam_instance_profile; association_id }
+    let to_query v =
+      Query.List
+        (Util.list_filter_opt
+           [Some
+              (Query.Pair
+                 ("AssociationId", (String.to_query v.association_id)));
+           Some
+             (Query.Pair
+                ("IamInstanceProfile",
+                  (IamInstanceProfileSpecification.to_query
+                     v.iam_instance_profile)))])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Some ("association_id", (String.to_json v.association_id));
+           Some
+             ("iam_instance_profile",
+               (IamInstanceProfileSpecification.to_json
+                  v.iam_instance_profile))])
+    let parse xml =
+      Some
+        {
+          iam_instance_profile =
+            (Xml.required "IamInstanceProfile"
+               (Util.option_bind (Xml.member "IamInstanceProfile" xml)
+                  IamInstanceProfileSpecification.parse));
+          association_id =
+            (Xml.required "AssociationId"
+               (Util.option_bind (Xml.member "AssociationId" xml)
+                  String.parse))
+        }
+    let to_xml v =
+      Util.list_filter_opt
+        (([] @
+            [Some
+               (Ezxmlm.make_tag "IamInstanceProfile"
+                  ([],
+                    (IamInstanceProfileSpecification.to_xml
+                       v.iam_instance_profile)))])
+           @
+           [Some
+              (Ezxmlm.make_tag "AssociationId"
+                 ([], (String.to_xml v.association_id)))])
+  end
+module ReplaceIamInstanceProfileAssociationResult =
+  ReplaceIamInstanceProfileAssociationResult
 type input = ReplaceIamInstanceProfileAssociationRequest.t
 type output = ReplaceIamInstanceProfileAssociationResult.t
 type error = Errors_internal.t
+let streaming = false
 let service = "ec2"
 let to_http service region req =
   let uri =
@@ -19,17 +79,20 @@ let to_http service region req =
   (`POST, uri,
     (Headers.render
        (ReplaceIamInstanceProfileAssociationRequest.to_headers req)), "")
-let of_http body =
+let of_http headers
+  (body : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+  let ((`String body) : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+    body[@@ocaml.warning "-8"] in
   try
     let xml = Ezxmlm.from_string body in
     let resp =
       Xml.member "ReplaceIamInstanceProfileAssociationResponse" (snd xml) in
     try
-      Util.or_error
-        (Util.option_bind resp
-           ReplaceIamInstanceProfileAssociationResult.parse)
-        (let open Error in
-           BadResponse
+      let open Error in
+        Util.or_error
+          (Util.option_bind resp
+             ReplaceIamInstanceProfileAssociationResult.parse)
+          (BadResponse
              {
                body;
                message =
@@ -48,18 +111,18 @@ let of_http body =
                })
   with
   | Failure msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing xml: " ^ msg) })
+      let open Error in
+        `Error
+          (BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
-  | Some var ->
+  | Some v ->
       if
-        (List.mem var errors) &&
-          ((match Errors_internal.to_http_code var with
-            | Some var -> var = code
+        (List.mem v errors) &&
+          ((match Errors_internal.to_http_code v with
+            | Some x -> x = code
             | None -> true))
-      then Some var
+      then Some v
       else None
   | None -> None

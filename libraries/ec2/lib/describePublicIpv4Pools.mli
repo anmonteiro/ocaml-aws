@@ -1,4 +1,23 @@
-open Types
+(** "<p>Describes the specified IPv4 address pools.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribePublicIpv4PoolsRequest :
+sig
+  type t =
+    {
+    pool_ids: ValueStringList.t ;
+    next_token: String.t option ;
+    max_results: Integer.t option }
+  val make :
+    ?pool_ids:ValueStringList.t ->
+      ?next_token:String.t -> ?max_results:Integer.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DescribePublicIpv4PoolsResult = DescribePublicIpv4PoolsResult
 type input = DescribePublicIpv4PoolsRequest.t
 type output = DescribePublicIpv4PoolsResult.t
 type error = Errors_internal.t

@@ -1,8 +1,76 @@
-open Types
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
 open Aws
+module DescribeDBInstancesMessage =
+  struct
+    type t =
+      {
+      d_b_instance_identifier: String.t option
+        [@ocaml.doc
+          "<p>The user-supplied instance identifier. If this parameter is specified, information from only the specific DB instance is returned. This parameter isn't case-sensitive.</p> <p>Constraints:</p> <ul> <li> <p>If supplied, must match the identifier of an existing DBInstance.</p> </li> </ul>"];
+      filters: FilterList.t
+        [@ocaml.doc
+          "<p>A filter that specifies one or more DB instances to describe.</p> <p>Supported filters:</p> <ul> <li> <p> <code>db-cluster-id</code> - Accepts DB cluster identifiers and DB cluster Amazon Resource Names (ARNs). The results list will only include information about the DB instances associated with the DB clusters identified by these ARNs.</p> </li> <li> <p> <code>db-instance-id</code> - Accepts DB instance identifiers and DB instance Amazon Resource Names (ARNs). The results list will only include information about the DB instances identified by these ARNs.</p> </li> <li> <p> <code>dbi-resource-id</code> - Accepts DB instance resource identifiers. The results list will only include information about the DB instances identified by these DB instance resource identifiers.</p> </li> <li> <p> <code>domain</code> - Accepts Active Directory directory IDs. The results list will only include information about the DB instances associated with these domains.</p> </li> <li> <p> <code>engine</code> - Accepts engine names. The results list will only include information about the DB instances for these engines.</p> </li> </ul>"];
+      max_records: Integer.t option
+        [@ocaml.doc
+          "<p> The maximum number of records to include in the response. If more records exist than the specified <code>MaxRecords</code> value, a pagination token called a marker is included in the response so that you can retrieve the remaining results. </p> <p>Default: 100</p> <p>Constraints: Minimum 20, maximum 100.</p>"];
+      marker: String.t option
+        [@ocaml.doc
+          "<p> An optional pagination token provided by a previous <code>DescribeDBInstances</code> request. If this parameter is specified, the response includes only records beyond the marker, up to the value specified by <code>MaxRecords</code>. </p>"]}
+    [@@ocaml.doc "<p/>"]
+    let make ?d_b_instance_identifier  ?(filters= [])  ?max_records  ?marker 
+      () = { d_b_instance_identifier; filters; max_records; marker }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.marker
+              (fun f -> ("marker", (String.to_json f)));
+           Util.option_map v.max_records
+             (fun f -> ("max_records", (Integer.to_json f)));
+           Some ("filters", (FilterList.to_json v.filters));
+           Util.option_map v.d_b_instance_identifier
+             (fun f -> ("d_b_instance_identifier", (String.to_json f)))])
+    let parse xml =
+      Some
+        {
+          d_b_instance_identifier =
+            (Util.option_bind (Xml.member "DBInstanceIdentifier" xml)
+               String.parse);
+          filters =
+            (Util.of_option []
+               (Util.option_bind (Xml.member "Filters" xml) FilterList.parse));
+          max_records =
+            (Util.option_bind (Xml.member "MaxRecords" xml) Integer.parse);
+          marker = (Util.option_bind (Xml.member "Marker" xml) String.parse)
+        }
+    let to_xml v =
+      Util.list_filter_opt
+        (((([] @
+              [Util.option_map v.d_b_instance_identifier
+                 (fun f ->
+                    Ezxmlm.make_tag "DBInstanceIdentifier"
+                      ([], (String.to_xml f)))])
+             @
+             (List.map
+                (fun x ->
+                   Some
+                     (Ezxmlm.make_tag "Filters" ([], (FilterList.to_xml [x]))))
+                v.filters))
+            @
+            [Util.option_map v.max_records
+               (fun f ->
+                  Ezxmlm.make_tag "MaxRecords" ([], (Integer.to_xml f)))])
+           @
+           [Util.option_map v.marker
+              (fun f -> Ezxmlm.make_tag "Marker" ([], (String.to_xml f)))])
+  end[@@ocaml.doc "<p/>"]
+module DBInstanceMessage = DBInstanceMessage
 type input = DescribeDBInstancesMessage.t
 type output = DBInstanceMessage.t
 type error = Errors_internal.t
+let streaming = false
 let service = "rds"
 let to_http service region req =
   let uri =
@@ -16,16 +84,19 @@ let to_http service region req =
                (Query.render (DescribeDBInstancesMessage.to_query req))))) in
   (`POST, uri, (Headers.render (DescribeDBInstancesMessage.to_headers req)),
     "")
-let of_http body =
+let of_http headers
+  (body : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+  let ((`String body) : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+    body[@@ocaml.warning "-8"] in
   try
     let xml = Ezxmlm.from_string body in
     let resp =
       Util.option_bind (Xml.member "DescribeDBInstancesResponse" (snd xml))
         (Xml.member "DescribeDBInstancesResult") in
     try
-      Util.or_error (Util.option_bind resp DBInstanceMessage.parse)
-        (let open Error in
-           BadResponse
+      let open Error in
+        Util.or_error (Util.option_bind resp DBInstanceMessage.parse)
+          (BadResponse
              {
                body;
                message = "Could not find well formed DBInstanceMessage."
@@ -43,18 +114,18 @@ let of_http body =
                })
   with
   | Failure msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing xml: " ^ msg) })
+      let open Error in
+        `Error
+          (BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
-  | Some var ->
+  | Some v ->
       if
-        (List.mem var errors) &&
-          ((match Errors_internal.to_http_code var with
-            | Some var -> var = code
+        (List.mem v errors) &&
+          ((match Errors_internal.to_http_code v with
+            | Some x -> x = code
             | None -> true))
-      then Some var
+      then Some v
       else None
   | None -> None

@@ -1,4 +1,27 @@
-open Types
+(** "<p>Lists the anomaly detection models that you have created in your account. You can list all models in your account or filter the results to only the models that are related to a certain namespace, metric name, or metric dimension.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribeAnomalyDetectorsInput :
+sig
+  type t =
+    {
+    next_token: String.t option ;
+    max_results: Integer.t option ;
+    namespace: String.t option ;
+    metric_name: String.t option ;
+    dimensions: Dimensions.t }
+  val make :
+    ?next_token:String.t ->
+      ?max_results:Integer.t ->
+        ?namespace:String.t ->
+          ?metric_name:String.t -> ?dimensions:Dimensions.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DescribeAnomalyDetectorsOutput = DescribeAnomalyDetectorsOutput
 type input = DescribeAnomalyDetectorsInput.t
 type output = DescribeAnomalyDetectorsOutput.t
 type error = Errors_internal.t

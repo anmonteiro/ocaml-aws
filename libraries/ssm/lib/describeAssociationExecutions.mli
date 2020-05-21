@@ -1,4 +1,25 @@
-open Types
+(** "<p>Use this API action to view all executions for a specific association ID. </p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribeAssociationExecutionsRequest :
+sig
+  type t =
+    {
+    association_id: String.t ;
+    filters: AssociationExecutionFilterList.t ;
+    max_results: Integer.t option ;
+    next_token: String.t option }
+  val make :
+    association_id:String.t ->
+      ?filters:AssociationExecutionFilterList.t ->
+        ?max_results:Integer.t -> ?next_token:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val of_json : Aws.Json.t -> t
+end
+module DescribeAssociationExecutionsResult =
+DescribeAssociationExecutionsResult
 type input = DescribeAssociationExecutionsRequest.t
 type output = DescribeAssociationExecutionsResult.t
 type error = Errors_internal.t

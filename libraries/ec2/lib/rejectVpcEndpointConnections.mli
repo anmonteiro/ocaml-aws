@@ -1,4 +1,24 @@
-open Types
+(** "<p>Rejects one or more VPC endpoint connection requests to your VPC endpoint service.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module RejectVpcEndpointConnectionsRequest :
+sig
+  type t =
+    {
+    dry_run: Boolean.t option ;
+    service_id: String.t ;
+    vpc_endpoint_ids: ValueStringList.t }
+  val make :
+    ?dry_run:Boolean.t ->
+      service_id:String.t -> vpc_endpoint_ids:ValueStringList.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module RejectVpcEndpointConnectionsResult =
+RejectVpcEndpointConnectionsResult
 type input = RejectVpcEndpointConnectionsRequest.t
 type output = RejectVpcEndpointConnectionsResult.t
 type error = Errors_internal.t

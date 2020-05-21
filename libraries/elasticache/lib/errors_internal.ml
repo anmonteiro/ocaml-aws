@@ -1,75 +1,164 @@
 type t =
-  | APICallRateForCustomerExceeded 
+  | APICallRateForCustomerExceeded
+  [@ocaml.doc
+    "<p>The customer has exceeded the allowed rate of API calls.</p>"]
   | AuthFailure 
-  | AuthorizationAlreadyExists 
-  | AuthorizationNotFound 
+  | AuthorizationAlreadyExists
+  [@ocaml.doc
+    "<p>The specified Amazon EC2 security group is already authorized for the specified cache security group.</p>"]
+  | AuthorizationNotFound
+  [@ocaml.doc
+    "<p>The specified Amazon EC2 security group is not authorized for the specified cache security group.</p>"]
   | Blocked 
-  | CacheClusterAlreadyExists 
-  | CacheClusterNotFound 
-  | CacheParameterGroupAlreadyExists 
-  | CacheParameterGroupNotFound 
-  | CacheParameterGroupQuotaExceeded 
-  | CacheSecurityGroupAlreadyExists 
-  | CacheSecurityGroupNotFound 
-  | CacheSubnetGroupAlreadyExists 
-  | CacheSubnetGroupInUse 
-  | CacheSubnetGroupNotFoundFault 
-  | CacheSubnetGroupQuotaExceeded 
-  | CacheSubnetQuotaExceededFault 
-  | ClusterQuotaForCustomerExceeded 
+  | CacheClusterAlreadyExists
+  [@ocaml.doc "<p>You already have a cluster with the given identifier.</p>"]
+  | CacheClusterNotFound
+  [@ocaml.doc
+    "<p>The requested cluster ID does not refer to an existing cluster.</p>"]
+  | CacheParameterGroupAlreadyExists
+  [@ocaml.doc
+    "<p>A cache parameter group with the requested name already exists.</p>"]
+  | CacheParameterGroupNotFound
+  [@ocaml.doc
+    "<p>The requested cache parameter group name does not refer to an existing cache parameter group.</p>"]
+  | CacheParameterGroupQuotaExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the maximum number of cache security groups.</p>"]
+  | CacheSecurityGroupAlreadyExists
+  [@ocaml.doc
+    "<p>A cache security group with the specified name already exists.</p>"]
+  | CacheSecurityGroupNotFound
+  [@ocaml.doc
+    "<p>The requested cache security group name does not refer to an existing cache security group.</p>"]
+  | CacheSubnetGroupAlreadyExists
+  [@ocaml.doc
+    "<p>The requested cache subnet group name is already in use by an existing cache subnet group.</p>"]
+  | CacheSubnetGroupInUse
+  [@ocaml.doc "<p>The requested cache subnet group is currently in use.</p>"]
+  | CacheSubnetGroupNotFoundFault
+  [@ocaml.doc
+    "<p>The requested cache subnet group name does not refer to an existing cache subnet group.</p>"]
+  | CacheSubnetGroupQuotaExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of cache subnet groups.</p>"]
+  | CacheSubnetQuotaExceededFault
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of subnets in a cache subnet group.</p>"]
+  | ClusterQuotaForCustomerExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of clusters per customer.</p>"]
   | DryRunOperation 
   | IdempotentParameterMismatch 
   | IncompleteSignature 
-  | InsufficientCacheClusterCapacity 
+  | InsufficientCacheClusterCapacity
+  [@ocaml.doc
+    "<p>The requested cache node type is not available in the specified Availability Zone. For more information, see <a href=\"http://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/ErrorMessages.html#ErrorMessages.INSUFFICIENT_CACHE_CLUSTER_CAPACITY\">InsufficientCacheClusterCapacity</a> in the ElastiCache User Guide.</p>"]
   | InternalFailure 
-  | InvalidARN 
+  | InvalidARN
+  [@ocaml.doc
+    "<p>The requested Amazon Resource Name (ARN) does not refer to an existing resource.</p>"]
   | InvalidAction 
-  | InvalidCacheClusterState 
-  | InvalidCacheParameterGroupState 
-  | InvalidCacheSecurityGroupState 
+  | InvalidCacheClusterState
+  [@ocaml.doc
+    "<p>The requested cluster is not in the <code>available</code> state.</p>"]
+  | InvalidCacheParameterGroupState
+  [@ocaml.doc
+    "<p>The current state of the cache parameter group does not allow the requested operation to occur.</p>"]
+  | InvalidCacheSecurityGroupState
+  [@ocaml.doc
+    "<p>The current state of the cache security group does not allow deletion.</p>"]
   | InvalidClientTokenId 
-  | InvalidKMSKeyFault 
+  | InvalidKMSKeyFault
+  [@ocaml.doc "<p>The KMS key supplied is not valid.</p>"]
   | InvalidParameter 
-  | InvalidParameterCombination 
-  | InvalidParameterValue 
+  | InvalidParameterCombination
+  [@ocaml.doc "<p>Two or more incompatible parameters were specified.</p>"]
+  | InvalidParameterValue
+  [@ocaml.doc "<p>The value for a parameter is invalid.</p>"]
   | InvalidQueryParameter 
-  | InvalidReplicationGroupState 
-  | InvalidSnapshotState 
-  | InvalidSubnet 
-  | InvalidVPCNetworkStateFault 
+  | InvalidReplicationGroupState
+  [@ocaml.doc
+    "<p>The requested replication group is not in the <code>available</code> state.</p>"]
+  | InvalidSnapshotState
+  [@ocaml.doc
+    "<p>The current state of the snapshot does not allow the requested operation to occur.</p>"]
+  | InvalidSubnet
+  [@ocaml.doc "<p>An invalid subnet identifier was specified.</p>"]
+  | InvalidVPCNetworkStateFault
+  [@ocaml.doc "<p>The VPC network is in an invalid state.</p>"]
   | MalformedQueryString 
   | MissingAction 
   | MissingAuthenticationToken 
   | MissingParameter 
-  | NoOperationFault 
-  | NodeGroupNotFoundFault 
-  | NodeGroupsPerReplicationGroupQuotaExceeded 
-  | NodeQuotaForClusterExceeded 
-  | NodeQuotaForCustomerExceeded 
+  | NoOperationFault
+  [@ocaml.doc
+    "<p>The operation was not performed because no changes were required.</p>"]
+  | NodeGroupNotFoundFault
+  [@ocaml.doc
+    "<p>The node group specified by the <code>NodeGroupId</code> parameter could not be found. Please verify that the node group exists and that you spelled the <code>NodeGroupId</code> value correctly.</p>"]
+  | NodeGroupsPerReplicationGroupQuotaExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the maximum allowed number of node groups (shards) in a single replication group. The default maximum is 90</p>"]
+  | NodeQuotaForClusterExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of cache nodes in a single cluster.</p>"]
+  | NodeQuotaForCustomerExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of cache nodes per customer.</p>"]
   | OptInRequired 
   | PendingVerification 
-  | QuotaExceeded_CacheSecurityGroup 
-  | ReplicationGroupAlreadyExists 
-  | ReplicationGroupAlreadyUnderMigrationFault 
-  | ReplicationGroupNotFoundFault 
-  | ReplicationGroupNotUnderMigrationFault 
+  | QuotaExceeded_CacheSecurityGroup
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the allowed number of cache security groups.</p>"]
+  | ReplicationGroupAlreadyExists
+  [@ocaml.doc "<p>The specified replication group already exists.</p>"]
+  | ReplicationGroupAlreadyUnderMigrationFault
+  [@ocaml.doc "<p>The targeted replication group is not available. </p>"]
+  | ReplicationGroupNotFoundFault
+  [@ocaml.doc "<p>The specified replication group does not exist.</p>"]
+  | ReplicationGroupNotUnderMigrationFault
+  [@ocaml.doc
+    "<p>The designated replication group is not available for data migration.</p>"]
   | RequestExpired 
   | RequestLimitExceeded 
-  | ReservedCacheNodeAlreadyExists 
-  | ReservedCacheNodeNotFound 
-  | ReservedCacheNodeQuotaExceeded 
-  | ReservedCacheNodesOfferingNotFound 
-  | ServiceLinkedRoleNotFoundFault 
+  | ReservedCacheNodeAlreadyExists
+  [@ocaml.doc
+    "<p>You already have a reservation with the given identifier.</p>"]
+  | ReservedCacheNodeNotFound
+  [@ocaml.doc "<p>The requested reserved cache node was not found.</p>"]
+  | ReservedCacheNodeQuotaExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the user's cache node quota.</p>"]
+  | ReservedCacheNodesOfferingNotFound
+  [@ocaml.doc "<p>The requested cache node offering does not exist.</p>"]
+  | ServiceLinkedRoleNotFoundFault
+  [@ocaml.doc
+    "<p>The specified service linked role (SLR) was not found.</p>"]
   | ServiceUnavailable 
-  | ServiceUpdateNotFoundFault 
-  | SnapshotAlreadyExistsFault 
-  | SnapshotFeatureNotSupportedFault 
-  | SnapshotNotFoundFault 
-  | SnapshotQuotaExceededFault 
-  | SubnetInUse 
-  | TagNotFound 
-  | TagQuotaPerResourceExceeded 
-  | TestFailoverNotAvailableFault 
+  | ServiceUpdateNotFoundFault
+  [@ocaml.doc "<p>The service update doesn't exist</p>"]
+  | SnapshotAlreadyExistsFault
+  [@ocaml.doc "<p>You already have a snapshot with the given name.</p>"]
+  | SnapshotFeatureNotSupportedFault
+  [@ocaml.doc
+    "<p>You attempted one of the following operations:</p> <ul> <li> <p>Creating a snapshot of a Redis cluster running on a <code>cache.t1.micro</code> cache node.</p> </li> <li> <p>Creating a snapshot of a cluster that is running Memcached rather than Redis.</p> </li> </ul> <p>Neither of these are supported by ElastiCache.</p>"]
+  | SnapshotNotFoundFault
+  [@ocaml.doc
+    "<p>The requested snapshot name does not refer to an existing snapshot.</p>"]
+  | SnapshotQuotaExceededFault
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would exceed the maximum number of snapshots.</p>"]
+  | SubnetInUse
+  [@ocaml.doc
+    "<p>The requested subnet is being used by another cache subnet group.</p>"]
+  | TagNotFound
+  [@ocaml.doc "<p>The requested tag was not found on this resource.</p>"]
+  | TagQuotaPerResourceExceeded
+  [@ocaml.doc
+    "<p>The request cannot be processed because it would cause the resource to have more than the allowed number of tags. The maximum number of tags permitted on a resource is 50.</p>"]
+  | TestFailoverNotAvailableFault
+  [@ocaml.doc
+    "<p>The <code>TestFailover</code> action is not available.</p>"]
   | Throttling 
   | UnauthorizedOperation 
   | UnknownParameter 

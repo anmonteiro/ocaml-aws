@@ -1,0 +1,6 @@
+(library
+ (name        aws_simpledb)
+ (public_name aws_simpledb)
+ (synopsis "aws-Amazon SimpleDB")
+ (flags (:standard -w -27))
+ (libraries aws ))

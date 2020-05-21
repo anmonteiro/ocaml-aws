@@ -1,4 +1,28 @@
-open Types
+(** "<p>Describes the principals (service consumers) that are permitted to discover your VPC endpoint service.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribeVpcEndpointServicePermissionsRequest :
+sig
+  type t =
+    {
+    dry_run: Boolean.t option ;
+    service_id: String.t ;
+    filters: FilterList.t ;
+    max_results: Integer.t option ;
+    next_token: String.t option }
+  val make :
+    ?dry_run:Boolean.t ->
+      service_id:String.t ->
+        ?filters:FilterList.t ->
+          ?max_results:Integer.t -> ?next_token:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DescribeVpcEndpointServicePermissionsResult =
+DescribeVpcEndpointServicePermissionsResult
 type input = DescribeVpcEndpointServicePermissionsRequest.t
 type output = DescribeVpcEndpointServicePermissionsResult.t
 type error = Errors_internal.t

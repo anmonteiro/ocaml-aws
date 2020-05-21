@@ -1,4 +1,41 @@
-open Types
+(** "<p>Creates a Client VPN endpoint. A Client VPN endpoint is the resource you create and configure to enable and manage client VPN sessions. It is the destination endpoint at which all client VPN sessions are terminated.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module CreateClientVpnEndpointRequest :
+sig
+  type t =
+    {
+    client_cidr_block: String.t ;
+    server_certificate_arn: String.t ;
+    authentication_options: ClientVpnAuthenticationRequestList.t ;
+    connection_log_options: ConnectionLogOptions.t ;
+    dns_servers: ValueStringList.t ;
+    transport_protocol: TransportProtocol.t option ;
+    description: String.t option ;
+    split_tunnel: Boolean.t option ;
+    dry_run: Boolean.t option ;
+    client_token: String.t option ;
+    tag_specifications: TagSpecificationList.t }
+  val make :
+    client_cidr_block:String.t ->
+      server_certificate_arn:String.t ->
+        authentication_options:ClientVpnAuthenticationRequestList.t ->
+          connection_log_options:ConnectionLogOptions.t ->
+            ?dns_servers:ValueStringList.t ->
+              ?transport_protocol:TransportProtocol.t ->
+                ?description:String.t ->
+                  ?split_tunnel:Boolean.t ->
+                    ?dry_run:Boolean.t ->
+                      ?client_token:String.t ->
+                        ?tag_specifications:TagSpecificationList.t ->
+                          unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module CreateClientVpnEndpointResult = CreateClientVpnEndpointResult
 type input = CreateClientVpnEndpointRequest.t
 type output = CreateClientVpnEndpointResult.t
 type error = Errors_internal.t

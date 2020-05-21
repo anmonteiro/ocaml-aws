@@ -1,4 +1,25 @@
-open Types
+(** "<p>Lists the set of CA certificates provided by Amazon RDS for this AWS account.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribeCertificatesMessage :
+sig
+  type t =
+    {
+    certificate_identifier: String.t option ;
+    filters: FilterList.t ;
+    max_records: Integer.t option ;
+    marker: String.t option }[@@ocaml.doc "<p/>"]
+  val make :
+    ?certificate_identifier:String.t ->
+      ?filters:FilterList.t ->
+        ?max_records:Integer.t -> ?marker:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module CertificateMessage = CertificateMessage
 type input = DescribeCertificatesMessage.t
 type output = CertificateMessage.t
 type error = Errors_internal.t

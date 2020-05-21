@@ -1,8 +1,102 @@
-open Types
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
 open Aws
+module RevokeDBSecurityGroupIngressMessage =
+  struct
+    type t =
+      {
+      d_b_security_group_name: String.t
+        [@ocaml.doc
+          "<p>The name of the DB security group to revoke ingress from.</p>"];
+      c_i_d_r_i_p: String.t option
+        [@ocaml.doc
+          "<p> The IP range to revoke access from. Must be a valid CIDR range. If <code>CIDRIP</code> is specified, <code>EC2SecurityGroupName</code>, <code>EC2SecurityGroupId</code> and <code>EC2SecurityGroupOwnerId</code> can't be provided. </p>"];
+      e_c2_security_group_name: String.t option
+        [@ocaml.doc
+          "<p> The name of the EC2 security group to revoke access from. For VPC DB security groups, <code>EC2SecurityGroupId</code> must be provided. Otherwise, EC2SecurityGroupOwnerId and either <code>EC2SecurityGroupName</code> or <code>EC2SecurityGroupId</code> must be provided. </p>"];
+      e_c2_security_group_id: String.t option
+        [@ocaml.doc
+          "<p> The id of the EC2 security group to revoke access from. For VPC DB security groups, <code>EC2SecurityGroupId</code> must be provided. Otherwise, EC2SecurityGroupOwnerId and either <code>EC2SecurityGroupName</code> or <code>EC2SecurityGroupId</code> must be provided. </p>"];
+      e_c2_security_group_owner_id: String.t option
+        [@ocaml.doc
+          "<p> The AWS account number of the owner of the EC2 security group specified in the <code>EC2SecurityGroupName</code> parameter. The AWS access key ID isn't an acceptable value. For VPC DB security groups, <code>EC2SecurityGroupId</code> must be provided. Otherwise, EC2SecurityGroupOwnerId and either <code>EC2SecurityGroupName</code> or <code>EC2SecurityGroupId</code> must be provided. </p>"]}
+    [@@ocaml.doc "<p/>"]
+    let make ~d_b_security_group_name  ?c_i_d_r_i_p 
+      ?e_c2_security_group_name  ?e_c2_security_group_id 
+      ?e_c2_security_group_owner_id  () =
+      {
+        d_b_security_group_name;
+        c_i_d_r_i_p;
+        e_c2_security_group_name;
+        e_c2_security_group_id;
+        e_c2_security_group_owner_id
+      }
+    let to_query v = Query.List (Util.list_filter_opt [])
+    let to_headers v = Headers.List (Util.list_filter_opt [])
+    let to_json v =
+      `Assoc
+        (Util.list_filter_opt
+           [Util.option_map v.e_c2_security_group_owner_id
+              (fun f -> ("e_c2_security_group_owner_id", (String.to_json f)));
+           Util.option_map v.e_c2_security_group_id
+             (fun f -> ("e_c2_security_group_id", (String.to_json f)));
+           Util.option_map v.e_c2_security_group_name
+             (fun f -> ("e_c2_security_group_name", (String.to_json f)));
+           Util.option_map v.c_i_d_r_i_p
+             (fun f -> ("c_i_d_r_i_p", (String.to_json f)));
+           Some
+             ("d_b_security_group_name",
+               (String.to_json v.d_b_security_group_name))])
+    let parse xml =
+      Some
+        {
+          d_b_security_group_name =
+            (Xml.required "DBSecurityGroupName"
+               (Util.option_bind (Xml.member "DBSecurityGroupName" xml)
+                  String.parse));
+          c_i_d_r_i_p =
+            (Util.option_bind (Xml.member "CIDRIP" xml) String.parse);
+          e_c2_security_group_name =
+            (Util.option_bind (Xml.member "EC2SecurityGroupName" xml)
+               String.parse);
+          e_c2_security_group_id =
+            (Util.option_bind (Xml.member "EC2SecurityGroupId" xml)
+               String.parse);
+          e_c2_security_group_owner_id =
+            (Util.option_bind (Xml.member "EC2SecurityGroupOwnerId" xml)
+               String.parse)
+        }
+    let to_xml v =
+      Util.list_filter_opt
+        ((((([] @
+               [Some
+                  (Ezxmlm.make_tag "DBSecurityGroupName"
+                     ([], (String.to_xml v.d_b_security_group_name)))])
+              @
+              [Util.option_map v.c_i_d_r_i_p
+                 (fun f -> Ezxmlm.make_tag "CIDRIP" ([], (String.to_xml f)))])
+             @
+             [Util.option_map v.e_c2_security_group_name
+                (fun f ->
+                   Ezxmlm.make_tag "EC2SecurityGroupName"
+                     ([], (String.to_xml f)))])
+            @
+            [Util.option_map v.e_c2_security_group_id
+               (fun f ->
+                  Ezxmlm.make_tag "EC2SecurityGroupId"
+                    ([], (String.to_xml f)))])
+           @
+           [Util.option_map v.e_c2_security_group_owner_id
+              (fun f ->
+                 Ezxmlm.make_tag "EC2SecurityGroupOwnerId"
+                   ([], (String.to_xml f)))])
+  end[@@ocaml.doc "<p/>"]
+module RevokeDBSecurityGroupIngressResult =
+  RevokeDBSecurityGroupIngressResult
 type input = RevokeDBSecurityGroupIngressMessage.t
 type output = RevokeDBSecurityGroupIngressResult.t
 type error = Errors_internal.t
+let streaming = false
 let service = "rds"
 let to_http service region req =
   let uri =
@@ -19,7 +113,10 @@ let to_http service region req =
   (`POST, uri,
     (Headers.render (RevokeDBSecurityGroupIngressMessage.to_headers req)),
     "")
-let of_http body =
+let of_http headers
+  (body : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+  let ((`String body) : [ `String of string  | `Streaming of Piaf.Body.t ]) =
+    body[@@ocaml.warning "-8"] in
   try
     let xml = Ezxmlm.from_string body in
     let resp =
@@ -27,10 +124,10 @@ let of_http body =
         (Xml.member "RevokeDBSecurityGroupIngressResponse" (snd xml))
         (Xml.member "RevokeDBSecurityGroupIngressResult") in
     try
-      Util.or_error
-        (Util.option_bind resp RevokeDBSecurityGroupIngressResult.parse)
-        (let open Error in
-           BadResponse
+      let open Error in
+        Util.or_error
+          (Util.option_bind resp RevokeDBSecurityGroupIngressResult.parse)
+          (BadResponse
              {
                body;
                message =
@@ -49,18 +146,18 @@ let of_http body =
                })
   with
   | Failure msg ->
-      `Error
-        (let open Error in
-           BadResponse { body; message = ("Error parsing xml: " ^ msg) })
+      let open Error in
+        `Error
+          (BadResponse { body; message = ("Error parsing xml: " ^ msg) })
 let parse_error code err =
   let errors = [] @ Errors_internal.common in
   match Errors_internal.of_string err with
-  | Some var ->
+  | Some v ->
       if
-        (List.mem var errors) &&
-          ((match Errors_internal.to_http_code var with
-            | Some var -> var = code
+        (List.mem v errors) &&
+          ((match Errors_internal.to_http_code v with
+            | Some x -> x = code
             | None -> true))
-      then Some var
+      then Some v
       else None
   | None -> None

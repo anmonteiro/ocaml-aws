@@ -1,4 +1,17 @@
-open Types
+(** "<p>Get detailed information about a particular Automation execution.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module GetAutomationExecutionRequest :
+sig
+  type t = {
+    automation_execution_id: String.t }
+  val make : automation_execution_id:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val of_json : Aws.Json.t -> t
+end
+module GetAutomationExecutionResult = GetAutomationExecutionResult
 type input = GetAutomationExecutionRequest.t
 type output = GetAutomationExecutionResult.t
 type error = Errors_internal.t

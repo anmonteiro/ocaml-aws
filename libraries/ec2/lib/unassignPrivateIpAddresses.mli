@@ -1,4 +1,23 @@
-open Types
+(** "<p>Unassigns one or more secondary private IP addresses from a network interface.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module UnassignPrivateIpAddressesRequest :
+sig
+  type t =
+    {
+    network_interface_id: String.t ;
+    private_ip_addresses: PrivateIpAddressStringList.t }[@@ocaml.doc
+                                                          "<p>Contains the parameters for UnassignPrivateIpAddresses.</p>"]
+  val make :
+    network_interface_id:String.t ->
+      private_ip_addresses:PrivateIpAddressStringList.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module Output = Aws.BaseTypes.Unit
 type input = UnassignPrivateIpAddressesRequest.t
 type output = unit
 type error = Errors_internal.t

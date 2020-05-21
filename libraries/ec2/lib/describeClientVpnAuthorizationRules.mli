@@ -1,4 +1,28 @@
-open Types
+(** "<p>Describes the authorization rules for a specified Client VPN endpoint.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module DescribeClientVpnAuthorizationRulesRequest :
+sig
+  type t =
+    {
+    client_vpn_endpoint_id: String.t ;
+    dry_run: Boolean.t option ;
+    next_token: String.t option ;
+    filters: FilterList.t ;
+    max_results: Integer.t option }
+  val make :
+    client_vpn_endpoint_id:String.t ->
+      ?dry_run:Boolean.t ->
+        ?next_token:String.t ->
+          ?filters:FilterList.t -> ?max_results:Integer.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val parse : Ezxmlm.nodes -> t option
+  val to_xml : t -> Ezxmlm.nodes
+end
+module DescribeClientVpnAuthorizationRulesResult =
+DescribeClientVpnAuthorizationRulesResult
 type input = DescribeClientVpnAuthorizationRulesRequest.t
 type output = DescribeClientVpnAuthorizationRulesResult.t
 type error = Errors_internal.t

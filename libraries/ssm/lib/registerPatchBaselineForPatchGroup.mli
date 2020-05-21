@@ -1,4 +1,19 @@
-open Types
+(** "<p>Registers a patch baseline for a patch group.</p>" *)
+open Types[@@ocaml.warning "-33"]
+open Aws.BaseTypes[@@ocaml.warning "-33"]
+module RegisterPatchBaselineForPatchGroupRequest :
+sig
+  type t = {
+    baseline_id: String.t ;
+    patch_group: String.t }
+  val make : baseline_id:String.t -> patch_group:String.t -> unit -> t
+  val to_query : t -> Aws.Query.t
+  val to_headers : t -> Aws.Headers.t
+  val to_json : t -> Aws.Json.t
+  val of_json : Aws.Json.t -> t
+end
+module RegisterPatchBaselineForPatchGroupResult =
+RegisterPatchBaselineForPatchGroupResult
 type input = RegisterPatchBaselineForPatchGroupRequest.t
 type output = RegisterPatchBaselineForPatchGroupResult.t
 type error = Errors_internal.t
